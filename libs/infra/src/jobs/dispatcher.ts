@@ -7,6 +7,12 @@ export type DispatcherOptions = {
   pollMs?: number;
   /** A `queued` row older than this whose BullMQ message is missing goes back to `pending`. */
   lostAfterMs?: number;
+  /** A `running` row whose heartbeat is older than this lost its worker → back to the queue. */
+  staleAfterMs?: number;
+  /** Max queued+running jobs per merchant (fairness). */
+  maxInflightPerMerchant?: number;
+  /** Run the recovery passes every N dispatch passes. */
+  recoverEvery?: number;
   log?: (msg: string, extra?: Record<string, unknown>) => void;
 };
 
@@ -26,6 +32,9 @@ export class Dispatcher {
   private readonly batchSize: number;
   private readonly pollMs: number;
   private readonly lostAfterMs: number;
+  private readonly staleAfterMs: number;
+  private readonly maxInflight: number;
+  private readonly recoverEvery: number;
 
   constructor(
     private readonly ds: DataSource,
@@ -35,6 +44,9 @@ export class Dispatcher {
     this.batchSize = opts.batchSize ?? 50;
     this.pollMs = opts.pollMs ?? 500;
     this.lostAfterMs = opts.lostAfterMs ?? 30_000;
+    this.staleAfterMs = opts.staleAfterMs ?? 30_000;
+    this.maxInflight = opts.maxInflightPerMerchant ?? Number.MAX_SAFE_INTEGER;
+    this.recoverEvery = opts.recoverEvery ?? 20;
   }
 
   /** Marks due pending rows queued and commits; returns them. Exposed for crash tests. */
@@ -45,14 +57,31 @@ export class Dispatcher {
         `UPDATE jobs SET status = 'pending', updated_at = now()
           WHERE status = 'failed' AND run_after <= now() AND cancel_requested = false`,
       );
-      const rows: Claimed[] = await em.query(
-        `SELECT id, queue, type, attempts FROM jobs
+      const candidates: (Claimed & { merchant_id: string })[] = await em.query(
+        `SELECT id, queue, type, attempts, merchant_id FROM jobs
           WHERE status = 'pending' AND run_after <= now()
           ORDER BY run_after, id
           LIMIT $1
           FOR UPDATE SKIP LOCKED`,
         [this.batchSize],
       );
+      if (candidates.length === 0) return [];
+      // Fairness: never more than maxInflight queued+running jobs per merchant; the rest wait their turn.
+      const merchants = [...new Set(candidates.map((c) => c.merchant_id))];
+      const inflight: { merchant_id: string; n: string }[] = await em.query(
+        `SELECT merchant_id, count(*) AS n FROM jobs
+          WHERE merchant_id = ANY($1::uuid[]) AND status IN ('queued', 'running') GROUP BY merchant_id`,
+        [merchants],
+      );
+      const room = new Map(merchants.map((m) => [m, this.maxInflight]));
+      for (const r of inflight) room.set(r.merchant_id, this.maxInflight - Number(r.n));
+      const rows: Claimed[] = [];
+      for (const c of candidates) {
+        const left = room.get(c.merchant_id) ?? 0;
+        if (left <= 0) continue;
+        room.set(c.merchant_id, left - 1);
+        rows.push({ id: c.id, queue: c.queue, type: c.type, attempts: c.attempts });
+      }
       if (rows.length === 0) return [];
       await em.query(
         `UPDATE jobs SET status = 'queued', queued_at = now(), updated_at = now()
@@ -74,6 +103,33 @@ export class Dispatcher {
     const rows = await this.claimDue();
     await this.publish(rows);
     return rows.length;
+  }
+
+  /**
+   * Abandoned leases: a `running` job whose worker stopped heartbeating (killed, OOM, machine slept) goes back
+   * to `queued` with `queued_at` in the past, so `recoverLost` re-dispatches it at once if no message exists.
+   * The old attempt is closed as failed. A late write from the dead worker is rejected by the lock guard.
+   */
+  async reapStale(): Promise<number> {
+    return this.ds.transaction(async (em) => {
+      const res: [{ id: string; attempts: number }[], number] = await em.query(
+        `UPDATE jobs SET status = 'queued', locked_by = NULL, heartbeat_at = NULL,
+                queued_at = now() - interval '1 day', updated_at = now()
+          WHERE status = 'running' AND heartbeat_at < now() - ($1 || ' milliseconds')::interval
+          RETURNING id, attempts`,
+        [String(this.staleAfterMs)],
+      );
+      for (const r of res[0]) {
+        await em.query(
+          `UPDATE job_attempts SET status = 'failed', finished_at = now(),
+                  error = '{"message":"worker lost (heartbeat expired)","name":"WorkerLost"}'::jsonb
+            WHERE job_id = $1 AND attempt_no = $2 AND status = 'running'`,
+          [r.id, r.attempts],
+        );
+      }
+      if (res[0].length > 0) this.opts.log?.('reaped abandoned jobs', { reaped: res[0].length });
+      return res[0].length;
+    });
   }
 
   /** `queued` rows whose message is gone (crash between phases, Redis flushed) → back to `pending`. */
@@ -109,7 +165,10 @@ export class Dispatcher {
         while ((await this.tick()) === this.batchSize && !this.stopped) {
           // drain backlog in batches
         }
-        if (++passes % 20 === 0) await this.recoverLost();
+        if (++passes % this.recoverEvery === 0) {
+          await this.reapStale();
+          await this.recoverLost();
+        }
       } catch (err) {
         this.opts.log?.('dispatch failed', { error: err instanceof Error ? err.message : String(err) });
       } finally {

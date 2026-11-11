@@ -106,5 +106,8 @@ export const createTestRun = defineRoute({
   tags: ['jobs'],
   auth: true,
   request: { body: TestRunRequest },
-  responses: { 201: { description: 'Run created', schema: RunSummary } },
+  responses: {
+    201: { description: 'Run created', schema: RunSummary },
+    429: { description: 'Too many unfinished runs for this merchant (back-pressure)', schema: ApiErrorBody },
+  },
 });

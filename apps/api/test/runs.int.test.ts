@@ -174,3 +174,24 @@ describe('workflow runs + SSE progress (real Postgres + Redis)', () => {
     ).toHaveLength(0);
   });
 });
+
+describe('back-pressure on run creation (real Postgres)', () => {
+  it('answers 429 with a clear message when the merchant has too many unfinished runs', async () => {
+    const ds = await freshTestDb();
+    await seedMerchant(ds, A);
+    const app = await createApp(testEnv({ MERCHANT_MAX_ACTIVE_RUNS: '2' }));
+    await app.init();
+    const cookie = await loginCookie(app, A.email, A.password);
+    const request = (await import('supertest')).default;
+    const post = () =>
+      request(app.getHttpServer()).post('/workflow-runs/test').set('Cookie', cookie).send({ ms: 1000 });
+    expect((await post()).status).toBe(201);
+    expect((await post()).status).toBe(201);
+    const third = await post();
+    expect(third.status).toBe(429);
+    expect(third.body).toMatchObject({ statusCode: 429, error: 'too_many_runs' });
+    expect(third.body.message).toContain('limit 2');
+    await app.close();
+    await ds.destroy();
+  });
+});

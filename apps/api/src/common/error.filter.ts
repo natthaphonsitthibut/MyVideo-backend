@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from '@myvideo/contracts';
+import { RunCapacityError } from '@myvideo/infra';
 import {
   type ArgumentsHost,
   Catch,
@@ -30,7 +31,13 @@ export class ApiErrorFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
     let body: ApiErrorBody;
-    if (exception instanceof HttpException) {
+    if (exception instanceof RunCapacityError) {
+      body = {
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
+        error: 'too_many_runs',
+        message: `มีงานที่ยังไม่เสร็จครบ ${exception.limit} งานแล้ว รอให้งานเดิมเสร็จก่อนแล้วลองใหม่ (too many unfinished runs, limit ${exception.limit})`,
+      };
+    } else if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const raw = exception.getResponse();
       const obj = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};

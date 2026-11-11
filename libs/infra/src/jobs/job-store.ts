@@ -24,6 +24,26 @@ export type NewJob = {
   runAfter?: Date;
 };
 
+export class RunCapacityError extends Error {
+  constructor(readonly limit: number) {
+    super(`too many unfinished runs (limit ${limit})`);
+    this.name = 'RunCapacityError';
+  }
+}
+
+/**
+ * Back-pressure (ARCHITECTURE §5.7): refuses a new run when the merchant already has `limit` unfinished runs.
+ * Locks the merchant row so concurrent requests are counted one after another.
+ */
+export async function assertRunCapacity(em: EntityManager, merchantId: string, limit: number): Promise<void> {
+  await em.query('SELECT id FROM merchants WHERE id = $1 FOR UPDATE', [merchantId]);
+  const rows: { n: string }[] = await em.query(
+    `SELECT count(*) AS n FROM workflow_runs WHERE merchant_id = $1 AND status IN ('pending', 'running')`,
+    [merchantId],
+  );
+  if (Number(rows[0]?.n ?? 0) >= limit) throw new RunCapacityError(limit);
+}
+
 /** Creates a workflow run row. Call inside the caller's transaction. */
 export async function createRunInTransaction(em: EntityManager, run: NewRun): Promise<WorkflowRunEntity> {
   return em.getRepository(WorkflowRunEntity).save({

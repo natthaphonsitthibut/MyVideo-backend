@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { RunEvent, RunList, RunSummary } from '@myvideo/contracts';
 import {
+  assertRunCapacity,
   createRunInTransaction,
+  type Env,
   enqueueInTransaction,
   JobEntity,
   JobEventEntity,
@@ -9,6 +11,7 @@ import {
 } from '@myvideo/infra';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, In, MoreThan } from 'typeorm';
+import { ENV } from '../config/env.module.js';
 import { toJobSummary } from '../jobs/job-summary.js';
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
@@ -43,7 +46,10 @@ const encodeCursor = (r: WorkflowRunEntity) => `${r.createdAt.toISOString()}|${r
 
 @Injectable()
 export class RunsService {
-  constructor(@Inject(DataSource) private readonly ds: DataSource) {}
+  constructor(
+    @Inject(DataSource) private readonly ds: DataSource,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   async list(merchantId: string, limit: number, before?: string): Promise<RunList> {
     const qb = this.ds
@@ -104,6 +110,7 @@ export class RunsService {
     body: { ms: number; steps: number; failFirstAttempt: boolean },
   ): Promise<RunSummary> {
     const runId = await this.ds.transaction(async (em) => {
+      await assertRunCapacity(em, merchantId, this.env.MERCHANT_MAX_ACTIVE_RUNS);
       const run = await createRunInTransaction(em, { merchantId, kind: 'system_test', input: body });
       await enqueueInTransaction(em, {
         merchantId,

@@ -32,7 +32,14 @@ export {
   type JobHandler,
   systemHandlers,
 } from './jobs/handlers.js';
-export { createRunInTransaction, enqueueInTransaction, type NewJob, type NewRun } from './jobs/job-store.js';
+export {
+  assertRunCapacity,
+  createRunInTransaction,
+  enqueueInTransaction,
+  type NewJob,
+  type NewRun,
+  RunCapacityError,
+} from './jobs/job-store.js';
 export { bullJobId, type QueueMessage, QueueSet, redisConnection } from './jobs/queues.js';
 export {
   defaultWorkerId,

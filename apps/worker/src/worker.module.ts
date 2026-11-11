@@ -41,6 +41,10 @@ export class WorkerLifecycle implements OnApplicationBootstrap, OnApplicationShu
     const prefix = this.env.QUEUE_PREFIX;
     this.queues = new QueueSet({ redisUrl: this.env.REDIS_URL, prefix });
     this.dispatcher = new Dispatcher(this.ds, this.queues, {
+      pollMs: this.env.DISPATCH_POLL_MS,
+      maxInflightPerMerchant: this.env.MERCHANT_MAX_INFLIGHT_JOBS,
+      staleAfterMs: this.env.JOB_STALE_AFTER_MS,
+      lostAfterMs: this.env.JOB_LOST_AFTER_MS,
       log: (msg, extra) => this.logger.warn({ ...extra }, msg),
     });
     this.workers = new QueueWorkers(

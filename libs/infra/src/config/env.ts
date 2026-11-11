@@ -44,6 +44,16 @@ export const envSchema = z
       .string()
       .regex(/^[a-z0-9-]+$/)
       .default('myvideo'),
+    /** Jobs of one merchant that may be queued or running at once (fairness, ARCHITECTURE §5.7). */
+    MERCHANT_MAX_INFLIGHT_JOBS: z.coerce.number().int().min(1).default(2),
+    /** Unfinished runs one merchant may have before new requests get 429. */
+    MERCHANT_MAX_ACTIVE_RUNS: z.coerce.number().int().min(1).default(20),
+    /** A running job whose heartbeat is older than this is considered abandoned (worker died). */
+    JOB_STALE_AFTER_MS: z.coerce.number().int().min(1000).default(30_000),
+    /** A queued job without a queue message for this long goes back to pending. */
+    JOB_LOST_AFTER_MS: z.coerce.number().int().min(0).default(30_000),
+    /** Dispatcher poll interval; recovery passes run every 20 polls. */
+    DISPATCH_POLL_MS: z.coerce.number().int().min(10).default(500),
     QUEUE_MEDIA_CONCURRENCY: z.coerce.number().int().min(1).default(1),
     QUEUE_AI_CONCURRENCY: z.coerce.number().int().min(1).default(1),
     QUEUE_RENDER_CONCURRENCY: z.coerce.number().int().min(1).default(1),
