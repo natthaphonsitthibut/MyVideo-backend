@@ -11,6 +11,8 @@
     }
   },
   "dependencies": {
+    "@myvideo/domain": "workspace:*",
+    "bullmq": "6.7.4",
     "ioredis": "6.0.0",
     "pg": "8.23.1",
     "typeorm": "1.1.2",

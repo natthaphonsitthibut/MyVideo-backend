@@ -47,6 +47,15 @@ describe('loadEnv', () => {
     expect(loadEnv({ ...base, LLM_MODE: 'api', LLM_PROVIDER: 'x', LLM_API_KEY: 'k' }).LLM_MODE).toBe('api');
   });
 
+  it('requires the stale threshold to be well above the heartbeat', () => {
+    expect(() => loadEnv({ ...base, JOB_HEARTBEAT_MS: '2000', JOB_STALE_AFTER_MS: '1500' })).toThrow(
+      /JOB_STALE_AFTER_MS/,
+    );
+    expect(loadEnv({ ...base, JOB_HEARTBEAT_MS: '200', JOB_STALE_AFTER_MS: '1500' }).JOB_STALE_AFTER_MS).toBe(
+      1500,
+    );
+  });
+
   it('never puts a value into the error message', () => {
     try {
       loadEnv({ ...base, SESSION_SECRET: 'short' });
