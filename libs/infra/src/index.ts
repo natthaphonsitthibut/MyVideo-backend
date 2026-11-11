@@ -60,6 +60,7 @@ export {
   probeHandler,
 } from './media/ingest-handlers.js';
 export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
+export { type ProxyDeps, proxyHandler } from './media/proxy-handler.js';
 export {
   ffmpegProgressParser,
   ProcessError,

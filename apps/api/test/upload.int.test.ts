@@ -135,6 +135,24 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
       [source.ingestRunId],
     );
     expect(jobs).toEqual([{ type: 'media.probe', status: 'pending', queue: 'media' }]);
+
+    // authorised streaming with Range (seek support), merchant-scoped
+    const part = await fetch(`${base}/sources/${source.id}/assets/original`, {
+      headers: { cookie: cookieA, range: 'bytes=1000-1999' },
+    });
+    expect(part.status).toBe(206);
+    expect(part.headers.get('content-range')).toBe(`bytes 1000-1999/${file.length}`);
+    expect(Buffer.from(await part.arrayBuffer()).equals(file.subarray(1000, 2000))).toBe(true);
+    const bad = await fetch(`${base}/sources/${source.id}/assets/original`, {
+      headers: { cookie: cookieA, range: `bytes=${file.length}-` },
+    });
+    expect(bad.status).toBe(416);
+    expect(
+      (await fetch(`${base}/sources/${source.id}/assets/original`, { headers: { cookie: cookieB } })).status,
+    ).toBe(404);
+    expect(
+      (await fetch(`${base}/sources/${source.id}/assets/proxy`, { headers: { cookie: cookieA } })).status,
+    ).toBe(404);
   });
 
   it('completing twice (and concurrently) creates one source and one ingest run', async () => {

@@ -1,41 +1,18 @@
 import type { StoragePort } from '@myvideo/domain';
-import type { DataSource, EntityManager } from 'typeorm';
-import type { JobEntity } from '../db/entities/job.entity.js';
-import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
-import { VideoSourceEntity } from '../db/entities/video-source.entity.js';
+import type { DataSource } from 'typeorm';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { type ProbeInfo, probeFile } from './probe.js';
+import { proxyHandler } from './proxy-handler.js';
+import { loadSource, markSourceFailed } from './source-helpers.js';
 
-export type IngestDeps = { ds: DataSource; storage: StoragePort };
+export { loadSource, markSourceFailed };
 
-const GENERIC_FAILURE = 'ประมวลผลวิดีโอไม่สำเร็จ ลองใหม่ได้ที่หน้า "งานประมวลผล"';
-
-/** Marks the source failed with a merchant-readable reason (Thai). */
-export async function markSourceFailed(
-  em: EntityManager,
-  job: JobEntity,
-  error: { message: string; fatal: boolean },
-) {
-  const sourceId = String(job.payload.sourceId ?? '');
-  if (!sourceId) return;
-  await em.query(
-    `UPDATE video_sources SET status = 'failed', failure_reason = $3, updated_at = now() WHERE id = $1 AND merchant_id = $2`,
-    [sourceId, job.merchantId, error.fatal ? error.message : GENERIC_FAILURE],
-  );
-}
-
-export async function loadSource(ds: DataSource, job: JobEntity) {
-  const sourceId = String(job.payload.sourceId ?? '');
-  const source = await ds
-    .getRepository(VideoSourceEntity)
-    .findOneBy({ id: sourceId, merchantId: job.merchantId });
-  if (!source) throw new FatalJobError(`source ${sourceId} not found`);
-  const original = await ds
-    .getRepository(MediaAssetEntity)
-    .findOneBy({ sourceId, merchantId: job.merchantId, kind: 'original' });
-  if (!original) throw new FatalJobError(`source ${sourceId} has no original`);
-  return { source, original };
-}
+export type IngestDeps = {
+  ds: DataSource;
+  storage: StoragePort;
+  proxyEncoder?: 'libx264' | 'h264_videotoolbox';
+  proxySegmentSeconds?: number;
+};
 
 /** Step 1 of ingest: ffprobe the immutable original and validate it (fatal rejections never retry). */
 export function probeHandler({ ds, storage }: IngestDeps): JobHandler {
@@ -80,5 +57,12 @@ export function probeHandler({ ds, storage }: IngestDeps): JobHandler {
 }
 
 export function ingestHandlers(deps: IngestDeps): JobHandler[] {
-  return [probeHandler(deps)];
+  return [
+    probeHandler(deps),
+    proxyHandler({
+      ...deps,
+      encoder: deps.proxyEncoder ?? 'libx264',
+      segmentSeconds: deps.proxySegmentSeconds ?? 300,
+    }),
+  ];
 }

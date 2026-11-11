@@ -52,6 +52,20 @@ export class SourcesService {
     };
   }
 
+  /** The newest asset of a kind for a source of this merchant (404 when missing). */
+  async asset(merchantId: string, sourceId: string, kind: string): Promise<MediaAssetEntity> {
+    const a = await this.ds.getRepository(MediaAssetEntity).findOne({
+      where: { merchantId, sourceId, kind: kind as MediaAssetEntity['kind'] },
+      order: { recipeVersion: 'DESC' },
+    });
+    if (!a) throw new NotFoundException('File not found');
+    return a;
+  }
+
+  get store(): StoragePort {
+    return this.storage;
+  }
+
   async get(merchantId: string, id: string): Promise<SourceSummary> {
     const s = await this.ds.getRepository(VideoSourceEntity).findOneBy({ id, merchantId });
     if (!s) throw new NotFoundException('Source not found');

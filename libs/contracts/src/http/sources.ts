@@ -52,3 +52,24 @@ export const getSource = defineRoute({
     404: { description: 'No such source for this merchant', schema: ApiErrorBody },
   },
 });
+
+export const AssetParams = z.object({
+  id: z.uuid(),
+  kind: z.enum(['original', 'proxy', 'audio', 'peaks', 'sprites']),
+});
+
+export const getSourceAsset = defineRoute({
+  operationId: 'getSourceAsset',
+  method: 'get',
+  path: '/sources/{id}/assets/{kind}',
+  summary: 'Stream a file of the source (supports HTTP Range for video seeking). Merchant-scoped.',
+  tags: ['sources'],
+  auth: true,
+  request: { params: AssetParams },
+  responses: {
+    200: { description: 'Whole file' },
+    206: { description: 'Requested byte range' },
+    404: { description: 'No such source or file for this merchant', schema: ApiErrorBody },
+    416: { description: 'Range not satisfiable', schema: ApiErrorBody },
+  },
+});

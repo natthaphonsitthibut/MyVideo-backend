@@ -21,6 +21,10 @@ export const envSchema = z
     STORAGE_LOCAL_DIR: z.string().default('.data/storage'),
     /** Where resumable uploads are assembled before they move into storage. */
     UPLOAD_TMP_DIR: z.string().default('.data/uploads'),
+    /** Proxy encoder: libx264 (portable) or h264_videotoolbox (Mac hardware, frees CPU). */
+    PROXY_ENCODER: z.enum(['libx264', 'h264_videotoolbox']).default('libx264'),
+    /** Long inputs are transcoded in segments of this many seconds (resumable, visible progress). */
+    PROXY_SEGMENT_SECONDS: z.coerce.number().int().min(10).default(300),
     S3_ENDPOINT: optionalString,
     S3_REGION: optionalString,
     S3_BUCKET: optionalString,

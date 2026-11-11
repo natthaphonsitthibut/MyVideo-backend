@@ -106,6 +106,12 @@ export class WorkerModule {
 export function defaultHandlers(env: Env, ds: DataSource): HandlerRegistry {
   const registry = new HandlerRegistry();
   for (const h of systemHandlers) registry.register(h);
-  for (const h of ingestHandlers({ ds, storage: createStorage(env) })) registry.register(h);
+  const ingest = ingestHandlers({
+    ds,
+    storage: createStorage(env),
+    proxyEncoder: env.PROXY_ENCODER,
+    proxySegmentSeconds: env.PROXY_SEGMENT_SECONDS,
+  });
+  for (const h of ingest) registry.register(h);
   return registry;
 }
