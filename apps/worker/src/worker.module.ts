@@ -57,7 +57,7 @@ export class WorkerLifecycle implements OnApplicationBootstrap, OnApplicationShu
           render: this.env.QUEUE_RENDER_CONCURRENCY,
         },
       },
-      new JobRunner(this.ds, this.handlers),
+      new JobRunner(this.ds, this.handlers, { heartbeatMs: this.env.JOB_HEARTBEAT_MS }),
     );
     const queues = this.handlers.queues();
     this.workers.start(queues);

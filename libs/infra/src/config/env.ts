@@ -48,6 +48,8 @@ export const envSchema = z
     MERCHANT_MAX_INFLIGHT_JOBS: z.coerce.number().int().min(1).default(2),
     /** Unfinished runs one merchant may have before new requests get 429. */
     MERCHANT_MAX_ACTIVE_RUNS: z.coerce.number().int().min(1).default(20),
+    /** How often a running job renews its lease. */
+    JOB_HEARTBEAT_MS: z.coerce.number().int().min(50).default(2000),
     /** A running job whose heartbeat is older than this is considered abandoned (worker died). */
     JOB_STALE_AFTER_MS: z.coerce.number().int().min(1000).default(30_000),
     /** A queued job without a queue message for this long goes back to pending. */
@@ -81,6 +83,13 @@ export const envSchema = z
         code: 'custom',
         path: ['STORAGE_DRIVER'],
         message: 'STORAGE_DRIVER=s3 needs S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY',
+      });
+    }
+    if (env.JOB_STALE_AFTER_MS < env.JOB_HEARTBEAT_MS * 3) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['JOB_STALE_AFTER_MS'],
+        message: 'must be at least 3 × JOB_HEARTBEAT_MS, or healthy jobs get reaped as abandoned',
       });
     }
     if (env.NODE_ENV === 'production' && env.SESSION_SECRET === 'change-me') {

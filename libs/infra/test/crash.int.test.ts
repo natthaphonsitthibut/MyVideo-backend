@@ -33,6 +33,7 @@ function startWorker(): ChildProcess {
       SESSION_SECRET: 'test-session-secret',
       QUEUE_PREFIX: prefix,
       DISPATCH_POLL_MS: '50',
+      JOB_HEARTBEAT_MS: '200',
       JOB_STALE_AFTER_MS: '1500',
       JOB_LOST_AFTER_MS: '0',
     },
