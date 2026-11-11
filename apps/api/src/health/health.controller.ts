@@ -1,6 +1,7 @@
+import type { HealthReport } from '@myvideo/contracts';
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { type HealthReport, HealthService } from './health.service.js';
+import { HealthService } from './health.service.js';
 
 @Controller('health')
 export class HealthController {

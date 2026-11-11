@@ -11,6 +11,9 @@ importers:
       '@biomejs/biome':
         specifier: 2.6.6
         version: 2.6.6
+      '@myvideo/contracts':
+        specifier: workspace:*
+        version: link:libs/contracts
       '@myvideo/infra':
         specifier: workspace:*
         version: link:libs/infra
@@ -29,6 +32,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@myvideo/contracts':
+        specifier: workspace:*
+        version: link:../../libs/contracts
       '@myvideo/infra':
         specifier: workspace:*
         version: link:../../libs/infra
@@ -100,7 +106,11 @@ importers:
         specifier: 7.8.2
         version: 7.8.2
 
-  libs/contracts: {}
+  libs/contracts:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   libs/domain: {}
 

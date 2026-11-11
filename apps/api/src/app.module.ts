@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Env } from '@myvideo/infra';
 import { type DynamicModule, Module } from '@nestjs/common';
+import { DiscoveryModule } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { EnvModule } from './config/env.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -24,6 +25,8 @@ export class AppModule {
       module: AppModule,
       imports: [
         EnvModule.forRoot(env),
+        // Lets tests and startup checks list controller routes (contract drift test).
+        DiscoveryModule,
         LoggerModule.forRoot({
           pinoHttp: {
             level: env.LOG_LEVEL,

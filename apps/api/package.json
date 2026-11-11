@@ -4,6 +4,7 @@
   "type": "module",
   "version": "0.0.0",
   "dependencies": {
+    "@myvideo/contracts": "workspace:*",
     "@myvideo/infra": "workspace:*",
     "@nestjs/common": "12.4.2",
     "@nestjs/core": "12.4.2",

@@ -1,11 +1,7 @@
-import { type Env, type ProbeResult, probePostgres, probeRedis } from '@myvideo/infra';
+import type { HealthReport } from '@myvideo/contracts';
+import { type Env, probePostgres, probeRedis } from '@myvideo/infra';
 import { Inject, Injectable } from '@nestjs/common';
 import { ENV } from '../config/env.module.js';
-
-export type HealthReport = {
-  status: 'ok' | 'degraded';
-  checks: Record<'postgres' | 'redis', ProbeResult>;
-};
 
 @Injectable()
 export class HealthService {
