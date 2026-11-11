@@ -1,3 +1,5 @@
+export * from './http/auth.js';
+export * from './http/errors.js';
 export * from './http/health.js';
 export { buildOpenApi } from './openapi.js';
 export { componentRegistry, named } from './registry.js';

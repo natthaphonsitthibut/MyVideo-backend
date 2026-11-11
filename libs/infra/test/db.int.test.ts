@@ -24,11 +24,11 @@ describe('database baseline (real Postgres, test database)', () => {
   });
 
   it('migrates up, down to empty, and up again', async () => {
-    expect(await tables(ds)).toEqual(['merchants', 'typeorm_migrations', 'users']);
+    expect(await tables(ds)).toEqual(['merchants', 'sessions', 'typeorm_migrations', 'users']);
     for (let i = 0; i < migrations.length; i++) await ds.undoLastMigration();
     expect(await tables(ds)).toEqual(['typeorm_migrations']);
     await ds.runMigrations();
-    expect(await tables(ds)).toEqual(['merchants', 'typeorm_migrations', 'users']);
+    expect(await tables(ds)).toEqual(['merchants', 'sessions', 'typeorm_migrations', 'users']);
   });
 
   it('has no drift between entities and migrations', async () => {

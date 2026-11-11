@@ -4,7 +4,9 @@ import type { Env } from '@myvideo/infra';
 import { type DynamicModule, Module } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { AuthModule } from './auth/auth.module.js';
 import { EnvModule } from './config/env.module.js';
+import { DatabaseModule } from './db/database.module.js';
 import { HealthModule } from './health/health.module.js';
 
 const REQUEST_ID_HEADER = 'x-request-id';
@@ -36,6 +38,8 @@ export class AppModule {
             ...(env.LOG_PRETTY ? { transport: { target: 'pino-pretty' } } : {}),
           },
         }),
+        DatabaseModule,
+        AuthModule,
         HealthModule,
       ],
     };

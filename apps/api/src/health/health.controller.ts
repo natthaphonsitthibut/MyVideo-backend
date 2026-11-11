@@ -1,8 +1,10 @@
 import type { HealthReport } from '@myvideo/contracts';
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { Public } from '../auth/auth-context.js';
 import { HealthService } from './health.service.js';
 
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly health: HealthService) {}
