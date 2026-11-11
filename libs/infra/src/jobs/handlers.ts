@@ -62,7 +62,9 @@ export const systemHandlers: JobHandler[] = [
   {
     type: 'system.sleep',
     queue: 'media',
-    run: async ({ job, signal, progress }) => {
+    run: async ({ job, attempt, signal, progress }) => {
+      if (job.payload.failFirstAttempt === true && attempt === 1)
+        throw new FatalJobError('simulated failure (test run)');
       const total = Number(job.payload.ms ?? 1000);
       const steps = Math.max(1, Number(job.payload.steps ?? 10));
       for (let i = 1; i <= steps; i++) {

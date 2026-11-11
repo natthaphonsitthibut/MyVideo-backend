@@ -14,6 +14,7 @@ export {
   entities,
   JobAttemptEntity,
   JobEntity,
+  JobEventEntity,
   MerchantEntity,
   SessionEntity,
   UserEntity,
