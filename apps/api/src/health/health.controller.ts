@@ -1,0 +1,19 @@
+import type { HealthReport } from '@myvideo/contracts';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import { Public } from '../auth/auth-context.js';
+import { HealthService } from './health.service.js';
+
+@Public()
+@Controller('health')
+export class HealthController {
+  constructor(private readonly health: HealthService) {}
+
+  /** 200 when every dependency is up, 503 otherwise; the body always lists each check. */
+  @Get()
+  async get(@Res({ passthrough: true }) res: Response): Promise<HealthReport> {
+    const report = await this.health.check();
+    res.status(report.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    return report;
+  }
+}

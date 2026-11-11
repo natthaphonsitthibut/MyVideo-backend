@@ -1,0 +1,25 @@
+{
+  "name": "@myvideo/infra",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "ioredis": "6.0.0",
+    "pg": "8.23.1",
+    "typeorm": "1.1.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  }
+}
