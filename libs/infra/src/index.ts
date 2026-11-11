@@ -8,7 +8,17 @@ export {
 export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';
 export { createDataSource } from './db/data-source.js';
-export { entities, MerchantEntity, SessionEntity, UserEntity } from './db/entities/index.js';
+export {
+  ATTEMPT_STATUSES,
+  type AttemptStatus,
+  entities,
+  JobAttemptEntity,
+  JobEntity,
+  MerchantEntity,
+  SessionEntity,
+  UserEntity,
+  WorkflowRunEntity,
+} from './db/entities/index.js';
 export { migrations } from './db/migrations/index.js';
 export { type SeedInput, seedMerchant } from './db/seed.js';
 export { TenantRepository, type TenantRow } from './db/tenant/tenant-repository.js';
