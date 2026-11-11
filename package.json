@@ -1,0 +1,27 @@
+{
+  "name": "myvideo-backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 run build",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude \"**/*.int.test.ts\"",
+    "test:int": "vitest run int.test",
+    "start:api": "node --env-file-if-exists=.env apps/api/dist/main.js",
+    "start:worker": "node --env-file-if-exists=.env apps/worker/dist/main.js"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@myvideo/infra": "workspace:*",
+    "@types/node": "^24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}
