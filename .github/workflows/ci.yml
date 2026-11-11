@@ -21,12 +21,12 @@ jobs:
           POSTGRES_USER: myvideo
           POSTGRES_PASSWORD: myvideo
           POSTGRES_DB: myvideo_test
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U myvideo" --health-interval 5s --health-timeout 5s --health-retries 20
       redis:
         image: redis:8
-        ports: ['6379:6379']
+        ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
