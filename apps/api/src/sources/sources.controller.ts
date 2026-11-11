@@ -5,19 +5,35 @@ import {
   SourceIdParams,
   type SourceSummary,
   SpriteSheetParams,
+  type UploadConfig,
   UploadIdParams,
 } from '@myvideo/contracts';
-import { storageKeys } from '@myvideo/domain';
+import { storageKeys, UPLOAD_EXTENSIONS } from '@myvideo/domain';
+import type { Env } from '@myvideo/infra';
 import { Controller, Get, HttpException, HttpStatus, Inject, Param, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CurrentMerchant } from '../auth/auth-context.js';
 import { ZodPipe } from '../common/zod-pipe.js';
+import { ENV } from '../config/env.module.js';
 import { parseRange } from './range.js';
 import { SourcesService } from './sources.service.js';
 
 @Controller('sources')
 export class SourcesController {
-  constructor(@Inject(SourcesService) private readonly sources: SourcesService) {}
+  constructor(
+    @Inject(SourcesService) private readonly sources: SourcesService,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
+
+  @Get('upload-config')
+  uploadConfig(): UploadConfig {
+    return {
+      endpoint: '/uploads',
+      maxBytes: this.env.UPLOAD_MAX_BYTES,
+      extensions: [...UPLOAD_EXTENSIONS],
+      chunkBytes: 8 * 1024 * 1024,
+    };
+  }
 
   @Get('by-upload/:uploadId')
   byUpload(

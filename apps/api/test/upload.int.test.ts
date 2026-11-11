@@ -172,6 +172,18 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
     expect(Number(runs[0]?.n)).toBe(1);
   });
 
+  it('tells the UI the limits', async () => {
+    const cfg = (await (
+      await fetch(`${base}/sources/upload-config`, { headers: { cookie: cookieA } })
+    ).json()) as { extensions: string[] };
+    expect(cfg).toMatchObject({
+      endpoint: '/uploads',
+      maxBytes: env.UPLOAD_MAX_BYTES,
+      chunkBytes: 8 * 1024 * 1024,
+    });
+    expect(cfg.extensions).toContain('mp4');
+  });
+
   it('keeps uploads private to the merchant and rejects bad requests', async () => {
     const { url } = await startUpload(cookieA);
     const id = url.split('/').pop() ?? '';

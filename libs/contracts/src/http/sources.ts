@@ -93,3 +93,25 @@ export const getSpriteSheet = defineRoute({
     404: { description: 'No such sheet for this merchant', schema: ApiErrorBody },
   },
 });
+
+export const UploadConfig = named(
+  'UploadConfig',
+  z.object({
+    /** tus endpoint, relative to the API base. */
+    endpoint: z.string(),
+    maxBytes: z.number().int(),
+    extensions: z.array(z.string()),
+    chunkBytes: z.number().int(),
+  }),
+);
+export type UploadConfig = z.infer<typeof UploadConfig>;
+
+export const getUploadConfig = defineRoute({
+  operationId: 'getUploadConfig',
+  method: 'get',
+  path: '/sources/upload-config',
+  summary: 'Limits the upload UI checks before sending (the server enforces them again)',
+  tags: ['sources'],
+  auth: true,
+  responses: { 200: { description: 'Upload limits', schema: UploadConfig } },
+});
