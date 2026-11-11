@@ -39,6 +39,8 @@ export const envSchema = z
       .int()
       .positive()
       .default(8 * 1024 ** 3),
+    /** Redis key prefix for BullMQ (tests use a random one). */
+    QUEUE_PREFIX: z.string().regex(/^[a-z0-9-]+$/).default('myvideo'),
     QUEUE_MEDIA_CONCURRENCY: z.coerce.number().int().min(1).default(1),
     QUEUE_AI_CONCURRENCY: z.coerce.number().int().min(1).default(1),
     QUEUE_RENDER_CONCURRENCY: z.coerce.number().int().min(1).default(1),

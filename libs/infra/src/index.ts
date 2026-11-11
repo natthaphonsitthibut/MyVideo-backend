@@ -23,3 +23,15 @@ export { migrations } from './db/migrations/index.js';
 export { type SeedInput, seedMerchant } from './db/seed.js';
 export { TenantRepository, type TenantRow } from './db/tenant/tenant-repository.js';
 export { type ProbeResult, probePostgres, probeRedis } from './health/probes.js';
+export { Dispatcher, type DispatcherOptions } from './jobs/dispatcher.js';
+export {
+  FatalJobError,
+  HandlerRegistry,
+  type JobContext,
+  type JobHandler,
+  systemHandlers,
+} from './jobs/handlers.js';
+export { createRunInTransaction, enqueueInTransaction, type NewJob, type NewRun } from './jobs/job-store.js';
+export { bullJobId, type QueueMessage, QueueSet, redisConnection } from './jobs/queues.js';
+export { defaultWorkerId, JobRunner, type RunOutcome } from './jobs/runner.js';
+export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';

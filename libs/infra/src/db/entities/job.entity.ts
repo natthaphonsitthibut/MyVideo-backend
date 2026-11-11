@@ -88,6 +88,10 @@ export class JobEntity extends BaseRow {
   @Column({ type: 'jsonb', nullable: true })
   result!: Record<string, unknown> | null;
 
+  /** When the dispatcher handed the job to the queue (lost-message recovery uses it). */
+  @Column({ name: 'queued_at', type: 'timestamptz', nullable: true })
+  queuedAt!: Date | null;
+
   @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
   startedAt!: Date | null;
 
