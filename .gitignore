@@ -1,3 +1,12 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.data/
+logs/
+tmp/
+
 # Python
 __pycache__/
 *.py[cod]

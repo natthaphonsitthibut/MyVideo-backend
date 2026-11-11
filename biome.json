@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/dist", "!**/openapi.json", "!**/stage-bundle", "!services/ai"]
+    "includes": ["**", "!**/dist", "!**/openapi.json", "!**/stage-bundle", "!services/ai", "!**/*.md"]
   },
   "formatter": {
     "enabled": true,
