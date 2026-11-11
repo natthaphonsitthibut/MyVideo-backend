@@ -32,6 +32,7 @@ export {
   HandlerRegistry,
   type JobContext,
   type JobHandler,
+  type NextStep,
   systemHandlers,
 } from './jobs/handlers.js';
 export {
@@ -51,6 +52,14 @@ export {
   refreshRunStatus,
 } from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';
+export {
+  type IngestDeps,
+  ingestHandlers,
+  loadSource,
+  markSourceFailed,
+  probeHandler,
+} from './media/ingest-handlers.js';
+export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
 export {
   ffmpegProgressParser,
   ProcessError,

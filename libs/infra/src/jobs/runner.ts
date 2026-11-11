@@ -2,7 +2,8 @@ import { hostname } from 'node:os';
 import { backoffMs, deriveRunStatus, type JobStatus } from '@myvideo/domain';
 import type { DataSource, EntityManager } from 'typeorm';
 import { JobEntity } from '../db/entities/job.entity.js';
-import { FatalJobError, type HandlerRegistry } from './handlers.js';
+import { FatalJobError, type HandlerRegistry, type JobHandler } from './handlers.js';
+import { enqueueInTransaction } from './job-store.js';
 
 export type RunOutcome = 'succeeded' | 'retrying' | 'dead' | 'cancelled' | 'skipped';
 
@@ -85,6 +86,7 @@ export class JobRunner {
     to: 'succeeded' | 'failed' | 'dead' | 'cancelled',
     patch: { result?: unknown; error?: ErrorDetail; runAfter?: Date },
     attemptStatus: 'succeeded' | 'failed' | 'cancelled' | 'timed_out',
+    handler?: JobHandler,
   ): Promise<boolean> {
     return this.ds.transaction(async (em) => {
       const res: [unknown[], number] = await em.query(
@@ -110,6 +112,22 @@ export class JobRunner {
           WHERE job_id = $1 AND attempt_no = $2`,
         [job.id, job.attempts, attemptStatus, patch.error ? JSON.stringify(patch.error) : null],
       );
+      if (to === 'succeeded' && handler?.next) {
+        for (const step of handler.next(job, (patch.result ?? {}) as Record<string, unknown>)) {
+          await enqueueInTransaction(em, {
+            merchantId: job.merchantId,
+            workflowRunId: job.workflowRunId,
+            type: step.type,
+            queue: step.queue,
+            payload: step.payload,
+            stepIndex: job.stepIndex + 1,
+            idempotencyKey: `${job.workflowRunId}:${step.type}`,
+            maxAttempts: step.maxAttempts,
+            timeoutMs: step.timeoutMs,
+          });
+        }
+      }
+      if (to === 'dead' && handler?.onDead && patch.error) await handler.onDead(em, job, patch.error);
       await refreshRunStatus(em, job.workflowRunId);
       return true;
     });
@@ -158,7 +176,7 @@ export class JobRunner {
       if (!handler) throw new FatalJobError(`no handler for job type ${job.type}`);
       const result = await handler.run({ job, attempt: job.attempts, signal: ac.signal, progress });
       if (cancelled) throw new Error('job cancelled');
-      return (await this.finish(job, 'succeeded', { result: result ?? {} }, 'succeeded'))
+      return (await this.finish(job, 'succeeded', { result: result ?? {} }, 'succeeded', handler))
         ? 'succeeded'
         : 'skipped';
     } catch (err) {
@@ -169,7 +187,7 @@ export class JobRunner {
       const fatal = err instanceof FatalJobError;
       const detail = errorDetail(err, job.attempts, fatal);
       if (fatal || job.attempts >= job.maxAttempts) {
-        await this.finish(job, 'dead', { error: detail }, timedOut ? 'timed_out' : 'failed');
+        await this.finish(job, 'dead', { error: detail }, timedOut ? 'timed_out' : 'failed', handler);
         return 'dead';
       }
       const runAfter = new Date(Date.now() + backoffMs(job.attempts, this.opts.backoff));

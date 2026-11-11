@@ -17,6 +17,9 @@ importers:
       '@myvideo/contracts':
         specifier: workspace:*
         version: link:libs/contracts
+      '@myvideo/domain':
+        specifier: workspace:*
+        version: link:libs/domain
       '@myvideo/infra':
         specifier: workspace:*
         version: link:libs/infra

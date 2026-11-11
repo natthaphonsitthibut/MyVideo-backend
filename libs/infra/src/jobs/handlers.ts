@@ -1,4 +1,5 @@
 import type { QueueName } from '@myvideo/domain';
+import type { EntityManager } from 'typeorm';
 import type { JobEntity } from '../db/entities/job.entity.js';
 
 export type JobContext = {
@@ -10,10 +11,23 @@ export type JobContext = {
   progress: (value: number) => Promise<void>;
 };
 
+/** The next step of a pipeline, inserted in the same transaction that marks this step succeeded. */
+export type NextStep = {
+  type: string;
+  queue: QueueName;
+  payload: Record<string, unknown>;
+  maxAttempts?: number;
+  timeoutMs?: number;
+};
+
 export interface JobHandler {
   readonly type: string;
   readonly queue: QueueName;
   run(ctx: JobContext): Promise<Record<string, unknown> | undefined>;
+  /** Steps that follow a success (ARCHITECTURE §5.9: pipelines are step lists, not nested jobs). */
+  next?(job: JobEntity, result: Record<string, unknown>): NextStep[];
+  /** Called inside the transaction that marks the job dead (e.g. to show a failure on the source). */
+  onDead?(em: EntityManager, job: JobEntity, error: { message: string; fatal: boolean }): Promise<void>;
 }
 
 /** Thrown for errors that a retry cannot fix (invalid input, unsupported media): the job goes to `dead`. */

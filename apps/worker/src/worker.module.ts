@@ -1,8 +1,10 @@
 import {
   createDataSource,
+  createStorage,
   Dispatcher,
   type Env,
   HandlerRegistry,
+  ingestHandlers,
   JobRunner,
   QueueSet,
   QueueWorkers,
@@ -76,7 +78,7 @@ export class WorkerLifecycle implements OnApplicationBootstrap, OnApplicationShu
 
 @Module({})
 export class WorkerModule {
-  static forRoot(env: Env, handlers: HandlerRegistry = defaultHandlers()): DynamicModule {
+  static forRoot(env: Env, handlers?: HandlerRegistry): DynamicModule {
     return {
       module: WorkerModule,
       imports: [
@@ -89,16 +91,21 @@ export class WorkerModule {
       ],
       providers: [
         { provide: WORKER_ENV, useValue: env },
-        { provide: HANDLERS, useValue: handlers },
         { provide: DataSource, useFactory: () => createDataSource(env.DATABASE_URL).initialize() },
+        {
+          provide: HANDLERS,
+          inject: [DataSource],
+          useFactory: (ds: DataSource) => handlers ?? defaultHandlers(env, ds),
+        },
         WorkerLifecycle,
       ],
     };
   }
 }
 
-export function defaultHandlers(): HandlerRegistry {
+export function defaultHandlers(env: Env, ds: DataSource): HandlerRegistry {
   const registry = new HandlerRegistry();
   for (const h of systemHandlers) registry.register(h);
+  for (const h of ingestHandlers({ ds, storage: createStorage(env) })) registry.register(h);
   return registry;
 }
