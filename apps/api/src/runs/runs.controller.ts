@@ -94,7 +94,8 @@ export class RunsController {
           for (const e of rows) {
             res.write(`id: ${e.id}\nevent: ${e.kind}\ndata: ${JSON.stringify(toRunEvent(e))}\n\n`);
             last = e.id;
-            if (e.kind === 'run' && TERMINAL.has(e.status)) runDone = true;
+            // the latest run event decides (a retried run goes failed → pending → … again)
+            if (e.kind === 'run') runDone = TERMINAL.has(e.status);
           }
           if (rows.length === 500) again = true;
         } while (again && !closed);

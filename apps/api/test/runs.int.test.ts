@@ -195,3 +195,46 @@ describe('back-pressure on run creation (real Postgres)', () => {
     await ds.destroy();
   });
 });
+
+describe('SSE after a manual retry (real Postgres + Redis)', () => {
+  it('keeps streaming a retried run until it really finishes', async () => {
+    const ds = await freshTestDb();
+    await seedMerchant(ds, A);
+    const app = await createApp(testEnv());
+    await app.listen(0, '127.0.0.1');
+    const base = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
+    const cookie = await loginCookie(app, A.email, A.password);
+    const prefix = `test-${randomUUID().slice(0, 8)}`;
+    const redisUrl = testEnv().REDIS_URL;
+    const qs = new QueueSet({ redisUrl, prefix });
+    const registry = new HandlerRegistry();
+    for (const h of systemHandlers) registry.register(h);
+    const workers = new QueueWorkers(
+      { redisUrl, prefix, concurrency: { media: 1, ai: 1, render: 1 } },
+      new JobRunner(ds, registry, { workerId: 'w-retry' }),
+    );
+    const d = new Dispatcher(ds, qs, { pollMs: 25 });
+    workers.start(['media']);
+    d.start();
+    const api = (path: string, init: RequestInit = {}) =>
+      fetch(`${base}${path}`, { ...init, headers: { cookie, 'content-type': 'application/json' } });
+    const run = (await (
+      await api('/workflow-runs/test', {
+        method: 'POST',
+        body: JSON.stringify({ ms: 400, steps: 2, failFirstAttempt: true }),
+      })
+    ).json()) as { id: string; jobs: { id: string }[] };
+    const first = await readSse(await api(`/workflow-runs/${run.id}/events`));
+    expect(first.filter((e) => e.event === 'run').at(-1)?.data.status).toBe('failed');
+    expect((await api(`/jobs/${run.jobs[0]?.id}/retry`, { method: 'POST' })).status).toBe(200);
+    const second = await readSse(await api(`/workflow-runs/${run.id}/events`)); // full replay incl. the old 'failed'
+    expect(second.filter((e) => e.event === 'run').at(-1)?.data.status).toBe('succeeded');
+    expect(second.at(-1)?.event).toBe('end');
+    await d.stop();
+    await workers.close();
+    for (const q of QUEUES) await qs.get(q).obliterate({ force: true });
+    await qs.close();
+    await app.close();
+    await ds.destroy();
+  });
+});
