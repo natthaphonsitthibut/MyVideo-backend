@@ -14,14 +14,26 @@ export default defineConfig({
     },
   },
   test: {
-    include: [
-      'apps/*/src/**/*.test.ts',
-      'apps/*/test/**/*.test.ts',
-      'libs/*/src/**/*.test.ts',
-      'libs/*/test/**/*.test.ts',
-    ],
     maxWorkers: 2,
-    testTimeout: 20_000,
-    hookTimeout: 30_000,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['apps/*/src/**/*.test.ts', 'libs/*/src/**/*.test.ts'],
+        },
+      },
+      {
+        // Integration tests share one real test database → run files one at a time.
+        extends: true,
+        test: {
+          name: 'int',
+          include: ['apps/*/test/**/*.int.test.ts', 'libs/*/test/**/*.int.test.ts'],
+          fileParallelism: false,
+          testTimeout: 20_000,
+          hookTimeout: 30_000,
+        },
+      },
+    ],
   },
 });

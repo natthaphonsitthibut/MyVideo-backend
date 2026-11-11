@@ -12,15 +12,20 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "test": "vitest run",
-    "test:unit": "vitest run --exclude \"**/*.int.test.ts\"",
-    "test:int": "vitest run int.test",
+    "test:unit": "vitest run --project unit",
+    "test:int": "vitest run --project int",
     "start:api": "node --env-file-if-exists=.env apps/api/dist/main.js",
-    "start:worker": "node --env-file-if-exists=.env apps/worker/dist/main.js"
+    "start:worker": "node --env-file-if-exists=.env apps/worker/dist/main.js",
+    "db:migrate": "pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/node_modules/typeorm/cli.js migration:run -d libs/infra/dist/db/cli-data-source.js",
+    "db:revert": "pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/node_modules/typeorm/cli.js migration:revert -d libs/infra/dist/db/cli-data-source.js",
+    "db:generate": "./scripts/db-generate.sh",
+    "db:seed": "pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/dist/db/seed-cli.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@myvideo/infra": "workspace:*",
     "@types/node": "^24.19.2",
+    "typeorm": "1.1.2",
     "typescript": "7.0.2",
     "vitest": "5.1.0"
   }

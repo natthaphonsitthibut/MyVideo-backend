@@ -1,2 +1,7 @@
+export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';
+export { createDataSource } from './db/data-source.js';
+export { entities, MerchantEntity, UserEntity } from './db/entities/index.js';
+export { migrations } from './db/migrations/index.js';
+export { type SeedInput, seedMerchant } from './db/seed.js';
 export { type ProbeResult, probePostgres, probeRedis } from './health/probes.js';
