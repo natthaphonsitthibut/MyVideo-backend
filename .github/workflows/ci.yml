@@ -43,6 +43,8 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: services/ai/uv.lock
+      - name: ffmpeg (process-control tests spawn real ffmpeg)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && ffmpeg -version | head -1
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
