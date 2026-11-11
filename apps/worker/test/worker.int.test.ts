@@ -57,6 +57,15 @@ describe('worker app (real Postgres + Redis)', () => {
       .toBe('succeeded');
     const job = await ds.getRepository(JobEntity).findOneByOrFail({ id: jobId });
     expect(job.result).toEqual({ sleptMs: 300 });
-    expect(job.lockedBy).toMatch(/:\d+$/);
+    expect(job.lockedBy).toBeNull();
+    const attempts: { worker_id: string; status: string }[] = await ds.query(
+      'SELECT worker_id, status FROM job_attempts WHERE job_id = $1',
+      [jobId],
+    );
+    expect(attempts).toEqual([{ worker_id: expect.stringMatching(/:\d+$/), status: 'succeeded' }]);
+    const run: { status: string }[] = await ds.query('SELECT status FROM workflow_runs WHERE id = $1', [
+      job.workflowRunId,
+    ]);
+    expect(run[0]?.status).toBe('succeeded');
   });
 });

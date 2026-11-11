@@ -33,5 +33,11 @@ export {
 } from './jobs/handlers.js';
 export { createRunInTransaction, enqueueInTransaction, type NewJob, type NewRun } from './jobs/job-store.js';
 export { bullJobId, type QueueMessage, QueueSet, redisConnection } from './jobs/queues.js';
-export { defaultWorkerId, JobRunner, type RunOutcome } from './jobs/runner.js';
+export {
+  defaultWorkerId,
+  JobRunner,
+  type RunnerOptions,
+  type RunOutcome,
+  refreshRunStatus,
+} from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';

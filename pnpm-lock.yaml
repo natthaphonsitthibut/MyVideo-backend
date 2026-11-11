@@ -35,6 +35,9 @@ importers:
       '@myvideo/contracts':
         specifier: workspace:*
         version: link:../../libs/contracts
+      '@myvideo/domain':
+        specifier: workspace:*
+        version: link:../../libs/domain
       '@myvideo/infra':
         specifier: workspace:*
         version: link:../../libs/infra
@@ -117,6 +120,9 @@ importers:
 
   libs/contracts:
     dependencies:
+      '@myvideo/domain':
+        specifier: workspace:*
+        version: link:../domain
       zod:
         specifier: 4.6.7
         version: 4.6.7

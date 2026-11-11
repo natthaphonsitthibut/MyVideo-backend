@@ -40,6 +40,11 @@ export class Dispatcher {
   /** Marks due pending rows queued and commits; returns them. Exposed for crash tests. */
   async claimDue(): Promise<Claimed[]> {
     return this.ds.transaction(async (em) => {
+      // retryable failures whose backoff has passed become dispatchable again (failed → pending)
+      await em.query(
+        `UPDATE jobs SET status = 'pending', updated_at = now()
+          WHERE status = 'failed' AND run_after <= now() AND cancel_requested = false`,
+      );
       const rows: Claimed[] = await em.query(
         `SELECT id, queue, type, attempts FROM jobs
           WHERE status = 'pending' AND run_after <= now()

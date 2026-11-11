@@ -129,7 +129,7 @@ describe('outbox dispatcher (real Postgres + Redis)', () => {
     const dispatcher = new Dispatcher(ds, qs, { pollMs: 50 });
     const workers = new QueueWorkers(
       { redisUrl, prefix, concurrency: { media: 1, ai: 1, render: 1 } },
-      new JobRunner(ds, new HandlerRegistry().register(systemHandlers[0]!), 'test-worker'),
+      new JobRunner(ds, new HandlerRegistry().register(systemHandlers[0]!), { workerId: 'test-worker' }),
     );
     opened.push({ close: () => dispatcher.stop() }, workers);
     workers.start(['media']);
