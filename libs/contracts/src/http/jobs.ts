@@ -39,6 +39,24 @@ export type JobSummary = z.infer<typeof JobSummary>;
 
 export const JobIdParams = z.object({ id: z.uuid() });
 
+export const cancelJob = defineRoute({
+  operationId: 'cancelJob',
+  method: 'post',
+  path: '/jobs/{id}/cancel',
+  summary: 'Cancel a job: waiting jobs stop at once, a running job is asked to stop (its process is killed)',
+  tags: ['jobs'],
+  auth: true,
+  request: { params: JobIdParams },
+  responses: {
+    200: {
+      description: 'Cancelled, or cancel requested (cancelRequested: true while it stops)',
+      schema: JobSummary,
+    },
+    404: { description: 'No such job for this merchant', schema: ApiErrorBody },
+    409: { description: 'Job already finished', schema: ApiErrorBody },
+  },
+});
+
 export const retryJob = defineRoute({
   operationId: 'retryJob',
   method: 'post',

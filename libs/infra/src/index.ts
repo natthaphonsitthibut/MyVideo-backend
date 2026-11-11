@@ -41,3 +41,11 @@ export {
   refreshRunStatus,
 } from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';
+export {
+  ffmpegProgressParser,
+  ProcessError,
+  type ProcessResult,
+  type RunProcessOptions,
+  runProcess,
+  withTempDir,
+} from './process/run-process.js';

@@ -9,6 +9,15 @@ import { JobsService } from './jobs.service.js';
 export class JobsController {
   constructor(@Inject(JobsService) private readonly jobs: JobsService) {}
 
+  @Post(':id/cancel')
+  @HttpCode(200)
+  async cancel(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(JobIdParams)) p: { id: string },
+  ): Promise<JobSummary> {
+    return toJobSummary(await this.jobs.cancel(merchantId, p.id));
+  }
+
   @Post(':id/retry')
   @HttpCode(200)
   async retry(
