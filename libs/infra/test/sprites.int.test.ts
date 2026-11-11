@@ -22,6 +22,8 @@ const has = !!footageClip('talkinghead-th-portrait.mp4');
 
 /** SSIM of two images via ffmpeg's stats file. */
 async function ssim(a: string, b: string): Promise<number> {
+  const { existsSync } = await import('node:fs');
+  if (!existsSync(a) || !existsSync(b)) throw new Error(`missing ${existsSync(a) ? b : a}`);
   const log = `${a}.${Math.random().toString(36).slice(2)}.ssim.txt`;
   await runProcess('ffmpeg', [
     '-v',
@@ -107,7 +109,7 @@ describe.skipIf(!has)('media.sprites on real footage', { timeout: 180_000 }, () 
       ]);
       const scores: Record<string, number> = {};
       for (const off of [-1.5, 0, 1.5]) {
-        const tt = Math.min(372.9, Math.max(0, t + off));
+        const tt = Math.min(372.4, Math.max(0, t + off)); // stay inside the 373 s file
         const grab = join(work, `grab-${t}-${off}.png`);
         await runProcess('ffmpeg', [
           '-v',

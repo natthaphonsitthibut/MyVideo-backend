@@ -102,7 +102,17 @@ export function runProcess(
       opts.signal?.removeEventListener('abort', onAbort);
       if (reason) reject(reason);
       else if (code === 0) resolve({ code, stderrTail: stderr, durationMs: Date.now() - started });
-      else reject(new ProcessError(`${command} exited with ${code ?? sig}`, code, sig, stderr));
+      else {
+        const last = stderr.trim().split('\n').pop()?.slice(0, 300) ?? '';
+        reject(
+          new ProcessError(
+            `${command} exited with ${code ?? sig}${last ? `: ${last}` : ''}`,
+            code,
+            sig,
+            stderr,
+          ),
+        );
+      }
     });
   });
 }
