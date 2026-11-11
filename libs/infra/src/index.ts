@@ -57,3 +57,6 @@ export {
   runProcess,
   withTempDir,
 } from './process/run-process.js';
+export { createStorage } from './storage/create-storage.js';
+export { LocalStorage } from './storage/local-storage.js';
+export { S3Storage, type S3StorageConfig } from './storage/s3-storage.js';
