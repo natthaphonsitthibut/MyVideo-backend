@@ -19,6 +19,8 @@ export const envSchema = z
     SESSION_SECRET: z.string().min(8),
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     STORAGE_LOCAL_DIR: z.string().default('.data/storage'),
+    /** Where resumable uploads are assembled before they move into storage. */
+    UPLOAD_TMP_DIR: z.string().default('.data/uploads'),
     S3_ENDPOINT: optionalString,
     S3_REGION: optionalString,
     S3_BUCKET: optionalString,

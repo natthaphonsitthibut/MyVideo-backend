@@ -1,3 +1,8 @@
 packages:
   - apps/*
   - libs/*
+
+# One ioredis for everyone (@tus/server brings ioredis 5 for an optional locker we do not use); a second copy
+# made pnpm create a second typeorm instance and broke EntityManager types.
+overrides:
+  ioredis: 6.0.0

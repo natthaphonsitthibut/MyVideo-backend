@@ -15,9 +15,11 @@ export {
   JobAttemptEntity,
   JobEntity,
   JobEventEntity,
+  MediaAssetEntity,
   MerchantEntity,
   SessionEntity,
   UserEntity,
+  VideoSourceEntity,
   WorkflowRunEntity,
 } from './db/entities/index.js';
 export { migrations } from './db/migrations/index.js';
