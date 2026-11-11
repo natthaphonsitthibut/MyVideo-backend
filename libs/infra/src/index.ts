@@ -63,6 +63,7 @@ export {
 export { noAudioPeaks, PEAKS_RECIPE, PeaksBuilder, type PeaksJson, type PeaksLevel } from './media/peaks.js';
 export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
 export { type ProxyDeps, proxyHandler } from './media/proxy-handler.js';
+export { SPRITES_RECIPE, sheetArgs, spritesHandler, tileHeightFor } from './media/sprites-handler.js';
 export {
   ffmpegProgressParser,
   ProcessError,

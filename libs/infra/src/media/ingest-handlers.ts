@@ -5,6 +5,7 @@ import { audioHandler } from './audio-handler.js';
 import { type ProbeInfo, probeFile } from './probe.js';
 import { proxyHandler } from './proxy-handler.js';
 import { loadSource, markSourceFailed } from './source-helpers.js';
+import { spritesHandler } from './sprites-handler.js';
 
 export { loadSource, markSourceFailed };
 
@@ -66,5 +67,6 @@ export function ingestHandlers(deps: IngestDeps): JobHandler[] {
       segmentSeconds: deps.proxySegmentSeconds ?? 300,
     }),
     audioHandler(deps),
+    spritesHandler(deps),
   ];
 }

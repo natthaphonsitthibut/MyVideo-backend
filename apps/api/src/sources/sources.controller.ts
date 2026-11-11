@@ -1,6 +1,13 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { AssetParams, SourceIdParams, type SourceSummary, UploadIdParams } from '@myvideo/contracts';
+import {
+  AssetParams,
+  SourceIdParams,
+  type SourceSummary,
+  SpriteSheetParams,
+  UploadIdParams,
+} from '@myvideo/contracts';
+import { storageKeys } from '@myvideo/domain';
 import { Controller, Get, HttpException, HttpStatus, Inject, Param, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CurrentMerchant } from '../auth/auth-context.js';
@@ -44,6 +51,24 @@ export class SourcesController {
     res.setHeader('cache-control', 'private, max-age=3600');
     if (range) res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stat.size}`);
     await pipeline(Readable.from(file.body), res).catch(() => undefined); // client aborts are normal while seeking
+  }
+
+  @Get(':id/sprites/:sheet')
+  async spriteSheet(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SpriteSheetParams)) p: { id: string; sheet: number },
+    @Res() res: Response,
+  ): Promise<void> {
+    const asset = await this.sources.asset(merchantId, p.id, 'sprites');
+    if (p.sheet >= Number(asset.meta.sheets ?? 0))
+      throw new HttpException('Sheet not found', HttpStatus.NOT_FOUND);
+    const key = storageKeys.spriteSheet(merchantId, p.id, asset.id, asset.recipeVersion, p.sheet);
+    const file = await this.sources.store.read(key);
+    res.status(200);
+    res.setHeader('content-type', 'image/jpeg');
+    res.setHeader('content-length', String(file.length));
+    res.setHeader('cache-control', 'private, max-age=86400, immutable');
+    await pipeline(Readable.from(file.body), res).catch(() => undefined);
   }
 
   @Get(':id')

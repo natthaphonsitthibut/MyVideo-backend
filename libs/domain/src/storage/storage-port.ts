@@ -82,6 +82,9 @@ export const storageKeys = {
   ): string {
     return `m/${merchantId}/sources/${sourceId}/derived/${assetId}/${kind}-v${recipe}.${ext}`;
   },
+  spriteSheet(merchantId: string, sourceId: string, assetId: string, recipe: number, sheet: number): string {
+    return `m/${merchantId}/sources/${sourceId}/derived/${assetId}/sprites-v${recipe}-sheet-${String(sheet).padStart(3, '0')}.jpg`;
+  },
   render(merchantId: string, renderId: string, file: string): string {
     return `m/${merchantId}/renders/${renderId}/${file}`;
   },

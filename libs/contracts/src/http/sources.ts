@@ -73,3 +73,23 @@ export const getSourceAsset = defineRoute({
     416: { description: 'Range not satisfiable', schema: ApiErrorBody },
   },
 });
+
+export const SpriteSheetParams = z.object({
+  id: z.uuid(),
+  sheet: z.coerce.number().int().min(0).max(10_000),
+});
+
+export const getSpriteSheet = defineRoute({
+  operationId: 'getSpriteSheet',
+  method: 'get',
+  path: '/sources/{id}/sprites/{sheet}',
+  summary:
+    'One thumbnail sprite sheet (JPEG, 10×10 tiles, 1 tile per second); the index is /sources/{id}/assets/sprites',
+  tags: ['sources'],
+  auth: true,
+  request: { params: SpriteSheetParams },
+  responses: {
+    200: { description: 'JPEG image' },
+    404: { description: 'No such sheet for this merchant', schema: ApiErrorBody },
+  },
+});
