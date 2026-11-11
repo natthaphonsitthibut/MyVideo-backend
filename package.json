@@ -20,7 +20,11 @@
     "db:revert": "pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/node_modules/typeorm/cli.js migration:revert -d libs/infra/dist/db/cli-data-source.js",
     "db:generate": "./scripts/db-generate.sh",
     "db:seed": "pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/dist/db/seed-cli.js",
-    "gen:openapi": "pnpm --filter @myvideo/contracts build >/dev/null && node libs/contracts/dist/cli/gen-openapi.js > openapi.json"
+    "gen:openapi": "pnpm --filter @myvideo/contracts build >/dev/null && node libs/contracts/dist/cli/gen-openapi.js > openapi.json",
+    "ai:sync": "uv --directory services/ai sync --frozen",
+    "ai:start": "uv --directory services/ai run --frozen python -m myvideo_ai",
+    "ai:test": "uv --directory services/ai run --frozen pytest",
+    "ai:lint": "uv --directory services/ai run --frozen ruff check . && uv --directory services/ai run --frozen ruff format --check ."
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",

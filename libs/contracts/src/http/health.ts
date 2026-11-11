@@ -16,7 +16,7 @@ export const HealthReport = named(
   'HealthReport',
   z.object({
     status: z.enum(['ok', 'degraded']),
-    checks: z.object({ postgres: CheckStatus, redis: CheckStatus }),
+    checks: z.object({ postgres: CheckStatus, redis: CheckStatus, ai: CheckStatus }),
   }),
   'ok when every dependency is up; the HTTP status is 503 otherwise',
 );
@@ -26,7 +26,7 @@ export const getHealth = defineRoute({
   operationId: 'getHealth',
   method: 'get',
   path: '/health',
-  summary: 'Dependency health (Postgres, Redis)',
+  summary: 'Dependency health (Postgres, Redis, AI service)',
   tags: ['system'],
   auth: false,
   responses: {

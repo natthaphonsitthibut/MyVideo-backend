@@ -1,3 +1,10 @@
+export {
+  AiHealth,
+  AiServiceClient,
+  type AiServiceClientOptions,
+  AiServiceError,
+  AiServiceUnavailableError,
+} from './ai/ai-service.client.js';
 export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';
 export { createDataSource } from './db/data-source.js';

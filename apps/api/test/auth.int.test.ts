@@ -58,7 +58,10 @@ describe('auth + tenant context (real Postgres)', () => {
   });
 
   it('keeps /health public', async () => {
-    expect((await http.get('/health')).status).toBe(200);
+    // No AI service in this suite → 503 report, but never 401.
+    const res = await http.get('/health');
+    expect(res.status).not.toBe(401);
+    expect(res.body.checks.postgres.status).toBe('up');
   });
 
   it('refuses wrong passwords and unknown emails with the same answer', async () => {
