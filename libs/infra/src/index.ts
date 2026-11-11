@@ -52,6 +52,7 @@ export {
   refreshRunStatus,
 } from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';
+export { AUDIO_RECIPE, audioHandler } from './media/audio-handler.js';
 export {
   type IngestDeps,
   ingestHandlers,
@@ -59,6 +60,7 @@ export {
   markSourceFailed,
   probeHandler,
 } from './media/ingest-handlers.js';
+export { noAudioPeaks, PEAKS_RECIPE, PeaksBuilder, type PeaksJson, type PeaksLevel } from './media/peaks.js';
 export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
 export { type ProxyDeps, proxyHandler } from './media/proxy-handler.js';
 export {

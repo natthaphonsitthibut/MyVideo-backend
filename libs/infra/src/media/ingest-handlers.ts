@@ -1,6 +1,7 @@
 import type { StoragePort } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
+import { audioHandler } from './audio-handler.js';
 import { type ProbeInfo, probeFile } from './probe.js';
 import { proxyHandler } from './proxy-handler.js';
 import { loadSource, markSourceFailed } from './source-helpers.js';
@@ -64,5 +65,6 @@ export function ingestHandlers(deps: IngestDeps): JobHandler[] {
       encoder: deps.proxyEncoder ?? 'libx264',
       segmentSeconds: deps.proxySegmentSeconds ?? 300,
     }),
+    audioHandler(deps),
   ];
 }

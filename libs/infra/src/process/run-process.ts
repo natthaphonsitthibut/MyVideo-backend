@@ -26,6 +26,8 @@ export type RunProcessOptions = {
   /** Grace period between SIGTERM and SIGKILL. */
   killGraceMs?: number;
   onStdoutLine?: (line: string) => void;
+  /** Raw stdout bytes (e.g. PCM from ffmpeg). Mutually exclusive with onStdoutLine. */
+  onStdoutData?: (chunk: Buffer) => void;
   onSpawn?: (pid: number) => void;
 };
 
@@ -82,7 +84,9 @@ export function runProcess(
         )
       : undefined;
     if (child.pid) opts.onSpawn?.(child.pid);
-    if (opts.onStdoutLine && child.stdout) {
+    if (opts.onStdoutData && child.stdout) {
+      child.stdout.on('data', opts.onStdoutData);
+    } else if (opts.onStdoutLine && child.stdout) {
       createInterface({ input: child.stdout }).on('line', opts.onStdoutLine);
     } else child.stdout?.resume();
     child.stderr?.on('data', (d: Buffer) => {
