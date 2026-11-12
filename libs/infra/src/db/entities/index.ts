@@ -8,6 +8,7 @@ import { LlmCallEntity } from './llm-call.entity.js';
 import { MediaAssetEntity } from './media-asset.entity.js';
 import { MerchantEntity } from './merchant.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from './project.entity.js';
+import { ProjectFolderEntity, ProjectFolderSourceEntity } from './project-folder.entity.js';
 import { RenderEntity } from './render.entity.js';
 import { SessionEntity } from './session.entity.js';
 import {
@@ -33,6 +34,8 @@ export {
   MediaAssetEntity,
   MerchantEntity,
   ProjectEntity,
+  ProjectFolderEntity,
+  ProjectFolderSourceEntity,
   ProjectVersionEntity,
   RenderEntity,
   SessionEntity,
@@ -60,6 +63,8 @@ export const entities = [
   TranscriptSegmentEntity,
   TranscriptEditEntity,
   ProjectEntity,
+  ProjectFolderEntity,
+  ProjectFolderSourceEntity,
   ProjectVersionEntity,
   RenderEntity,
   LlmCallEntity,

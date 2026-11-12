@@ -19,6 +19,7 @@ import { TranscriptEditReview1794493000000 } from './1794493000000-TranscriptEdi
 import { BrandKits1794494000000 } from './1794494000000-BrandKits.js';
 import { TemplateVersionReason1794495000000 } from './1794495000000-TemplateVersionReason.js';
 import { PurgeRun1794496000000 } from './1794496000000-PurgeRun.js';
+import { ProjectFolders1794497000000 } from './1794497000000-ProjectFolders.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -44,4 +45,5 @@ export const migrations: Function[] = [
   BrandKits1794494000000,
   TemplateVersionReason1794495000000,
   PurgeRun1794496000000,
+  ProjectFolders1794497000000,
 ];

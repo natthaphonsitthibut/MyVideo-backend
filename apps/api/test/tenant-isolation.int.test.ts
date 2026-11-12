@@ -36,6 +36,9 @@ const SHARED = new Set([
   'get /health',
   'post /auth/login',
 ]);
+// D-039: idempotent deletion returns the same empty 204 for absent and foreign IDs.
+// Check that A's resource remains byte-for-byte unchanged instead of requiring an error status.
+const IDEMPOTENT_DELETES = new Set(['delete /folders/{id}', 'delete /projects/{id}', 'delete /sources/{id}']);
 
 /**
  * Tenant isolation (E11-F01), generated from the route contracts: for EVERY authenticated route that takes an id,
@@ -72,6 +75,10 @@ describe('tenant isolation over every route (real Postgres)', () => {
     base = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
     cookieA = await loginCookie(app, A.email, A.password);
     cookieB = await loginCookie(app, B.email, B.password);
+    const folder = (await (await call('post', '/folders', cookieA, { title: 'โฟลเดอร์ร้าน A' })).json()) as {
+      id: string;
+    };
+    ids.folder = folder.id;
     const { id: _i, merchantId: _m, ...doc } = structuredClone(s01Clip) as Record<string, unknown>;
     const project = (await (
       await call('post', '/projects', cookieA, { title: 'ของร้าน A', doc })
@@ -118,23 +125,25 @@ describe('tenant isolation over every route (real Postgres)', () => {
 
   /** A's real resource for a path, or null when the route has no merchant resource in its path. */
   function fill(path: string): string | null {
-    const id = path.startsWith('/sources/by-upload/')
-      ? null
-      : path.startsWith('/sources/')
-        ? sourceId
-        : path.startsWith('/projects/')
-          ? ids.project
-          : path.startsWith('/renders/')
-            ? ids.render
-            : path.startsWith('/jobs/')
-              ? ids.job
-              : path.startsWith('/workflow-runs/')
-                ? ids.run
-                : path.startsWith('/clip-suggestions/')
-                  ? ids.suggestion
-                  : path.startsWith('/review-videos/')
-                    ? ids.review
-                    : undefined;
+    const id = path.startsWith('/folders/')
+      ? ids.folder
+      : path.startsWith('/sources/by-upload/')
+        ? null
+        : path.startsWith('/sources/')
+          ? sourceId
+          : path.startsWith('/projects/')
+            ? ids.project
+            : path.startsWith('/renders/')
+              ? ids.render
+              : path.startsWith('/jobs/')
+                ? ids.job
+                : path.startsWith('/workflow-runs/')
+                  ? ids.run
+                  : path.startsWith('/clip-suggestions/')
+                    ? ids.suggestion
+                    : path.startsWith('/review-videos/')
+                      ? ids.review
+                      : undefined;
     if (id === undefined) throw new Error(`tenant suite has no fixture for ${path} — add one`);
     return path
       .replace('{uploadId}', 'up-s01')
@@ -148,6 +157,7 @@ describe('tenant isolation over every route (real Postgres)', () => {
 
   /** Bodies that pass validation, so a refusal is about ownership, not the payload. */
   const BODY: Record<string, unknown> = {
+    'post /folders/{id}/sources': { sourceIds: [sourceId] },
     'put /projects/{id}': { baseVersion: 1, doc: {} },
     'post /projects/{id}/renders': { preset: 'standard' },
     'post /projects/{id}/restyle': { styleId: 'sale-fast' },
@@ -158,13 +168,14 @@ describe('tenant isolation over every route (real Postgres)', () => {
     'put /sources/{id}/transcript/words/{seq}/{index}': { text: 'ก' },
   };
 
-  it('B gets no 2xx and none of A’s data on every route that takes A’s id', async () => {
+  it('B gets no data or mutations on every route that takes A’s id', async () => {
     const checked: string[] = [];
     for (const r of routes) {
       const key = `${r.method} ${r.path}`;
       if (!r.auth || SHARED.has(key) || !r.path.includes('{')) continue;
       const path = fill(r.path);
       if (path === null) continue;
+      const before = IDEMPOTENT_DELETES.has(key) ? await (await call('get', path, cookieA)).json() : null;
       const res = await call(
         r.method,
         path,
@@ -172,7 +183,14 @@ describe('tenant isolation over every route (real Postgres)', () => {
         r.method === 'get' || r.method === 'delete' ? undefined : (BODY[key] ?? {}),
       );
       const text = await res.text();
-      expect(res.status, `${key} as B → ${res.status} ${text.slice(0, 200)}`).toBeGreaterThanOrEqual(400);
+      if (IDEMPOTENT_DELETES.has(key) && res.status === 204) {
+        expect(text, key).toBe('');
+        const after = await call('get', path, cookieA);
+        expect(after.status, `${key}: A still owns the resource`).toBe(200);
+        expect(await after.json(), `${key}: A's resource is unchanged`).toEqual(before);
+      } else {
+        expect(res.status, `${key} as B → ${res.status} ${text.slice(0, 200)}`).toBeGreaterThanOrEqual(400);
+      }
       expect(res.status, key).not.toBe(500);
       for (const v of [...Object.values(ids), sourceId, 'ของร้าน A']) expect(text, key).not.toContain(v);
       checked.push(key);
@@ -182,7 +200,7 @@ describe('tenant isolation over every route (real Postgres)', () => {
   });
 
   it('list routes never show A’s rows to B; B’s brand kit is B’s own', async () => {
-    for (const path of ['/sources', '/projects', '/renders', '/workflow-runs']) {
+    for (const path of ['/folders', '/sources', '/projects', '/renders', '/workflow-runs']) {
       const res = await call('get', path, cookieB);
       expect(res.status, path).toBe(200);
       const text = await res.text();
@@ -202,6 +220,7 @@ describe('tenant isolation over every route (real Postgres)', () => {
 
   it('the same calls work for A (the fixtures are real, not just missing)', async () => {
     for (const path of [
+      `/folders/${ids.folder}`,
       `/projects/${ids.project}`,
       `/renders/${ids.render}`,
       `/workflow-runs/${ids.run}`,

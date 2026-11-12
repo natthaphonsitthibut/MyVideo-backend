@@ -2,6 +2,7 @@ export * from './http/auth.js';
 export * from './http/brand-kit.js';
 export * from './http/clips.js';
 export * from './http/errors.js';
+export * from './http/folders.js';
 export * from './http/health.js';
 export * from './http/jobs.js';
 export * from './http/library.js';

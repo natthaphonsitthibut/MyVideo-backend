@@ -8,12 +8,14 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { MerchantEntity } from './merchant.entity.js';
 
 /** One uploaded video and everything known about it. The original file is immutable (ARCHITECTURE §4). */
 @Entity({ name: 'video_sources' })
+@Unique('video_sources_id_merchant_key', ['id', 'merchantId'])
 @Check('video_sources_status_valid', `status IN (${SOURCE_STATUSES.map((s) => `'${s}'`).join(', ')})`)
 @Check('video_sources_size_valid', `size_bytes > 0`)
 @Check('video_sources_title_not_blank', `length(btrim(title)) > 0`)
