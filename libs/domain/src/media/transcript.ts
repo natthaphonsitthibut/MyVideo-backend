@@ -10,4 +10,5 @@ export type TranscriptChunkStatus = (typeof TRANSCRIPT_CHUNK_STATUSES)[number];
  * sha256 and the ASR model: bump it when the output for the same audio would change.
  */
 // 2: whisper.cpp built-in VAD off (D-017)
-export const TRANSCRIPT_RECIPE = 2;
+// 3: word start times from whisper DTW token times (E07-F10)
+export const TRANSCRIPT_RECIPE = 3;

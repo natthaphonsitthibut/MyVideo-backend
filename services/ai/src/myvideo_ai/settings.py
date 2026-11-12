@@ -34,6 +34,9 @@ class Settings:
     asr_builtin_vad: bool = field(
         default_factory=lambda: os.environ.get("ASR_BUILTIN_VAD", "0").strip().lower() in ("1", "true", "yes")
     )
+    # whisper.cpp DTW alignment-heads preset for word timing (E07-F10); must match ASR_MODEL. Empty = off
+    # (word times then fall back to a character-count spread over each segment).
+    asr_dtw_preset: str = field(default_factory=lambda: os.environ.get("ASR_DTW_PRESET", "large.v3.turbo"))
     # Only files under these directories may be read (internal service, but paths still come from requests).
     allowed_roots: list[Path] = field(default_factory=_roots)
 

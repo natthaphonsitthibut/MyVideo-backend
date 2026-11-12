@@ -196,7 +196,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             duration_ms=r.duration_ms,
             segments=[
                 AsrSegmentOut(
-                    **s.__dict__, words=[WordOut(**w) for w in segment_words(s.text, s.start_ms, s.end_ms)]
+                    start_ms=s.start_ms,
+                    end_ms=s.end_ms,
+                    text=s.text,
+                    avg_logprob=s.avg_logprob,
+                    no_speech_prob=s.no_speech_prob,
+                    words=[WordOut(**w) for w in segment_words(s.text, s.start_ms, s.end_ms, s.tokens)],
                 )
                 for s in r.segments
             ],

@@ -68,11 +68,75 @@ def split_words(text: str) -> list[str]:
     return words
 
 
-def segment_words(text: str, start_ms: int, end_ms: int) -> list[dict]:
-    """Words with contiguous, monotonic timings covering [start_ms, end_ms] exactly."""
+def _squash(text: str) -> str:
+    return normalize_text(text).replace(" ", "")
+
+
+def _dtw_starts(
+    words: list[str], start_ms: int, end_ms: int, tokens: list[tuple[str, int]]
+) -> list[int] | None:
+    """Word start times from DTW token times, or None when the tokens cannot be aligned to the words.
+
+    Character offsets are counted on the normalised, space-free text (what the words are cut from). Token k
+    covers characters [b_k, b_k+1) and starts at its DTW time (clamped into the segment, made monotonic); a
+    character inside a token is interpolated towards the next token's time, so several words in one token
+    still get distinct starts. A word starts at the time of its first character.
+    """
+    full = "".join(words)
+    bounds = [0]
+    prefix = ""
+    for text, _ in tokens:
+        prefix += text
+        bounds.append(max(bounds[-1], len(_squash(prefix))))
+    if bounds[-1] != len(full) or _squash("".join(t for t, _ in tokens)) != full:
+        return None
+    times: list[int] = []
+    for _, t in tokens:
+        times.append(min(max(t, start_ms, times[-1] if times else start_ms), end_ms))
+    times.append(end_ms)
+
+    def at(c: int) -> int:
+        for k in range(len(tokens)):
+            if bounds[k] <= c < bounds[k + 1]:
+                t0, t1 = times[k], times[k + 1]
+                return t0 + round((t1 - t0) * (c - bounds[k]) / (bounds[k + 1] - bounds[k]))
+        return end_ms
+
+    starts: list[int] = []
+    offset = 0
+    for w in words:
+        starts.append(at(offset))
+        offset += len(w)
+    # every word keeps at least 1 ms and the last one ends at end_ms
+    n = len(starts)
+    for i in range(n):
+        lo = starts[i - 1] + 1 if i else start_ms
+        starts[i] = min(max(starts[i], lo), end_ms - (n - i))
+    if starts[0] < start_ms:
+        return None
+    return starts
+
+
+def segment_words(
+    text: str, start_ms: int, end_ms: int, tokens: list[tuple[str, int]] | None = None
+) -> list[dict]:
+    """Words with contiguous, monotonic timings ending at end_ms.
+
+    With DTW `tokens` (text, ms) each word starts when it is spoken (the first word may start after
+    start_ms). Without them — or if they do not line up with the text — timings are spread over
+    [start_ms, end_ms] by grapheme count and cover it exactly.
+    """
     words = split_words(text)
     if not words:
         return []
+    if tokens and end_ms - start_ms >= len(words):
+        starts = _dtw_starts(words, start_ms, end_ms, tokens)
+        if starts is not None:
+            ends = [*starts[1:], end_ms]
+            return [
+                {"text": w, "start_ms": s, "end_ms": e, "kind": kind_of(w)}
+                for w, s, e in zip(words, starts, ends, strict=True)
+            ]
     weights = [max(1, len([g for g in graphemes(w) if not g.isspace()])) for w in words]
     total = sum(weights)
     span = max(end_ms - start_ms, len(words))  # at least 1 ms per word

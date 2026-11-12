@@ -26,11 +26,20 @@ BUILTIN_VAD_FLAGS = ["--vad", "-vmsd", "30"]
 TUNED_FLAGS = [*BASE_FLAGS, *BUILTIN_VAD_FLAGS]
 
 
-def decode_flags(builtin_vad: bool, vad_model: Path | str) -> list[str]:
-    """whisper-server decoding flags for the chosen configuration."""
-    if not builtin_vad:
-        return list(BASE_FLAGS)
-    return [*BASE_FLAGS, *BUILTIN_VAD_FLAGS, "-vm", str(vad_model)]
+def decode_flags(builtin_vad: bool, vad_model: Path | str, dtw_preset: str = "") -> list[str]:
+    """whisper-server decoding flags for the chosen configuration.
+
+    `dtw_preset` (e.g. "large.v3.turbo", must match the model's alignment heads) turns on DTW token
+    timestamps, used for caption word timing (E07-F10). DTW needs flash attention off (`-nfa`).
+    """
+    flags = list(BASE_FLAGS)
+    if builtin_vad:
+        # whisper.cpp 1.9.5 remaps segment times but NOT `t_dtw` after its built-in VAD (measured on
+        # live-tiedye-b: 297/375 DTW times > 0.5 s outside their segment), so DTW is used only without it.
+        return [*flags, *BUILTIN_VAD_FLAGS, "-vm", str(vad_model)]
+    if dtw_preset:
+        flags += ["-dtw", dtw_preset, "-nfa"]
+    return flags
 
 
 class AsrBusyError(RuntimeError):
@@ -44,6 +53,8 @@ class AsrSegment:
     text: str
     avg_logprob: float | None
     no_speech_prob: float | None
+    # (token text, DTW time in ms) when whisper ran with -dtw; the strings rebuild the raw segment text
+    tokens: list[tuple[str, int]] | None = None
 
 
 @dataclass
@@ -79,6 +90,26 @@ def _multipart(fields: dict[str, str], file_field: str, path: Path) -> tuple[byt
 _ISO = {"thai": "th", "english": "en"}
 
 
+def _dtw_tokens(seg: dict) -> list[tuple[str, int]] | None:
+    """DTW token times (whisper.cpp `t_dtw`, 1/100 s) → ms. None unless every text token has one and the
+    token strings rebuild the segment text exactly (otherwise character offsets could not be trusted)."""
+    words = seg.get("words")
+    if not words:
+        return None
+    out: list[tuple[str, int]] = []
+    for w in words:
+        text = str(w.get("word", ""))
+        if text.startswith("[_"):  # special tokens ([_BEG_], [_TT_...]) carry no text
+            continue
+        t = w.get("t_dtw")
+        if not isinstance(t, int | float) or t < 0:
+            return None
+        out.append((text, round(float(t) * 10)))
+    if not out or "".join(t for t, _ in out) != str(seg.get("text", "")):
+        return None
+    return out
+
+
 def parse_verbose(raw: dict, model: str, elapsed_ms: int) -> AsrResult:
     """whisper-server verbose_json → result. Segment times are seconds (already on the input timeline)."""
     segs = []
@@ -93,6 +124,7 @@ def parse_verbose(raw: dict, model: str, elapsed_ms: int) -> AsrResult:
                 text=text,
                 avg_logprob=float(s["avg_logprob"]) if "avg_logprob" in s else None,
                 no_speech_prob=float(s["no_speech_prob"]) if "no_speech_prob" in s else None,
+                tokens=_dtw_tokens(s),
             )
         )
     segs.sort(key=lambda x: x.start_ms)
@@ -140,7 +172,7 @@ class WhisperServer:
                 self.language,
                 "-t",
                 "4",
-                *decode_flags(self.settings.asr_builtin_vad, vad),
+                *decode_flags(self.settings.asr_builtin_vad, vad, self.settings.asr_dtw_preset),
                 "--host",
                 "127.0.0.1",
                 "--port",
