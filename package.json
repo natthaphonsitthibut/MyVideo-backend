@@ -28,6 +28,7 @@
     "eval:highlights": "pnpm --filter @myvideo/domain build && pnpm --filter @myvideo/infra build && node libs/infra/dist/cli/eval-highlights.js",
     "library:fetch": "pnpm --filter @myvideo/domain build && pnpm --filter @myvideo/contracts build && pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/dist/cli/fetch-sound-library.js",
     "report:live-to-clips": "pnpm --filter @myvideo/domain build && pnpm --filter @myvideo/infra build && node libs/infra/dist/cli/report-live-to-clips.js",
+    "cleanup": "pnpm --filter @myvideo/domain build && pnpm --filter @myvideo/contracts build && pnpm --filter @myvideo/infra build && node --env-file-if-exists=.env libs/infra/dist/cli/cleanup.js",
     "ai:lint": "uv --directory services/ai run --frozen ruff check . && uv --directory services/ai run --frozen ruff format --check ."
   },
   "devDependencies": {
