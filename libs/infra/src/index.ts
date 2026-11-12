@@ -4,7 +4,21 @@ export {
   type AiServiceClientOptions,
   AiServiceError,
   AiServiceUnavailableError,
+  AsrInfo,
+  AsrResult,
+  VadResult,
 } from './ai/ai-service.client.js';
+export {
+  asrChunkHandler,
+  asrMergeHandler,
+  asrPlanHandler,
+  chunkCutArgs,
+  requestTranscription,
+  type StoredSegment,
+  type TranscribeDeps,
+  TranscriptionUnavailableError,
+  transcribeHandlers,
+} from './ai/transcribe-handlers.js';
 export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';
 export { createDataSource } from './db/data-source.js';
@@ -18,6 +32,10 @@ export {
   MediaAssetEntity,
   MerchantEntity,
   SessionEntity,
+  TranscriptChunkEntity,
+  TranscriptEditEntity,
+  TranscriptEntity,
+  TranscriptSegmentEntity,
   UserEntity,
   VideoSourceEntity,
   WorkflowRunEntity,

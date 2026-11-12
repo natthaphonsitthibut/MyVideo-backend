@@ -4,6 +4,12 @@ import { JobEventEntity } from './job-event.entity.js';
 import { MediaAssetEntity } from './media-asset.entity.js';
 import { MerchantEntity } from './merchant.entity.js';
 import { SessionEntity } from './session.entity.js';
+import {
+  TranscriptChunkEntity,
+  TranscriptEditEntity,
+  TranscriptEntity,
+  TranscriptSegmentEntity,
+} from './transcript.entity.js';
 import { UserEntity } from './user.entity.js';
 import { VideoSourceEntity } from './video-source.entity.js';
 import { WorkflowRunEntity } from './workflow-run.entity.js';
@@ -16,6 +22,10 @@ export {
   MediaAssetEntity,
   MerchantEntity,
   SessionEntity,
+  TranscriptChunkEntity,
+  TranscriptEditEntity,
+  TranscriptEntity,
+  TranscriptSegmentEntity,
   UserEntity,
   VideoSourceEntity,
   WorkflowRunEntity,
@@ -31,4 +41,8 @@ export const entities = [
   JobEventEntity,
   VideoSourceEntity,
   MediaAssetEntity,
+  TranscriptEntity,
+  TranscriptChunkEntity,
+  TranscriptSegmentEntity,
+  TranscriptEditEntity,
 ];

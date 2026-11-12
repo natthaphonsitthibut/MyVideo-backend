@@ -16,6 +16,8 @@ export type NextStep = {
   type: string;
   queue: QueueName;
   payload: Record<string, unknown>;
+  /** Distinguishes several steps of the same type in one run (fan-out, e.g. one per chunk). */
+  key?: string;
   maxAttempts?: number;
   timeoutMs?: number;
 };
@@ -24,8 +26,12 @@ export interface JobHandler {
   readonly type: string;
   readonly queue: QueueName;
   run(ctx: JobContext): Promise<Record<string, unknown> | undefined>;
-  /** Steps that follow a success (ARCHITECTURE §5.9: pipelines are step lists, not nested jobs). */
-  next?(job: JobEntity, result: Record<string, unknown>): NextStep[];
+  /**
+   * Steps that follow a success (ARCHITECTURE §5.9: pipelines are step lists, not nested jobs). Runs inside the
+   * transaction that marks this job succeeded, so a fan-in step can check its siblings there; steps are
+   * idempotent per (run, type, key), so two siblings both emitting the same follow-up create it once.
+   */
+  next?(job: JobEntity, result: Record<string, unknown>, em: EntityManager): NextStep[] | Promise<NextStep[]>;
   /** Called inside the transaction that marks the job dead (e.g. to show a failure on the source). */
   onDead?(em: EntityManager, job: JobEntity, error: { message: string; fatal: boolean }): Promise<void>;
 }

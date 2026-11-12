@@ -1,0 +1,375 @@
+{
+ "talkinghead-th-portrait": {
+  "source": "footage/clips/talkinghead-th-portrait.mp4 (MANIFEST C03, CC BY 3.0), whisper.cpp output recorded 2026-11-12",
+  "engine": "whisper.cpp",
+  "model": "ggml-large-v3-turbo-q5_0.bin",
+  "language": "th",
+  "segments": [
+   {
+    "start_ms": 900,
+    "end_ms": 3130,
+    "text": "ไว้อีกข้อนะคะ",
+    "avg_logprob": -0.42520126700401306,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 3130,
+    "end_ms": 4400,
+    "text": "ต่อเนี่ย",
+    "avg_logprob": -0.15107285976409912,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 4400,
+    "end_ms": 6030,
+    "text": "ต้องต่อเนี่ย",
+    "avg_logprob": -0.010318235494196415,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 6030,
+    "end_ms": 7650,
+    "text": "ก็เหมือนกับข้อเมื่อกี้ค่ะ",
+    "avg_logprob": -0.04443000629544258,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 7650,
+    "end_ms": 8610,
+    "text": "แต่ว่า",
+    "avg_logprob": -0.011542479507625103,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 8610,
+    "end_ms": 10850,
+    "text": "ขาวนี้ขอเกียบเทียบเป็นการวิ่งนะคะ",
+    "avg_logprob": -0.27777352929115295,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 10850,
+    "end_ms": 11970,
+    "text": "การวิ่ง",
+    "avg_logprob": -0.03277260810136795,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 11970,
+    "end_ms": 12850,
+    "text": "การเลิกวิ่ง",
+    "avg_logprob": -0.3252449035644531,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 12850,
+    "end_ms": 15250,
+    "text": "ก็คือคุณทำไลฟ์สดครั้งแรก",
+    "avg_logprob": -0.11849159002304077,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 15250,
+    "end_ms": 16250,
+    "text": "เลิกวิ่ง",
+    "avg_logprob": -0.021636486053466797,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 16250,
+    "end_ms": 17050,
+    "text": "แต่",
+    "avg_logprob": -0.0041186013258993626,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 17050,
+    "end_ms": 19280,
+    "text": "พอคิดว่าไลฟ์สดแล้วมันต้องปังตั้งแต่",
+    "avg_logprob": -0.07966561615467072,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 19280,
+    "end_ms": 21340,
+    "text": "แต่เลิกหยุด",
+    "avg_logprob": -0.4370526373386383,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 21340,
+    "end_ms": 23560,
+    "text": "คนอื่นเขาก็วิ่งเหมือนกัน",
+    "avg_logprob": -0.03652974218130112,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 23560,
+    "end_ms": 24850,
+    "text": "กำไว้นะคะ",
+    "avg_logprob": -0.21041665971279144,
+    "no_speech_prob": 1.9280345441075042e-05
+   },
+   {
+    "start_ms": 34820,
+    "end_ms": 36820,
+    "text": "คุณจะนำคนอื่นมาต้องแต่ได้",
+    "avg_logprob": -0.2696722149848938,
+    "no_speech_prob": 2.26465200758863e-11
+   },
+   {
+    "start_ms": 36820,
+    "end_ms": 38820,
+    "text": "แต่คุณมาหยุดเสียก่อน",
+    "avg_logprob": -0.029460402205586433,
+    "no_speech_prob": 2.26465200758863e-11
+   },
+   {
+    "start_ms": 38820,
+    "end_ms": 40920,
+    "text": "ยุดเสียก่อน",
+    "avg_logprob": -0.3245325982570648,
+    "no_speech_prob": 2.26465200758863e-11
+   },
+   {
+    "start_ms": 40920,
+    "end_ms": 42920,
+    "text": "คุณก็ไม่ถึงต้องห่าย",
+    "avg_logprob": -0.37026259303092957,
+    "no_speech_prob": 2.26465200758863e-11
+   },
+   {
+    "start_ms": 42920,
+    "end_ms": 45950,
+    "text": "เพราะฉันจงวิ่งอย่างต่อเนี่ย",
+    "avg_logprob": -0.2899569571018219,
+    "no_speech_prob": 2.26465200758863e-11
+   },
+   {
+    "start_ms": 45950,
+    "end_ms": 49440,
+    "text": "จงทำการตลาดออนไวน์อย่างต่อเนี่ย",
+    "avg_logprob": -0.13759668171405792,
+    "no_speech_prob": 2.26465200758863e-11
+   }
+  ]
+ },
+ "live-tiedye-th-vertical-b": {
+  "source": "footage/clips/live-tiedye-th-vertical-b.mp4 (MANIFEST C02, CC BY 3.0), whisper.cpp output recorded 2026-11-12",
+  "engine": "whisper.cpp",
+  "model": "ggml-large-v3-turbo-q5_0.bin",
+  "language": "th",
+  "segments": [
+   {
+    "start_ms": 30,
+    "end_ms": 1820,
+    "text": "ขายราคานี้ครับผม",
+    "avg_logprob": -0.171828493475914,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 1820,
+    "end_ms": 3380,
+    "text": "รับพิมน้ำมา 100 บาท",
+    "avg_logprob": -0.29923105239868164,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 3380,
+    "end_ms": 4680,
+    "text": "100 บาท",
+    "avg_logprob": -0.6727908253669739,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 4680,
+    "end_ms": 5880,
+    "text": "โห โห ดีสับ",
+    "avg_logprob": -0.8148841261863708,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 5880,
+    "end_ms": 7600,
+    "text": "1500 บาท",
+    "avg_logprob": -0.23737920820713043,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 7600,
+    "end_ms": 8340,
+    "text": "ทำโทรตัวเอง",
+    "avg_logprob": -0.31177234649658203,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 8340,
+    "end_ms": 9220,
+    "text": "ใจเย็น ใจเย็น",
+    "avg_logprob": -0.19633491337299347,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 9220,
+    "end_ms": 10350,
+    "text": "ทำโทรตัวเอง",
+    "avg_logprob": -0.0457732193171978,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 10350,
+    "end_ms": 11780,
+    "text": "แต่ยังไม่ดึงเลยอ่ะ",
+    "avg_logprob": -0.4648839831352234,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 11780,
+    "end_ms": 14130,
+    "text": "ตัวเองอย่า อย่า ว็ก",
+    "avg_logprob": -0.4724081754684448,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 14130,
+    "end_ms": 15790,
+    "text": "เขาไม่โลก",
+    "avg_logprob": -0.29888975620269775,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 15790,
+    "end_ms": 18020,
+    "text": "แต่ยังเย็น",
+    "avg_logprob": -0.14784765243530273,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 18020,
+    "end_ms": 19000,
+    "text": "1500 บาท",
+    "avg_logprob": -0.02848529815673828,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 19000,
+    "end_ms": 23800,
+    "text": "อ่ะ ตามนี้นะครับผม ดีเทล",
+    "avg_logprob": -0.2347067892551422,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 23800,
+    "end_ms": 26780,
+    "text": "1995 ริกฟิกบู นะจ๊ะ",
+    "avg_logprob": -0.35883867740631104,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 26780,
+    "end_ms": 28620,
+    "text": "เอาไปตรงนี้อีกทีหนึ่งนะ",
+    "avg_logprob": -0.09380476176738739,
+    "no_speech_prob": 8.36903879530837e-10
+   },
+   {
+    "start_ms": 28620,
+    "end_ms": 30940,
+    "text": "ด้านหลังจะเป็นเงาหมาอยู่ด้านล่าง",
+    "avg_logprob": -0.1562667191028595,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 30940,
+    "end_ms": 32860,
+    "text": "น้องในน้ำนะ",
+    "avg_logprob": -0.5644590258598328,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 32860,
+    "end_ms": 35540,
+    "text": "น้องสุนักตาเขียวอยู่นี้",
+    "avg_logprob": -0.2521941661834717,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 35540,
+    "end_ms": 38660,
+    "text": "ด้านข้างจะเป็นมุขาววิวสวยๆไปนะ",
+    "avg_logprob": -0.26894375681877136,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 38660,
+    "end_ms": 40660,
+    "text": "OVP สะกินยันแขนนะ",
+    "avg_logprob": -0.5094817876815796,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 40660,
+    "end_ms": 42610,
+    "text": "ไปด้วยควิกบู",
+    "avg_logprob": -0.6176720261573792,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 42610,
+    "end_ms": 43730,
+    "text": "สะกินยันแขน",
+    "avg_logprob": -0.04057057574391365,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 43730,
+    "end_ms": 44850,
+    "text": "ยันแขนอ่ะ",
+    "avg_logprob": -0.21496859192848206,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 44850,
+    "end_ms": 45930,
+    "text": "จริงบอกเลย",
+    "avg_logprob": -0.07424020767211914,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 45930,
+    "end_ms": 47550,
+    "text": "OVP ไม่มีสะกินแขน",
+    "avg_logprob": -0.06220065802335739,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 47550,
+    "end_ms": 49390,
+    "text": "นี้ไม่ใช่ OVP นะ บอกเลยตัวนี้",
+    "avg_logprob": -0.1952347457408905,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 49390,
+    "end_ms": 51900,
+    "text": "ลายชื่ออะไร",
+    "avg_logprob": -0.19698455929756165,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 51900,
+    "end_ms": 53580,
+    "text": "หืม ไปล้องนานแล้ว",
+    "avg_logprob": -0.5005665421485901,
+    "no_speech_prob": 2.7423993742559105e-07
+   },
+   {
+    "start_ms": 53580,
+    "end_ms": 54910,
+    "text": "ล้า ต้องบล้า",
+    "avg_logprob": -0.16032174229621887,
+    "no_speech_prob": 3.1985149462343543e-07
+   }
+  ]
+ }
+}

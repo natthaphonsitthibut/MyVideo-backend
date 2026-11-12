@@ -4,6 +4,8 @@ import { JobsBackbone1794437290673 } from './1794437290673-JobsBackbone.js';
 import { JobQueuedAt1794437366586 } from './1794437366586-JobQueuedAt.js';
 import { JobEvents1794437958981 } from './1794437958981-JobEvents.js';
 import { MediaSources1794439961977 } from './1794439961977-MediaSources.js';
+import { Transcripts1794448632344 } from './1794448632344-Transcripts.js';
+import { TranscriptEdits1794452328318 } from './1794452328318-TranscriptEdits.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -14,4 +16,6 @@ export const migrations: Function[] = [
   JobQueuedAt1794437366586,
   JobEvents1794437958981,
   MediaSources1794439961977,
+  Transcripts1794448632344,
+  TranscriptEdits1794452328318,
 ];

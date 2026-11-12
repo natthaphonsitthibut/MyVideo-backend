@@ -16,3 +16,16 @@ def test_health_reports_ok_and_python_312():
 def test_docs_are_disabled():
     client = TestClient(create_app())
     assert client.get("/docs").status_code == 404
+
+
+def test_asr_info_names_the_model_without_loading_it():
+    app = create_app()
+    client = TestClient(app)
+    res = client.get("/asr/info")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["engine"] == "whisper.cpp"
+    assert body["model"].endswith(".bin")
+    assert body["language"] == "th"
+    assert app.state.asr.proc is None  # info must not start the model process
+    assert body["flags"] == "-mc 0 -sns"  # built-in VAD off by default (D-017)

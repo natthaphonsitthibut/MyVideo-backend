@@ -29,6 +29,48 @@ export const AiHealth = z.object({
 });
 export type AiHealth = z.infer<typeof AiHealth>;
 
+export const VadResult = z.object({
+  segments: z.array(z.object({ start_ms: z.number().int(), end_ms: z.number().int() })),
+  speech_ms: z.number().int(),
+  model: z.string(),
+});
+export type VadResult = z.infer<typeof VadResult>;
+
+export const AsrResult = z.object({
+  language: z.string(),
+  duration_ms: z.number().int(),
+  segments: z.array(
+    z.object({
+      start_ms: z.number().int(),
+      end_ms: z.number().int(),
+      text: z.string(),
+      /** Display words (pythainlp), timings spread over the segment. */
+      words: z.array(
+        z.object({
+          text: z.string(),
+          start_ms: z.number().int(),
+          end_ms: z.number().int(),
+          kind: z.string(),
+        }),
+      ),
+      avg_logprob: z.number().nullable(),
+      no_speech_prob: z.number().nullable(),
+    }),
+  ),
+  model: z.string(),
+  engine: z.string(),
+  elapsed_ms: z.number().int(),
+});
+export type AsrResult = z.infer<typeof AsrResult>;
+
+export const AsrInfo = z.object({
+  engine: z.string(),
+  model: z.string(),
+  language: z.string(),
+  flags: z.string(),
+});
+export type AsrInfo = z.infer<typeof AsrInfo>;
+
 export type AiServiceClientOptions = { baseUrl: string; timeoutMs?: number };
 
 /** Typed HTTP client for `services/ai`. Every call has a timeout; errors map to the two classes above. */
@@ -86,6 +128,31 @@ export class AiServiceClient {
       );
     }
     return parsed.data;
+  }
+
+  /** Speech segments (ms) of a local audio file (Silero VAD). */
+  vad(path: string, opts: { minSilenceMs?: number; signal?: AbortSignal } = {}): Promise<VadResult> {
+    return this.request('/vad', VadResult, {
+      method: 'POST',
+      body: { path, min_silence_ms: opts.minSilenceMs ?? 300 },
+      timeoutMs: 10 * 60_000,
+      signal: opts.signal,
+    });
+  }
+
+  /** Transcribes one local audio chunk. 409 (busy) is retryable: the service runs one chunk at a time. */
+  asr(path: string, opts: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<AsrResult> {
+    return this.request('/asr', AsrResult, {
+      method: 'POST',
+      body: { path },
+      timeoutMs: opts.timeoutMs ?? 30 * 60_000,
+      signal: opts.signal,
+    });
+  }
+
+  /** Which engine/model `/asr` runs (does not load the model). Used in the transcript cache key. */
+  asrInfo(opts: { signal?: AbortSignal } = {}): Promise<AsrInfo> {
+    return this.request('/asr/info', AsrInfo, { signal: opts.signal });
   }
 
   health(timeoutMs = 2000): Promise<AiHealth> {

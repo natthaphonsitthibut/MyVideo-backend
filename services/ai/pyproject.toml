@@ -8,6 +8,7 @@ dependencies = [
     "fastapi==0.162.4",
     "uvicorn==0.54.0",
     "pydantic==2.14.3",
+    "pythainlp==5.4.0",
 ]
 
 [dependency-groups]
@@ -28,6 +29,12 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
 ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# tests run fixed local tools (ffmpeg) to prepare fixtures
+"tests/*" = ["S603", "S607"]
+# the service runs whisper.cpp binaries with argument lists (no shell)
+"src/myvideo_ai/*.py" = ["S603"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
