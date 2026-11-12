@@ -7,7 +7,7 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * window, keep/drop, a type, refined word bounds, a score and a reason with a quote. Every index and quote is
  * checked against the real transcript — an answer that cites words that are not there is rejected (one repair).
  */
-export const RERANK_PROMPT_VERSION = 'rerank-highlights-v1';
+export const RERANK_PROMPT_VERSION = 'rerank-highlights-v2';
 
 export const CLIP_TYPES = ['product-intro', 'demo', 'price-promo', 'faq', 'testimonial', 'other'] as const;
 export type ClipType = (typeof CLIP_TYPES)[number];
@@ -24,7 +24,8 @@ export const RERANK_SYSTEM = [
   'Return one result per candidate with: id; keep (true/false); type (product-intro, demo, price-promo, faq,',
   'testimonial, other); startWord and endWord: word indexes INSIDE the candidate that start at the beginning of',
   'a sentence and end after a complete sentence (tighten the window, never extend it); score 0-100 (how good',
-  'the clip is); reason: one short English sentence; quote: a short phrase copied character for character from',
+  'the clip is); reason: one short natural Thai sentence, at most 90 characters, using plain words a seller uses;',
+  'quote: a short Thai phrase copied character for character from',
   'the transcript between startWord and endWord that supports the reason. Never invent or translate text.',
 ].join('\n');
 
