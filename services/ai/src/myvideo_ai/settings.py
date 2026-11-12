@@ -53,3 +53,20 @@ def checked_path(settings: Settings, path: str) -> Path:
     if not p.is_file():
         raise PathNotAllowed(f"not a file: {path}")
     return p
+
+
+def _inside_roots(settings: Settings, p: Path, path: str) -> None:
+    if not settings.allowed_roots:
+        raise PathNotAllowed("AI_ALLOWED_ROOTS is not configured")
+    roots = [r.resolve() for r in settings.allowed_roots]
+    if not any(p == r or r in p.parents for r in roots):
+        raise PathNotAllowed(f"path outside allowed roots: {path}")
+
+
+def checked_dir(settings: Settings, path: str) -> Path:
+    """An output directory inside the allowed roots (created if missing, never outside them)."""
+    p = Path(path).resolve()
+    _inside_roots(settings, p, path)
+    if p.exists() and not p.is_dir():
+        raise PathNotAllowed(f"not a directory: {path}")
+    return p

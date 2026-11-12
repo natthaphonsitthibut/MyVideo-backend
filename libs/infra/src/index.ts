@@ -6,8 +6,10 @@ export {
   AiServiceUnavailableError,
   AsrInfo,
   AsrResult,
+  ShotsResult,
   VadResult,
 } from './ai/ai-service.client.js';
+export { type ShotsDeps, shotsHandler } from './ai/shots-handler.js';
 export {
   asrChunkHandler,
   asrMergeHandler,
@@ -22,6 +24,10 @@ export {
 export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';
 export { createDataSource } from './db/data-source.js';
+export {
+  AnalysisEntity,
+  DetectedShotEntity,
+} from './db/entities/analysis.entity.js';
 export {
   ATTEMPT_STATUSES,
   type AttemptStatus,

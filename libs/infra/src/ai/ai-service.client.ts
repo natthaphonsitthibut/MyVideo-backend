@@ -36,6 +36,22 @@ export const VadResult = z.object({
 });
 export type VadResult = z.infer<typeof VadResult>;
 
+export const ShotsResult = z.object({
+  engine: z.string(),
+  recipe: z.number().int(),
+  fps: z.number(),
+  cuts_ms: z.array(z.number().int()),
+  shots: z.array(
+    z.object({
+      start_ms: z.number().int(),
+      end_ms: z.number().int(),
+      keyframes: z.array(z.object({ t_ms: z.number().int(), path: z.string() })),
+    }),
+  ),
+  elapsed_ms: z.number().int(),
+});
+export type ShotsResult = z.infer<typeof ShotsResult>;
+
 export const AsrResult = z.object({
   language: z.string(),
   duration_ms: z.number().int(),
@@ -128,6 +144,19 @@ export class AiServiceClient {
       );
     }
     return parsed.data;
+  }
+
+  /** Shots (and optional 1–3 JPEG keyframes each) of a local video file, optionally within a time range. */
+  shots(
+    path: string,
+    opts: { startMs?: number; endMs?: number; keyframesDir?: string; signal?: AbortSignal } = {},
+  ): Promise<ShotsResult> {
+    return this.request('/shots', ShotsResult, {
+      method: 'POST',
+      body: { path, start_ms: opts.startMs, end_ms: opts.endMs, keyframes_dir: opts.keyframesDir },
+      timeoutMs: 30 * 60_000,
+      signal: opts.signal,
+    });
   }
 
   /** Speech segments (ms) of a local audio file (Silero VAD). */

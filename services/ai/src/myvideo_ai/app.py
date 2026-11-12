@@ -1,6 +1,7 @@
 """FastAPI app. Bind to 127.0.0.1 only: this service is never exposed to the internet."""
 
 import platform
+import subprocess
 import sys
 from contextlib import asynccontextmanager
 
@@ -9,7 +10,10 @@ from pydantic import BaseModel, Field
 
 from . import __version__
 from .asr import ENGINE, AsrBusyError, WhisperServer, decode_flags
-from .settings import PathNotAllowed, Settings, checked_path
+from .settings import PathNotAllowed, Settings, checked_dir, checked_path
+from .shots import ENGINE as SHOTS_ENGINE
+from .shots import RECIPE as SHOTS_RECIPE
+from .shots import detect_shots, extract_keyframes
 from .thai import segment_words
 from .vad import VadOptions, run_vad
 
@@ -70,6 +74,33 @@ class AsrResponse(BaseModel):
     elapsed_ms: int
 
 
+class ShotsRequest(BaseModel):
+    path: str = Field(description="Local video file (original or proxy)")
+    start_ms: int | None = Field(None, ge=0, description="Analyse from here (segment-wise runs)")
+    end_ms: int | None = Field(None, gt=0)
+    keyframes_dir: str | None = Field(None, description="Write 1-3 JPEG keyframes per shot here")
+
+
+class KeyframeOut(BaseModel):
+    t_ms: int
+    path: str
+
+
+class ShotOut(BaseModel):
+    start_ms: int
+    end_ms: int
+    keyframes: list[KeyframeOut]
+
+
+class ShotsResponse(BaseModel):
+    engine: str
+    recipe: int
+    fps: float
+    cuts_ms: list[int]
+    shots: list[ShotOut]
+    elapsed_ms: int
+
+
 class VadResponse(BaseModel):
     segments: list[Segment]
     speech_ms: int
@@ -122,6 +153,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             segments=[Segment(start_ms=s, end_ms=e) for s, e in segs],
             speech_ms=sum(e - s for s, e in segs),
             model=cfg.vad_model,
+        )
+
+    @app.post("/shots")
+    def shots(req: ShotsRequest) -> ShotsResponse:
+        try:
+            video = checked_path(cfg, req.path)
+            out_dir = checked_dir(cfg, req.keyframes_dir) if req.keyframes_dir else None
+        except PathNotAllowed as err:
+            raise HTTPException(status_code=400, detail=str(err)) from err
+        if req.start_ms is not None and req.end_ms is not None and req.end_ms <= req.start_ms:
+            raise HTTPException(status_code=400, detail="end_ms must be after start_ms")
+        try:
+            r = detect_shots(video, req.start_ms, req.end_ms)
+            if out_dir is not None:
+                extract_keyframes(video, r.shots, out_dir)
+        except (RuntimeError, OSError, subprocess.SubprocessError) as err:
+            raise HTTPException(status_code=500, detail=str(err)) from err
+        return ShotsResponse(
+            engine=SHOTS_ENGINE,
+            recipe=SHOTS_RECIPE,
+            fps=r.fps,
+            cuts_ms=r.cuts_ms,
+            shots=[ShotOut(start_ms=s.start_ms, end_ms=s.end_ms, keyframes=s.keyframes) for s in r.shots],
+            elapsed_ms=r.elapsed_ms,
         )
 
     @app.post("/asr")

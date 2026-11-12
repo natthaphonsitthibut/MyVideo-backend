@@ -25,6 +25,8 @@ describe('database baseline (real Postgres, test database)', () => {
 
   it('migrates up, down to empty, and up again', async () => {
     expect(await tables(ds)).toEqual([
+      'analyses',
+      'detected_shots',
       'job_attempts',
       'job_events',
       'jobs',
@@ -48,6 +50,8 @@ describe('database baseline (real Postgres, test database)', () => {
     expect(await tables(ds)).toEqual(['typeorm_migrations']);
     await ds.runMigrations();
     expect(await tables(ds)).toEqual([
+      'analyses',
+      'detected_shots',
       'job_attempts',
       'job_events',
       'jobs',

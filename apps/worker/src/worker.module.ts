@@ -12,6 +12,7 @@ import {
   QueueSet,
   QueueWorkers,
   renderHandler,
+  shotsHandler,
   systemHandlers,
   transcribeHandlers,
 } from '@myvideo/infra';
@@ -124,6 +125,13 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
   });
   for (const h of transcribe) registry.register(h);
+  registry.register(
+    shotsHandler({
+      ds,
+      storage: createStorage(env),
+      ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+    }),
+  );
   // the stage bundle is verified once at start; a broken or missing bundle stops the worker loudly
   const renderer = new ChromiumRenderer(await loadStageBundle());
   registry.register(renderHandler({ ds, storage: createStorage(env), renderer }));
