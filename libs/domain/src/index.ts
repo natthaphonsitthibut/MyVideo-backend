@@ -6,6 +6,7 @@ export * from './media/source.js';
 export * from './media/sprites.js';
 export * from './media/transcript.js';
 export * from './media/uuidv7.js';
+export * from './render/render-output.js';
 export * from './render/render-plan.js';
 export * from './render/renderer-port.js';
 export * from './storage/storage-port.js';

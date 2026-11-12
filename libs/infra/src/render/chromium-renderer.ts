@@ -1,6 +1,8 @@
 import { extname, join } from 'node:path';
 import type { Writable } from 'node:stream';
 import {
+  loudnormFilter,
+  parseLoudnorm,
   planRender,
   type RenderOptions,
   type RenderRequest,
@@ -9,7 +11,7 @@ import {
 } from '@myvideo/domain';
 import { type BrowserServer, chromium } from 'playwright-core';
 import { runProcess, withTempDir } from '../process/run-process.js';
-import { cutArgs, encodeArgs } from './render-args.js';
+import { cutArgs, encodeArgs, measureArgs, mixArgs } from './render-args.js';
 import type { StageBundle } from './stage-bundle.js';
 import { serveFiles } from './static-server.js';
 
@@ -92,9 +94,22 @@ export class ChromiumRenderer implements VideoRenderer {
         files.set(path, src);
         urls[id] = path;
       }
+      // 2. audio: mix every clip to one WAV, measure EBU R128, normalise in the encode (linear loudnorm)
+      let mixed: { path: string; loudnorm: string | null } | null = null;
+      if (plan.audio.length > 0) {
+        const clips = plan.audio.map((a) => {
+          const path = req.media[a.sourceAssetId];
+          if (!path) throw new Error(`no media file for asset ${a.sourceAssetId}`);
+          return { ...a, path };
+        });
+        const wav = join(dir, 'mix.wav');
+        await runProcess('ffmpeg', mixArgs(clips, plan.totalSec, wav), { signal });
+        const measured = await runProcess('ffmpeg', measureArgs(wav), { signal });
+        mixed = { path: wav, loudnorm: loudnormFilter(parseLoudnorm(measured.stderrTail)) };
+      }
       const prepareMs = Date.now() - started;
 
-      // 2. Chromium + encoder
+      // 3. Chromium + encoder
       const server = await serveFiles(files);
       let browser: BrowserServer | undefined;
       const kill = () => void browser?.kill();
@@ -117,18 +132,13 @@ export class ChromiumRenderer implements VideoRenderer {
           plan.project,
           urls,
         ] as const);
-        const audio = plan.audio.map((a) => {
-          const path = req.media[a.sourceAssetId];
-          if (!path) throw new Error(`no media file for asset ${a.sourceAssetId}`);
-          return { ...a, path };
-        });
         encoder = runProcess(
           'ffmpeg',
           encodeArgs({
             fps,
             frames: durationFrames,
             totalSec: plan.totalSec,
-            audio,
+            audio: mixed,
             preset: req.preset,
             out: req.outPath,
           }),

@@ -2,7 +2,13 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { validateProject } from '@myvideo/contracts';
-import { type RenderProject, type StoragePort, storageKeys, type VideoRenderer } from '@myvideo/domain';
+import {
+  checkRenderOutput,
+  type RenderProject,
+  type StoragePort,
+  storageKeys,
+  type VideoRenderer,
+} from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
 import { ProjectVersionEntity } from '../db/entities/project.entity.js';
@@ -10,6 +16,7 @@ import { RenderEntity } from '../db/entities/render.entity.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { probeFile } from '../media/probe.js';
 import { withTempDir } from '../process/run-process.js';
+import { probeRendered } from './probe-rendered.js';
 
 export type RenderDeps = { ds: DataSource; storage: StoragePort; renderer: VideoRenderer };
 
@@ -63,6 +70,14 @@ export function renderHandler({ ds, storage, renderer }: RenderDeps): JobHandler
           );
           const check = await probeFile(out, { signal });
           if (!check.ok) throw new Error(`render output invalid: ${check.reason}`);
+          // validation step: streams, size, frame count, A/V start + length (a mismatch is not retried)
+          const problems = checkRenderOutput(await probeRendered(out, signal), {
+            width: project.width,
+            height: project.height,
+            frames: project.durationFrames,
+            fps: project.fps,
+          });
+          if (problems.length) throw new FatalJobError(`render output check failed: ${problems.join('; ')}`);
           const key = storageKeys.render(job.merchantId, render.id, `output-${job.id}.mp4`);
           const stored = await storage.put(key, createReadStream(out), { contentType: 'video/mp4' });
           const meta = {
