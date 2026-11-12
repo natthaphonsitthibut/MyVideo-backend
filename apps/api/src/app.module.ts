@@ -5,6 +5,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import { DiscoveryModule } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
+import { BrandModule } from './brand/brand.module.js';
 import { ClipsModule } from './clips/clips.module.js';
 import { EnvModule } from './config/env.module.js';
 import { DatabaseModule } from './db/database.module.js';
@@ -48,6 +49,7 @@ export class AppModule {
           },
         }),
         DatabaseModule,
+        BrandModule,
         AuthModule,
         HealthModule,
         JobsModule,

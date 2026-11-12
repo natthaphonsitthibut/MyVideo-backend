@@ -16,9 +16,15 @@ export function clipEndWithTail(
  * Royal Institute spelling, merchant's choice 2026-11-12) instead of ไซส์ / ไซต์ / ไซ้ส์ before a size letter.
  * "เว็บไซต์" (website) is left alone.
  */
+const SIZE_LETTER: Record<string, string> = { เอ็กซ์แอล: 'XL', เอ็กแอล: 'XL', แอล: 'L', เอ็ม: 'M', เอส: 'S' };
+
 export function normalizeThaiSpelling(text: string): string {
-  return text
-    .normalize('NFC')
-    .replace(/(?<!เว็บ)(?:ไซส์|ไซ้ส์|ไซ้ซ์)/gu, 'ไซซ์')
-    .replace(/(?<!เว็บ)ไซต์(?=\s*(?:XXL|XL|XS|[SML]|2XL|3XL|ฟรี)\b)/gu, 'ไซซ์');
+  return (
+    text
+      .normalize('NFC')
+      .replace(/(?<!เว็บ)(?:ไซส์|ไซ้ส์|ไซ้ซ์)/gu, 'ไซซ์')
+      .replace(/(?<!เว็บ)ไซต์(?=\s*(?:XXL|XL|XS|[SML]|2XL|3XL|ฟรี)\b)/gu, 'ไซซ์')
+      // the size letter spelled out in Thai after the size word → the letter (ไซซ์แอล → ไซซ์ L)
+      .replace(/ไซซ์\s*(เอ็กซ์แอล|เอ็กแอล|แอล|เอ็ม|เอส)/gu, (_m, l: string) => `ไซซ์ ${SIZE_LETTER[l] ?? l}`)
+  );
 }

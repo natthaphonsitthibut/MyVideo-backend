@@ -59,8 +59,11 @@ export function validateProject(input: unknown): ProjectValidation {
 
   for (const [key, a] of Object.entries(p.assets)) {
     const at = `assets.${key}`;
-    if ((a.sourceId === undefined) === (a.libraryId === undefined))
-      add('asset_ref', at, `asset ${key} needs exactly one of sourceId or libraryId`);
+    const refs = [a.sourceId, a.libraryId, a.brandLogo].filter((r) => r !== undefined).length;
+    if (refs !== 1)
+      add('asset_ref', at, `asset ${key} needs exactly one of sourceId, libraryId or brandLogo`);
+    if (a.brandLogo && a.kind !== 'image')
+      add('asset_ref', `${at}.kind`, `brand logo asset ${key} must be an image`);
     if (a.libraryId !== undefined) {
       const sound = librarySound(a.libraryId);
       if (!sound) add('library_asset', `${at}.libraryId`, `library sound ${a.libraryId} does not exist`);

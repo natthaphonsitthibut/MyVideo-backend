@@ -10,6 +10,7 @@ import {
   type VideoRenderer,
 } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
+import { BrandKitEntity } from '../db/entities/brand-kit.entity.js';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
 import { ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { RenderEntity } from '../db/entities/render.entity.js';
@@ -65,7 +66,18 @@ export function renderHandler({
       const handles: { release(): Promise<void> }[] = [];
       const media: Record<string, string> = {};
       try {
+        const kit = await ds.getRepository(BrandKitEntity).findOneBy({ merchantId: job.merchantId });
+        const theme = kit
+          ? { primary: kit.primaryColor, accent: kit.accentColor, text: kit.textColor, font: kit.font }
+          : undefined;
         for (const [assetId, asset] of Object.entries(project.assets)) {
+          if ((asset as { brandLogo?: true }).brandLogo) {
+            if (!kit?.logoKey) throw new FatalJobError('โปรเจกต์ใช้โลโก้แบรนด์ แต่ร้านยังไม่ได้อัปโหลดโลโก้');
+            const file = await storage.localPath(kit.logoKey);
+            handles.push(file);
+            media[assetId] = file.path;
+            continue;
+          }
           if (asset.libraryId) {
             const path = soundLibraryFile(soundLibraryDir, asset.libraryId);
             if (!(await stat(path).catch(() => null)))
@@ -88,7 +100,7 @@ export function renderHandler({
         return await withTempDir('render-out', async (dir) => {
           const out = join(dir, 'output.mp4');
           const stats = await renderer.render(
-            { project, media, preset: render.preset, outPath: out },
+            { project, media, preset: render.preset, outPath: out, ...(theme ? { theme } : {}) },
             { signal, onProgress: (v) => void progress(Math.min(0.98, v)) },
           );
           const check = await probeFile(out, { signal });

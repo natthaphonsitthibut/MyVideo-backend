@@ -12,6 +12,8 @@ export type RenderRequest = {
   preset: RenderPreset;
   /** Where the MP4 is written. */
   outPath: string;
+  /** The merchant's current brand kit: brand tokens in element styles resolve to it (E08-F08). */
+  theme?: { primary: string; accent: string; text: string; font: string };
 };
 
 export type RenderStats = {

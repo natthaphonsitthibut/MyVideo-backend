@@ -117,13 +117,34 @@ describe('validateProject', () => {
     expect(r).toEqual({ ok: true, project: base() });
   });
 
+  it('accepts brand tokens (colours, font) and the brand logo asset (E08-F08)', () => {
+    const p = base();
+    const x = el(p, X1);
+    x.style = {
+      fontFamily: 'brand',
+      fontWeight: 800,
+      fontSize: 72,
+      color: 'brand:text',
+      background: 'brand:primary',
+      align: 'center',
+    };
+    p.assets[U(903)] = { brandLogo: true, kind: 'image', durationFrames: 300, hasAudio: false };
+    expect(validateProject(p).ok).toBe(true);
+    (x.style as Record<string, unknown>).color = 'brand:pink';
+    expect(validateProject(p).ok).toBe(false);
+  });
+
   const cases: [string, Mut, { code: string; path: string; message: RegExp }][] = [
     [
       'asset with neither sourceId nor libraryId',
       (p) => {
         delete p.assets[ASSET]!.sourceId;
       },
-      { code: 'asset_ref', path: `assets.${ASSET}`, message: /exactly one of sourceId or libraryId/ },
+      {
+        code: 'asset_ref',
+        path: `assets.${ASSET}`,
+        message: /exactly one of sourceId, libraryId or brandLogo/,
+      },
     ],
     [
       'asset with both sourceId and libraryId',

@@ -18,5 +18,7 @@ describe('clip ending', () => {
     );
     expect(normalizeThaiSpelling('ไซต์ L ไซ้ส์ XL')).toBe('ไซซ์ L ไซซ์ XL');
     expect(normalizeThaiSpelling('เว็บไซต์ของร้าน')).toBe('เว็บไซต์ของร้าน');
+    // real title of a fresh S01a clip
+    expect(normalizeThaiSpelling('OVP ไซซ์แอล 1,500 บาท')).toBe('OVP ไซซ์ L 1,500 บาท');
   });
 });

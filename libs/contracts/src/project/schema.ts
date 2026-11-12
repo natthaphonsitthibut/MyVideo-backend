@@ -92,18 +92,19 @@ const visual = {
 
 const Animation = z.object({ presetId: z.string().min(1).max(64), durationFrames: frames });
 
+/** A hex colour, or a brand kit token resolved by the stage from the merchant's current kit (E08-F08). */
+const StyleColor = z.string().regex(/^(#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|brand:(primary|accent|text))$/);
+
 export const TextStyle = named(
   'TextStyle',
   z.object({
+    /** A font family, or `brand` = the merchant's brand kit font (E08-F08). */
     fontFamily: z.string().min(1).max(64),
     fontWeight: z.number().int().min(100).max(900),
     /** Canvas pixels. */
     fontSize: z.number().positive().max(1000),
-    color: z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/),
-    background: z
-      .string()
-      .regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/)
-      .optional(),
+    color: StyleColor,
+    background: StyleColor.optional(),
     align: z.enum(['left', 'center', 'right']),
   }),
 );
@@ -196,6 +197,8 @@ export const ProjectAsset = named(
       .string()
       .regex(/^[a-z0-9-]{1,64}$/)
       .optional(),
+    /** The merchant's brand kit logo (E08-F08): resolved to the CURRENT logo at preview/render time. */
+    brandLogo: z.literal(true).optional(),
     kind: z.enum(['video', 'audio', 'image']),
     /** Length in project frames. */
     durationFrames: frames,

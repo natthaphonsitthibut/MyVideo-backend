@@ -1,6 +1,7 @@
 import type { LlmCallContext, LlmPort } from '@myvideo/domain';
 import { z } from 'zod';
 import { zodStructuredSchema } from '../llm/schema.js';
+import { normalizeThaiSpelling } from './clip-ending.js';
 import { RISKY_TERMS } from './hooks.js';
 
 /**
@@ -173,7 +174,9 @@ export function validSentence(
   // รับพิมรับมา → รับมา)
   for (const g of glossary) {
     const heardIt = [g.term, ...g.heardAs].map(squash).some((v) => v.length >= 3 && before.includes(v));
-    if (heardIt && !squash(corrected).includes(squash(g.term))) return false;
+    // compare with one size spelling (ไซส์ in a glossary vs ไซซ์ written by the model is the same phrase)
+    const one = (t: string) => squash(normalizeThaiSpelling(t));
+    if (heardIt && !one(corrected).includes(one(g.term))) return false;
   }
   const changed = distance([...before], [...after]) - exempt;
   return changed <= Math.max(2, Math.ceil([...before].length * 0.5));

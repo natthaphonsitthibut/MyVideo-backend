@@ -1,4 +1,5 @@
 import { getMe, login, logout } from './http/auth.js';
+import { getBrandKit, getBrandLogo, saveBrandKit, uploadBrandLogo } from './http/brand-kit.js';
 import {
   buildClips,
   discardClip,
@@ -41,6 +42,10 @@ import type { RouteContract } from './route.js';
 /** Every HTTP route the API serves. The API test suite fails if a controller route is missing here. */
 export const routes: RouteContract[] = [
   getHealth,
+  getBrandKit,
+  saveBrandKit,
+  uploadBrandLogo,
+  getBrandLogo,
   login,
   logout,
   getMe,

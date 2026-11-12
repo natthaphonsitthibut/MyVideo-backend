@@ -66,6 +66,11 @@ describe('validSentence: what a rewrite may not do', () => {
     expect(validSentence(heard, 'ตอนนี้รับพิมพ์รับมา 1,500 บาทนะครับผม', [], glossary)).toBe(true);
   });
 
+  it('a glossary phrase spelled with ไซส์ is kept when the model writes ไซซ์ (one size spelling)', () => {
+    const glossary = [{ term: 'ไซส์เสีย', heardAs: ['ไซส์ เสีย'] }];
+    expect(validSentence('บอ กว่า ไซส์ เสีย ค่ะ', 'บอกว่าไซซ์เสียค่ะ', [], glossary)).toBe(true);
+  });
+
   it('rejects an added health/guarantee claim that was not heard', () => {
     expect(validSentence('ผ้า ดี มาก', 'ผ้าดีมาก ของแท้100%', [])).toBe(false);
   });

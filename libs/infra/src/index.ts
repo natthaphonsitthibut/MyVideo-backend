@@ -31,6 +31,7 @@ export {
 export {
   ATTEMPT_STATUSES,
   type AttemptStatus,
+  BrandKitEntity,
   ClipSuggestionEntity,
   entities,
   JobAttemptEntity,

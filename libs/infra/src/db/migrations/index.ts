@@ -16,6 +16,7 @@ import { BuildClipsRun1794490000000 } from './1794490000000-BuildClipsRun.js';
 import { TranscriptAiEdits1794491000000 } from './1794491000000-TranscriptAiEdits.js';
 import { TranscriptContext1794492000000 } from './1794492000000-TranscriptContext.js';
 import { TranscriptEditReview1794493000000 } from './1794493000000-TranscriptEditReview.js';
+import { BrandKits1794494000000 } from './1794494000000-BrandKits.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -38,4 +39,5 @@ export const migrations: Function[] = [
   TranscriptAiEdits1794491000000,
   TranscriptContext1794492000000,
   TranscriptEditReview1794493000000,
+  BrandKits1794494000000,
 ];

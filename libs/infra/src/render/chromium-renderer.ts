@@ -28,7 +28,7 @@ export type ChromiumRendererOptions = {
 type StagePage = {
   MyVideoStage: {
     render: {
-      load(project: unknown, urls: unknown): Promise<{ frames: number }>;
+      load(project: unknown, urls: unknown, theme?: unknown): Promise<{ frames: number }>;
       seek(frame: number): Promise<void>;
     };
   };
@@ -128,10 +128,10 @@ export class ChromiumRenderer implements VideoRenderer {
         const pageErrors: string[] = [];
         page.on('pageerror', (e) => pageErrors.push(e.message));
         await page.goto(`${server.url}/index.html`);
-        await page.evaluate(([p, u]) => (globalThis as unknown as StagePage).MyVideoStage.render.load(p, u), [
-          plan.project,
-          urls,
-        ] as const);
+        await page.evaluate(
+          ([p, u, t]) => (globalThis as unknown as StagePage).MyVideoStage.render.load(p, u, t),
+          [plan.project, urls, req.theme] as const,
+        );
         encoder = runProcess(
           'ffmpeg',
           encodeArgs({
