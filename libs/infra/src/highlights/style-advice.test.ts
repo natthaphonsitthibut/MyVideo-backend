@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { STYLE_PACKS } from '@myvideo/contracts';
 import type { LlmPort } from '@myvideo/domain';
 import { describe, expect, it } from 'vitest';
@@ -60,6 +61,20 @@ describe('adviseStyles (model)', () => {
     expect(r.origin).toBe('ai');
     expect(r.items.slice(0, 2).map((x) => x.styleId)).toEqual(['fun', 'sale-fast']);
     expect(r.items).toHaveLength(STYLE_PACKS.length);
+  });
+
+  it('accepts a real recorded answer (S01a, local-agent, 2026-11-12) whose numbers come from the features', async () => {
+    const rec = JSON.parse(
+      readFileSync(new URL('./fixtures/style-advice-s01a.recorded.json', import.meta.url), 'utf8'),
+    ) as { output: { items: { styleId: string; reason: string }[] } };
+    // the run's measured pace and price rate (the reasons quote them); prices from the clips' own words
+    const s01a = { ...busySeller, wordsPerSec: 3.1, pricesPerMin: 4.7 };
+    const r = await adviseStyles(answer(rec.output.items), s01a, 'ลายแตงโม สีเขียว 100 บาท … ราคา 80 บาท', {
+      merchantId: 'm',
+    });
+    expect(r.origin).toBe('ai');
+    expect(r.items[0]?.styleId).toBe('sale-fast');
+    expect(r.items.map((x) => x.styleId).at(-1)).toBe('premium');
   });
 
   it('an unknown style or a reason with a number the video never had falls back to rules', async () => {
