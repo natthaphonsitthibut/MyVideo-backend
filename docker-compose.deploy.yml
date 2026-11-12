@@ -1,0 +1,66 @@
+# Single-server deployment (E11-F08) — NOT deployed by the agents; see docs/DEPLOY.md.
+#   docker compose -f docker-compose.deploy.yml --env-file .env.production up -d
+# The web app (frontend repo, its own image) is served by the `web` service and proxies /api to `api`.
+name: myvideo-prod
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://myvideo:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/myvideo
+  REDIS_URL: redis://redis:6379
+  AI_SERVICE_URL: http://ai:8000
+  STORAGE_LOCAL_DIR: /data/storage
+  UPLOAD_TMP_DIR: /data/uploads
+  SOUND_LIBRARY_DIR: /data/library/sounds
+  SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+  LLM_MODE: ${LLM_MODE:-api}
+  LLM_PROVIDER: ${LLM_PROVIDER:-}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: myvideo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: myvideo
+    volumes: [pgdata:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myvideo -d myvideo"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+  ai:
+    image: myvideo-ai:${MYVIDEO_VERSION:-latest}
+    environment:
+      AI_ALLOWED_ROOTS: /data
+    volumes:
+      - appdata:/data:ro
+      - ${MODELS_DIR:?set MODELS_DIR}:/models:ro
+    restart: unless-stopped
+  api:
+    image: myvideo-api:${MYVIDEO_VERSION:-latest}
+    environment: *app-env
+    volumes: [appdata:/data]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: unless-stopped
+  worker:
+    image: myvideo-worker:${MYVIDEO_VERSION:-latest}
+    environment: *app-env
+    volumes: [appdata:/data]
+    depends_on: [postgres, redis, ai]
+    shm_size: 1gb
+    restart: unless-stopped
+  web:
+    image: myvideo-web:${MYVIDEO_VERSION:-latest}
+    ports: ["${HTTP_PORT:-8080}:80"]
+    depends_on: [api]
+    restart: unless-stopped
+volumes:
+  pgdata:
+  redisdata:
+  appdata:

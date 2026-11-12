@@ -19,9 +19,12 @@ export class StageBundleError extends Error {
   }
 }
 
-/** `backend/stage-bundle` (same depth from `src/render` and `dist/render`). */
+/**
+ * `STAGE_BUNDLE_DIR` (containers, where the package sits in node_modules), else `backend/stage-bundle` (same depth
+ * from `src/render` and `dist/render`).
+ */
 export const defaultStageBundleRoot = (): string =>
-  fileURLToPath(new URL('../../../../stage-bundle', import.meta.url));
+  process.env.STAGE_BUNDLE_DIR || fileURLToPath(new URL('../../../../stage-bundle', import.meta.url));
 
 /** Same rule as the frontend's `scripts/manifest.mjs`: first 12 hex of sha256 over sorted `path sha256\n`. */
 export function manifestVersion(files: StageBundleManifest['files']): string {
