@@ -214,7 +214,8 @@ export function segmentShots(
     const start = segments[i]?.startFrame ?? 0;
     for (let j = i + 1; j < segments.length; j++) {
       const at = segments[j]?.startFrame ?? 0;
-      if (isJump(j) && at - start >= hold && (segments[j]?.durationFrames ?? 0) >= minFrames) return at - start;
+      if (isJump(j) && at - start >= hold && (segments[j]?.durationFrames ?? 0) >= minFrames)
+        return at - start;
     }
     return total - start;
   };
@@ -224,7 +225,8 @@ export function segmentShots(
   let sincePunch = Number.POSITIVE_INFINITY;
   return segments.map((s, i) => {
     const moment = keyMomentKind(s.words);
-    const canChange = i > 0 && isJump(i) && s.durationFrames >= minFrames && s.startFrame - lastChange >= hold;
+    const canChange =
+      i > 0 && isJump(i) && s.durationFrames >= minFrames && s.startFrame - lastChange >= hold;
     let punch: Shot['punch'] = null;
     if (canChange && scale !== 1) {
       scale = 1;

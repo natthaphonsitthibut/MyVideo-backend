@@ -106,7 +106,12 @@ describe('style-pack edit of a clip', () => {
       { startMs: 15_000, endMs: 17_000 },
       { startMs: 19_000, endMs: 27_000 },
     ];
-    const cut = planJumpCuts({ startMs: plan2.startMs, endMs: plan2.endMs }, plan2.words, speech2, style.cuts);
+    const cut = planJumpCuts(
+      { startMs: plan2.startMs, endMs: plan2.endMs },
+      plan2.words,
+      speech2,
+      style.cuts,
+    );
     const frames = editFrames(source, plan2, cut);
     const project = buildClipProject({
       projectId: '00000000-0000-4000-8000-0000000000aa',
@@ -350,7 +355,11 @@ describe('style-pack edit of a clip', () => {
     for (const id of STYLE_PACKS.map((s) => s.id)) {
       const style = stylePack(id);
       const segs = shotsOf(
-        Array.from({ length: 20 }, (_, i) => ({ frames: 60, gap: 20, words: i % 3 === 0 ? ['80', 'บาท'] : [] })),
+        Array.from({ length: 20 }, (_, i) => ({
+          frames: 60,
+          gap: 20,
+          words: i % 3 === 0 ? ['80', 'บาท'] : [],
+        })),
       );
       const scales = segmentScales(style, segs);
       const total = segs.reduce((n, s) => n + s.durationFrames, 0);
@@ -367,7 +376,11 @@ describe('style-pack edit of a clip', () => {
 
   it('camera: a punch-in lands on a spoken price at a jump cut when the hold allows it', () => {
     const style = stylePack('sale-fast');
-    const segs = shotsOf([{ frames: 90 }, { frames: 90, gap: 40, words: ['80', 'บาท'] }, { frames: 300, gap: 40 }]);
+    const segs = shotsOf([
+      { frames: 90 },
+      { frames: 90, gap: 40, words: ['80', 'บาท'] },
+      { frames: 300, gap: 40 },
+    ]);
     const shots = segmentShots(style, segs);
     expect(shots.map((s) => s.scale)).toEqual([1, style.zoom.punchIn, 1]);
     expect(shots[1]?.punch).toBe('price');
