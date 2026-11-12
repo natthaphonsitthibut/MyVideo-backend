@@ -15,6 +15,7 @@ export * from './project/migrate.js';
 export * from './project/schema.js';
 export * from './project/sound-library.js';
 export * from './project/style-packs.js';
+export * from './project/templates.js';
 export * from './project/validate.js';
 export { componentRegistry, named } from './registry.js';
 export { defineRoute, expressPath, type HttpMethod, type RouteContract } from './route.js';
