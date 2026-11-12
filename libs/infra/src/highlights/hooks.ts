@@ -8,7 +8,7 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * cite transcript quotes, and a validator rejects any number or risky claim (discount, medical, guarantee,
  * superlative) that is not in the cited quotes or the product info. AI-written text is marked `origin: 'ai'`.
  */
-export const HOOKS_PROMPT_VERSION = 'hooks-v1';
+export const HOOKS_PROMPT_VERSION = 'hooks-v2';
 
 export type ProductInfo = { name?: string; price?: string; facts?: string[] };
 export type HookKind = 'hook' | 'title';
@@ -119,6 +119,11 @@ export const HOOKS_SYSTEM = [
   'free gift, medical or health claim, guarantee, authenticity claim or superlative that is not said there.',
   'Return exactly 3 suggestions: 2 hooks (natural spoken Thai, at most 50 characters, makes a viewer stop',
   'scrolling in the first second) and 1 title (at most 60 characters, says what the product is).',
+  'A hook carries ONE idea and reads in about one second (about 8 words or fewer). Good hook shapes, filled only',
+  'with real content from the transcript or PRODUCT INFO: the price the seller says ("only [price]"), the result',
+  'before the method, a problem the buyer has as a question, a number of items or reasons, or the strongest',
+  'line the seller actually says (meaning unchanged). The two hooks must use DIFFERENT shapes.',
+  "Never a greeting, the shop name alone, a question about the viewer's day, emoji or hashtags.",
   'For each suggestion give sourceQuotes: 1-3 phrases copied character for character from the transcript that',
   'support every fact in the text (copy the transcript as written, including its spelling).',
 ].join('\n');

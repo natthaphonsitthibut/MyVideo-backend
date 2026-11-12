@@ -7,24 +7,42 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * window, keep/drop, a type, refined word bounds, a score and a reason with a quote. Every index and quote is
  * checked against the real transcript — an answer that cites words that are not there is rejected (one repair).
  */
-export const RERANK_PROMPT_VERSION = 'rerank-highlights-v2';
+export const RERANK_PROMPT_VERSION = 'rerank-highlights-v3';
 
 export const CLIP_TYPES = ['product-intro', 'demo', 'price-promo', 'faq', 'testimonial', 'other'] as const;
 export type ClipType = (typeof CLIP_TYPES)[number];
 
+/**
+ * v3 (2026-11-13): explicit scoring rubric, start/end rules and duplicate-pitch handling so a cheap model ranks
+ * the way an editor would. Same output schema as v2 (the validator and the clip builder are unchanged).
+ */
 export const RERANK_SYSTEM = [
-  'You review candidate moments from the transcript of a Thai live-selling video. The transcript is automatic',
-  'speech recognition and contains recognition errors; do not correct it.',
+  'You are a short-form video editor reviewing candidate moments from the transcript of a Thai selling video',
+  '(a live-selling stream or a product review). The transcript is automatic speech recognition and contains',
+  'recognition errors; do not correct it.',
   'For EVERY candidate decide whether it would make a good stand-alone short vertical clip (about 15-60 seconds)',
   'that helps sell: it should present one product, one clear offer/price, a demonstration, an answer to a',
   'buyer question, or a testimonial, and make sense without the rest of the stream. Chatter, greetings, technical',
-  'problems and talk about unrelated things are not good clips.',
+  'problems, reading out names, waiting, and talk about unrelated things are not good clips.',
+  'Score 0-100 with this rubric (weights in brackets):',
+  '- hook (30): the first sentence makes a scrolling viewer stop - a price, a result, a problem, a bold claim',
+  '  the seller really says, or a product shown in action; NOT a greeting, filler or "wait a moment".',
+  '- stand-alone (25): understandable without what came before; no "as I said", no unresolved "this one" without',
+  '  the product being named or shown in the same window.',
+  '- energy (20): the seller sounds engaged, excited or convincing; repeated stumbles lower it.',
+  '- value (15): a concrete fact a buyer cares about - price, size, material, how to use, result, stock.',
+  '- payoff (10): ends on a complete thought - the price, the call to order, the result - not mid-sentence.',
+  'keep=true only when the score is 60 or more.',
+  'Hosts often repeat the same pitch many times in one stream. When two candidates pitch the same product with',
+  'the same offer, keep only the cleanest, most complete take and set keep=false on the others with the reason',
+  'that it repeats a better take.',
   'Each transcript line starts with [n], the index of its first word; words on a line are separated by single',
   'spaces, so the k-th word on that line (counting from 0) has index n+k.',
   'Return one result per candidate with: id; keep (true/false); type (product-intro, demo, price-promo, faq,',
   'testimonial, other); startWord and endWord: word indexes INSIDE the candidate that start at the beginning of',
-  'a sentence and end after a complete sentence (tighten the window, never extend it); score 0-100 (how good',
-  'the clip is); reason: one short natural Thai sentence, at most 90 characters, using plain words a seller uses;',
+  'a sentence and end after a complete sentence (tighten the window, never extend it): start on the strongest',
+  'opening sentence (skip greetings and filler before it) and end right after the payoff; score 0-100 (the',
+  'rubric total); reason: one short natural Thai sentence, at most 90 characters, using plain words a seller uses;',
   'quote: a short Thai phrase copied character for character from',
   'the transcript between startWord and endWord that supports the reason. Never invent or translate text.',
 ].join('\n');

@@ -9,13 +9,24 @@ describe('merchant-facing prompt language', () => {
     expect(RERANK_SYSTEM).toContain('plain words a seller uses');
     expect(RERANK_SYSTEM).toContain('quote: a short Thai phrase copied character for character');
     expect(RERANK_SYSTEM).not.toContain('English sentence');
-    expect(RERANK_PROMPT_VERSION).toBe('rerank-highlights-v2');
+    expect(RERANK_PROMPT_VERSION).toBe('rerank-highlights-v3');
+  });
+
+  it('v3 ranks with an editor rubric: hook first, stand-alone, payoff, and one take per repeated pitch', () => {
+    for (const axis of ['hook (30)', 'stand-alone (25)', 'energy (20)', 'value (15)', 'payoff (10)'])
+      expect(RERANK_SYSTEM).toContain(axis);
+    expect(RERANK_SYSTEM).toContain('keep only the cleanest, most complete take');
+    expect(RERANK_SYSTEM).toContain('skip greetings and filler');
+    expect(RERANK_SYSTEM).toContain('Never invent or translate text.');
   });
 
   it('already requests Thai text for both hooks and titles', () => {
     expect(HOOKS_SYSTEM).toContain('You write short Thai on-screen text');
     expect(HOOKS_SYSTEM).toContain('2 hooks (natural spoken Thai');
     expect(HOOKS_SYSTEM).toContain('1 title');
-    expect(HOOKS_PROMPT_VERSION).toBe('hooks-v1');
+    expect(HOOKS_PROMPT_VERSION).toBe('hooks-v2');
+    expect(HOOKS_SYSTEM).toContain('ONE idea');
+    expect(HOOKS_SYSTEM).toContain('DIFFERENT shapes');
+    expect(HOOKS_SYSTEM).toContain('Never add a price');
   });
 });
