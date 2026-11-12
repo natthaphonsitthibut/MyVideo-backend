@@ -1,8 +1,21 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
-import type { ApiErrorBody, TranscriptSegmentPage, TranscriptState } from '@myvideo/contracts';
-import { uuidv7 } from '@myvideo/domain';
-import { seedMerchant, TranscriptEntity, TranscriptSegmentEntity } from '@myvideo/infra';
+import { resolve } from 'node:path';
+import type {
+  ApiErrorBody,
+  TranscriptSegment,
+  TranscriptSegmentPage,
+  TranscriptState,
+} from '@myvideo/contracts';
+import { storageKeys, uuidv7 } from '@myvideo/domain';
+import {
+  LocalStorage,
+  seedMerchant,
+  TranscriptEditEntity,
+  TranscriptEntity,
+  TranscriptSegmentEntity,
+} from '@myvideo/infra';
 import type { INestApplication } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -158,6 +171,7 @@ describe('transcript API (real Postgres)', () => {
           startMs: FIXTURE.segments[0]?.start_ms,
           endMs: FIXTURE.segments[0]?.end_ms,
           kind: 'word',
+          original: null,
         },
       ],
     });
@@ -176,5 +190,105 @@ describe('transcript API (real Postgres)', () => {
     expect(state).toMatchObject({ status: 'ready', segmentCount: total, language: 'th', durationMs: 54_500 });
     expect((await api(`/sources/${id}/transcript/segments`, cookieB)).status).toBe(404);
     expect((await api(`/sources/${id}/transcript/segments?limit=5000`, cookieA)).status).toBe(400);
+  });
+
+  it('word correction: stored as a user layer, survives reload, revertable; ASR rows and stored JSON untouched', async () => {
+    const id = await source({ status: 'ready', audio: true });
+    const t = await ds.getRepository(TranscriptEntity).save({
+      merchantId: merchantA,
+      sourceId: id,
+      audioSha256: 'audiosha',
+      model: 'ggml-large-v3-turbo-q5_0.bin',
+      engine: 'whisper.cpp',
+      recipeVersion: 1,
+      status: 'ready',
+      durationMs: 54_500,
+      chunkCount: 1,
+      language: 'th',
+    });
+    // real recorded C03 segment 5: "ก็คือคุณทำไลฟ์สดครั้งแรก" split into display words
+    const seg = FIXTURE.segments[5];
+    if (!seg) throw new Error('fixture');
+    const words = [
+      { text: 'ก็คือ', startMs: seg.start_ms, endMs: seg.start_ms + 400, kind: 'word' },
+      { text: 'คุณ', startMs: seg.start_ms + 400, endMs: seg.start_ms + 700, kind: 'word' },
+      { text: 'ทำไลฟสด', startMs: seg.start_ms + 700, endMs: seg.end_ms, kind: 'word' },
+    ];
+    await ds
+      .getRepository(TranscriptSegmentEntity)
+      .insert({
+        merchantId: merchantA,
+        transcriptId: t.id,
+        seq: 0,
+        startMs: seg.start_ms,
+        endMs: seg.end_ms,
+        text: 'ก็คือคุณทำไลฟสด',
+        words,
+      });
+    // the merged original ASR JSON as the merge step stores it
+    const storage = new LocalStorage(resolve(testEnv().STORAGE_LOCAL_DIR));
+    const key = storageKeys.derived(merchantA, id, t.id, 'transcript', 1, 'json');
+    const original = await storage.put(
+      key,
+      Buffer.from(JSON.stringify({ version: 1, segments: [{ text: 'ก็คือคุณทำไลฟสด', words }] })),
+    );
+    await ds.getRepository(TranscriptEntity).update({ id: t.id }, { storageKey: key });
+    const rowsBefore = await ds.query(
+      `SELECT text, words FROM transcript_segments WHERE transcript_id = $1`,
+      [t.id],
+    );
+
+    const put = (path: string, cookie: string, text: unknown) =>
+      api(path, cookie, {
+        method: 'PUT',
+        body: JSON.stringify({ text }),
+        headers: { 'content-type': 'application/json' },
+      });
+    const wordPath = `/sources/${id}/transcript/words/0/2`;
+
+    const res = await put(wordPath, cookieA, '  ทำไลฟ์สด ');
+    expect(res.status).toBe(200);
+    const edited = (await res.json()) as TranscriptSegment;
+    expect(edited.words[2]).toEqual({ ...words[2], text: 'ทำไลฟ์สด', original: 'ทำไลฟสด' });
+    expect(edited.text).toBe('ก็คือคุณทำไลฟ์สด');
+    expect(edited.words[0]?.original).toBeNull();
+
+    // "reload": a fresh read of the page has the correction
+    const page = (await (
+      await api(`/sources/${id}/transcript/segments`, cookieA)
+    ).json()) as TranscriptSegmentPage;
+    expect(page.items[0]?.words[2]).toMatchObject({
+      text: 'ทำไลฟ์สด',
+      original: 'ทำไลฟสด',
+      startMs: words[2]?.startMs,
+    });
+
+    // editing again replaces the correction (one row per word)
+    expect((await put(wordPath, cookieA, 'ทำไลฟ์สดๆ')).status).toBe(200);
+    expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(1);
+
+    // invalid input, unknown word, other merchant
+    expect((await put(wordPath, cookieA, '   ')).status).toBe(400);
+    expect((await put(wordPath, cookieA, 'x'.repeat(201))).status).toBe(400);
+    expect((await put(`/sources/${id}/transcript/words/0/3`, cookieA, 'x')).status).toBe(404);
+    expect((await put(`/sources/${id}/transcript/words/9/0`, cookieA, 'x')).status).toBe(404);
+    expect((await put(wordPath, cookieB, 'hack')).status).toBe(404);
+
+    // the ASR original is never touched: segment rows and the stored JSON are byte-identical
+    expect(
+      await ds.query(`SELECT text, words FROM transcript_segments WHERE transcript_id = $1`, [t.id]),
+    ).toEqual(rowsBefore);
+    const file = await storage.localPath(key);
+    expect(createHash('sha256').update(readFileSync(file.path)).digest('hex')).toBe(original.sha256);
+
+    // revert → back to the recognised word
+    const rev = await api(wordPath, cookieA, { method: 'DELETE' });
+    expect(rev.status).toBe(200);
+    expect(((await rev.json()) as TranscriptSegment).words[2]).toEqual({ ...words[2], original: null });
+    expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
+    // writing the recognised text itself stores no correction
+    expect((await put(wordPath, cookieA, 'ทำไลฟสด')).status).toBe(200);
+    expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
+    await storage.delete(key);
   });
 });

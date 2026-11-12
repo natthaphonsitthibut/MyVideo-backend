@@ -149,3 +149,39 @@ export class TranscriptSegmentEntity extends BaseRow {
   @Column({ name: 'no_speech_prob', type: 'real', nullable: true })
   noSpeechProb!: number | null;
 }
+
+/**
+ * The merchant's correction of one display word (user layer over the ASR original, which is never changed). The word
+ * keeps its ASR timing; only the text is replaced. Deleting the row restores the original word.
+ */
+@Entity({ name: 'transcript_edits' })
+@Check('transcript_edits_text_valid', `length(btrim(text)) > 0 AND length(text) <= 200`)
+@Check('transcript_edits_position_valid', `seq >= 0 AND word_index >= 0`)
+@Index('transcript_edits_word_key', ['transcriptId', 'seq', 'wordIndex'], { unique: true })
+@Index('transcript_edits_merchant_id_idx', ['merchantId'])
+export class TranscriptEditEntity extends BaseRow {
+  @Column({ name: 'merchant_id', type: 'uuid' })
+  merchantId!: string;
+
+  @ManyToOne(() => MerchantEntity, { onDelete: 'CASCADE', nullable: false })
+  @JoinColumn({ name: 'merchant_id', foreignKeyConstraintName: 'transcript_edits_merchant_id_fkey' })
+  merchant?: MerchantEntity;
+
+  @Column({ name: 'transcript_id', type: 'uuid' })
+  transcriptId!: string;
+
+  @ManyToOne(() => TranscriptEntity, { onDelete: 'CASCADE', nullable: false })
+  @JoinColumn({ name: 'transcript_id', foreignKeyConstraintName: 'transcript_edits_transcript_id_fkey' })
+  transcript?: TranscriptEntity;
+
+  /** Segment position (`transcript_segments.seq`). */
+  @Column({ type: 'integer' })
+  seq!: number;
+
+  /** Position of the word inside the segment's `words`. */
+  @Column({ name: 'word_index', type: 'integer' })
+  wordIndex!: number;
+
+  @Column({ type: 'text' })
+  text!: string;
+}

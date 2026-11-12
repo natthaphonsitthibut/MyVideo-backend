@@ -10,7 +10,13 @@ import {
   getUploadConfig,
   listSources,
 } from './http/sources.js';
-import { getTranscript, listTranscriptSegments, startTranscript } from './http/transcripts.js';
+import {
+  editTranscriptWord,
+  getTranscript,
+  listTranscriptSegments,
+  revertTranscriptWord,
+  startTranscript,
+} from './http/transcripts.js';
 import type { RouteContract } from './route.js';
 
 /** Every HTTP route the API serves. The API test suite fails if a controller route is missing here. */
@@ -34,4 +40,6 @@ export const routes: RouteContract[] = [
   getTranscript,
   startTranscript,
   listTranscriptSegments,
+  editTranscriptWord,
+  revertTranscriptWord,
 ];

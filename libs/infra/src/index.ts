@@ -33,6 +33,7 @@ export {
   MerchantEntity,
   SessionEntity,
   TranscriptChunkEntity,
+  TranscriptEditEntity,
   TranscriptEntity,
   TranscriptSegmentEntity,
   UserEntity,

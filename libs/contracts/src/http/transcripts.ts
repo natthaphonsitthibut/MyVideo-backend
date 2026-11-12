@@ -13,6 +13,8 @@ export const TranscriptWord = named(
     endMs: z.number().int(),
     /** `word` | `number` | `latin` | `punct` … (from the Thai tokenizer). */
     kind: z.string(),
+    /** The ASR text when the merchant corrected this word (then `text` is the correction); null = not edited. */
+    original: z.string().nullable(),
   }),
 );
 
@@ -23,11 +25,58 @@ export const TranscriptSegment = named(
     seq: z.number().int(),
     startMs: z.number().int(),
     endMs: z.number().int(),
+    /** ASR text, or the words joined when any word was corrected. */
     text: z.string(),
     words: z.array(TranscriptWord),
   }),
 );
 export type TranscriptSegment = z.infer<typeof TranscriptSegment>;
+
+export const TranscriptWordParams = z.object({
+  id: z.uuid(),
+  seq: z.coerce.number().int().min(0),
+  index: z.coerce.number().int().min(0),
+});
+
+export const TranscriptWordEdit = named(
+  'TranscriptWordEdit',
+  z.object({
+    /** The corrected text (timing stays the word's ASR timing). */
+    text: z
+      .string()
+      .transform((s) => s.normalize('NFC').trim())
+      .pipe(z.string().min(1).max(200)),
+  }),
+);
+
+export const editTranscriptWord = defineRoute({
+  operationId: 'editTranscriptWord',
+  method: 'put',
+  path: '/sources/{id}/transcript/words/{seq}/{index}',
+  summary: 'Correct one word of the ready transcript (stored as a user layer; the ASR original is kept)',
+  tags: ['transcripts'],
+  auth: true,
+  request: { params: TranscriptWordParams, body: TranscriptWordEdit },
+  responses: {
+    200: { description: 'The segment with the correction applied', schema: TranscriptSegment },
+    400: { description: 'Invalid text', schema: ApiErrorBody },
+    404: { description: 'No such source, ready transcript, segment or word', schema: ApiErrorBody },
+  },
+});
+
+export const revertTranscriptWord = defineRoute({
+  operationId: 'revertTranscriptWord',
+  method: 'delete',
+  path: '/sources/{id}/transcript/words/{seq}/{index}',
+  summary: 'Remove the correction of one word (back to the ASR text)',
+  tags: ['transcripts'],
+  auth: true,
+  request: { params: TranscriptWordParams },
+  responses: {
+    200: { description: 'The segment as recognised', schema: TranscriptSegment },
+    404: { description: 'No such source, ready transcript, segment or word', schema: ApiErrorBody },
+  },
+});
 
 export const TranscriptState = named(
   'TranscriptState',
