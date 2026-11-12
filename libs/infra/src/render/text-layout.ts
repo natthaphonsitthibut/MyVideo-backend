@@ -117,8 +117,15 @@ export class StageTextLayout {
           const lines = s.balancedLines(tokens, s.canvasMeasure(font), o.maxWidth, o.maxLines);
           if (lines) return { text: lines.join('\n'), fontSize: size, lines: lines.length };
         }
-        // nothing fits: smallest size, one phrase per line (still never inside a phrase)
-        return { text: tokens.join('\n'), fontSize: o.fontSizes.at(-1) ?? 48, lines: tokens.length };
+        // nothing fits: smallest size, keep the leading phrases that fit (real S01a: a five-phrase AI title became a
+        // five-line end card over the call-to-action). Never cut inside a phrase; the merchant can edit the text.
+        const size = o.fontSizes.at(-1) ?? 48;
+        const font = `${o.fontWeight} ${size}px ${s.STAGE_FONT}`;
+        for (let n = tokens.length - 1; n >= 1; n--) {
+          const lines = s.balancedLines(tokens.slice(0, n), s.canvasMeasure(font), o.maxWidth, o.maxLines);
+          if (lines) return { text: lines.join('\n'), fontSize: size, lines: lines.length };
+        }
+        return { text: tokens[0] ?? t, fontSize: size, lines: 1 };
       },
       [text, opts] as const,
     );

@@ -206,6 +206,46 @@ describe('style-pack edit of a clip', () => {
     expect(build('simple').project.tracks.filter((t) => t.kind === 'overlay')).toHaveLength(0);
   });
 
+  it('a price tag replaces the caption page saying that price; other pages stay', () => {
+    const style = stylePack('sale-fast');
+    const cut = planJumpCuts({ startMs: plan.startMs, endMs: plan.endMs }, plan.words, speech, style.cuts);
+    const frames = editFrames(source, plan, cut);
+    const page = (from: number, to: number) => {
+      const ws = frames.words.slice(from, to);
+      const start = ws[0]?.startFrame ?? 0;
+      const end = ws.at(-1)?.endFrame ?? 0;
+      return {
+        startFrame: start,
+        durationFrames: end - start,
+        words: ws.map((x) => ({
+          text: x.text,
+          startFrame: x.startFrame - start,
+          endFrame: x.endFrame - start,
+        })),
+        lines: [ws.map((_, i) => i)],
+      };
+    };
+    // page 1 "ตัวนี้สวย", page 2 "80บาทพิมพ์" (the price is said at 62)
+    const pages = [page(0, 3), page(3, frames.words.length)];
+    const project = buildClipProject({
+      projectId: '00000000-0000-4000-8000-0000000000aa',
+      merchantId: '00000000-0000-4000-8000-0000000000bb',
+      source,
+      plan,
+      pages,
+      graphics: { prices: [{ frame: 62, text: { text: '80 บาท', fontSize: 96, lines: 1 } }] },
+      edit: { style, cut },
+      seed: 'test',
+    });
+    expect(validateProject(project).ok).toBe(true);
+    const captions = Object.values(project.elements).filter((e) => e.type === 'caption');
+    expect(captions.map((c) => (c.type === 'caption' ? c.words.map((x) => x.text).join('') : ''))).toEqual([
+      'ตัวนี้สวย',
+    ]);
+    const track = project.tracks.find((t) => t.kind === 'caption');
+    expect(track?.elementIds).toEqual(captions.map((c) => c.id));
+  });
+
   it('a piece shorter than a second keeps the framing before it (a re-frame that short reads as a glitch)', () => {
     const style = stylePack('sale-fast');
     const seg = (startFrame: number, durationFrames: number, words: string[] = []) => ({

@@ -415,6 +415,19 @@ export function buildClipProject(input: {
       if (frames < Math.round(fps)) continue;
       textEl(p.text, p.frame, frames, gfx.priceTag, 900);
       graphicsFree = p.frame + frames;
+      // the tag IS the caption for that moment: drop caption pages saying the same price under it (user review
+      // 2026-11-12: "1,500 บาท" tag right above the caption "1,500 บาทค่ะ")
+      const digits = p.text.text.replace(/[^\d]/g, '');
+      for (const cid of captionIds) {
+        const c = elements[cid];
+        if (c?.type !== 'caption') continue;
+        const overlaps = c.startFrame < p.frame + frames && c.startFrame + c.durationFrames > p.frame;
+        const said = c.words
+          .map((w) => w.text)
+          .join('')
+          .replace(/[^\d]/g, '');
+        if (overlaps && digits && said.includes(digits)) delete elements[cid];
+      }
     }
   }
   if (gfx?.cta && input.graphics?.cta) {
@@ -509,7 +522,7 @@ export function buildClipProject(input: {
     assets,
     tracks: [
       { id: videoTrack, kind: 'video', elementIds: videoIds },
-      { id: captionTrack, kind: 'caption', elementIds: captionIds },
+      { id: captionTrack, kind: 'caption', elementIds: captionIds.filter((id) => elements[id]) },
       ...(overlayIds.length > 0
         ? [{ id: overlayTrack, kind: 'overlay' as const, elementIds: overlayIds }]
         : []),
