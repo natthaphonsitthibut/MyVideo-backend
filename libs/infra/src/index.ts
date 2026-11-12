@@ -15,9 +15,11 @@ export {
   JobAttemptEntity,
   JobEntity,
   JobEventEntity,
+  MediaAssetEntity,
   MerchantEntity,
   SessionEntity,
   UserEntity,
+  VideoSourceEntity,
   WorkflowRunEntity,
 } from './db/entities/index.js';
 export { migrations } from './db/migrations/index.js';
@@ -30,6 +32,7 @@ export {
   HandlerRegistry,
   type JobContext,
   type JobHandler,
+  type NextStep,
   systemHandlers,
 } from './jobs/handlers.js';
 export {
@@ -49,6 +52,18 @@ export {
   refreshRunStatus,
 } from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';
+export { AUDIO_RECIPE, audioHandler } from './media/audio-handler.js';
+export {
+  type IngestDeps,
+  ingestHandlers,
+  loadSource,
+  markSourceFailed,
+  probeHandler,
+} from './media/ingest-handlers.js';
+export { noAudioPeaks, PEAKS_RECIPE, PeaksBuilder, type PeaksJson, type PeaksLevel } from './media/peaks.js';
+export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
+export { type ProxyDeps, proxyHandler } from './media/proxy-handler.js';
+export { SPRITES_RECIPE, sheetArgs, spritesHandler, tileHeightFor } from './media/sprites-handler.js';
 export {
   ffmpegProgressParser,
   ProcessError,
@@ -57,3 +72,6 @@ export {
   runProcess,
   withTempDir,
 } from './process/run-process.js';
+export { createStorage } from './storage/create-storage.js';
+export { LocalStorage } from './storage/local-storage.js';
+export { S3Storage, type S3StorageConfig } from './storage/s3-storage.js';

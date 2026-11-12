@@ -10,6 +10,8 @@ import { DatabaseModule } from './db/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { RunsModule } from './runs/runs.module.js';
+import { SourcesModule } from './sources/sources.module.js';
+import { StorageModule } from './storage/storage.module.js';
 
 const REQUEST_ID_HEADER = 'x-request-id';
 const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -45,6 +47,8 @@ export class AppModule {
         HealthModule,
         JobsModule,
         RunsModule,
+        StorageModule,
+        SourcesModule,
       ],
     };
   }

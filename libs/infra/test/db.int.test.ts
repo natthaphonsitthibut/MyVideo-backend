@@ -28,10 +28,12 @@ describe('database baseline (real Postgres, test database)', () => {
       'job_attempts',
       'job_events',
       'jobs',
+      'media_assets',
       'merchants',
       'sessions',
       'typeorm_migrations',
       'users',
+      'video_sources',
       'workflow_runs',
     ]);
     for (let i = 0; i < migrations.length; i++) await ds.undoLastMigration();
@@ -41,10 +43,12 @@ describe('database baseline (real Postgres, test database)', () => {
       'job_attempts',
       'job_events',
       'jobs',
+      'media_assets',
       'merchants',
       'sessions',
       'typeorm_migrations',
       'users',
+      'video_sources',
       'workflow_runs',
     ]);
   });
