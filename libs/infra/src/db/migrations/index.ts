@@ -18,6 +18,7 @@ import { TranscriptContext1794492000000 } from './1794492000000-TranscriptContex
 import { TranscriptEditReview1794493000000 } from './1794493000000-TranscriptEditReview.js';
 import { BrandKits1794494000000 } from './1794494000000-BrandKits.js';
 import { TemplateVersionReason1794495000000 } from './1794495000000-TemplateVersionReason.js';
+import { PurgeRun1794496000000 } from './1794496000000-PurgeRun.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -42,4 +43,5 @@ export const migrations: Function[] = [
   TranscriptEditReview1794493000000,
   BrandKits1794494000000,
   TemplateVersionReason1794495000000,
+  PurgeRun1794496000000,
 ];

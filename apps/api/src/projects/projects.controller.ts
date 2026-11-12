@@ -10,7 +10,7 @@ import {
   RestoreParams,
   SaveProjectBody,
 } from '@myvideo/contracts';
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put } from '@nestjs/common';
 import type { z } from 'zod';
 import { CurrentMerchant } from '../auth/auth-context.js';
 import { ZodPipe } from '../common/zod-pipe.js';
@@ -40,6 +40,15 @@ export class ProjectsController {
     @Param(new ZodPipe(ProjectIdParams)) p: { id: string },
   ): Promise<ProjectRecord> {
     return this.projects.get(merchantId, p.id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async remove(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(ProjectIdParams)) p: { id: string },
+  ): Promise<void> {
+    await this.projects.delete(merchantId, p.id);
   }
 
   @Put(':id')

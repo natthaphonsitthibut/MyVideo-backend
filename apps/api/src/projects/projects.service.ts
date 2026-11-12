@@ -5,7 +5,13 @@ import {
   validateProject,
 } from '@myvideo/contracts';
 import { uuidv7 } from '@myvideo/domain';
-import { ProjectEntity, ProjectVersionEntity } from '@myvideo/infra';
+import {
+  cancelSubjectWork,
+  enqueuePurge,
+  ProjectEntity,
+  ProjectVersionEntity,
+  renderPrefix,
+} from '@myvideo/infra';
 import {
   BadRequestException,
   ConflictException,
@@ -92,6 +98,33 @@ export class ProjectsService {
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Deletes a project (E12-F02): its work is cancelled, versions and renders go with it (FK cascade), render
+   * files are removed by a purge job. Sources stay. Unknown / another merchant's id: no change (idempotent).
+   */
+  async delete(merchantId: string, id: string): Promise<void> {
+    await this.ds.transaction(async (em) => {
+      const locked: { id: string }[] = await em.query(
+        'SELECT id FROM projects WHERE id = $1 AND merchant_id = $2 FOR UPDATE',
+        [id, merchantId],
+      );
+      if (locked.length === 0) return;
+      await cancelSubjectWork(em, merchantId, { projectIds: [id] });
+      const renders: { id: string }[] = await em.query(
+        'SELECT id FROM renders WHERE merchant_id = $1 AND project_id = $2',
+        [merchantId, id],
+      );
+      await em.query('DELETE FROM projects WHERE id = $1 AND merchant_id = $2', [id, merchantId]);
+      if (renders.length > 0)
+        await enqueuePurge(
+          em,
+          merchantId,
+          { type: 'project', id },
+          renders.map((r) => renderPrefix(merchantId, r.id)),
+        );
+    });
   }
 
   async create(merchantId: string, title: string, draft: ProjectDraft): Promise<ProjectRecord> {
@@ -214,7 +247,11 @@ export class ProjectsService {
       .getRepository(ProjectVersionEntity)
       .findOneBy({ projectId: id, merchantId, version });
     if (!row) throw new NotFoundException('Version not found');
-    return { version: row.version, createdAt: row.createdAt.toISOString(), doc: row.doc as ProjectRecord['doc'] };
+    return {
+      version: row.version,
+      createdAt: row.createdAt.toISOString(),
+      doc: row.doc as ProjectRecord['doc'],
+    };
   }
 
   /** Copies an old version's doc into a NEW version (history is never rewritten). */

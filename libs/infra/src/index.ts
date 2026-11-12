@@ -129,6 +129,13 @@ export {
   RulesOnlyLlm,
   StructuredLlm,
 } from './llm/structured-llm.js';
+export {
+  cancelSubjectWork,
+  enqueuePurge,
+  purgeHandler,
+  renderPrefix,
+  sourcePrefix,
+} from './maintenance/purge.js';
 export { AUDIO_RECIPE, audioHandler } from './media/audio-handler.js';
 export {
   type IngestDeps,

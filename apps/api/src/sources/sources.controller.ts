@@ -2,7 +2,9 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
   AssetParams,
+  DeleteSourceQuery,
   ListSourcesQuery,
+  type SourceDependents,
   SourceIdParams,
   type SourceList,
   type SourceSummary,
@@ -12,7 +14,19 @@ import {
 } from '@myvideo/contracts';
 import { storageKeys, UPLOAD_EXTENSIONS } from '@myvideo/domain';
 import type { Env } from '@myvideo/infra';
-import { Controller, Get, HttpException, HttpStatus, Inject, Param, Query, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Param,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CurrentMerchant } from '../auth/auth-context.js';
 import { ZodPipe } from '../common/zod-pipe.js';
@@ -95,6 +109,24 @@ export class SourcesController {
     res.setHeader('content-length', String(file.length));
     res.setHeader('cache-control', 'private, max-age=86400, immutable');
     await pipeline(Readable.from(file.body), res).catch(() => undefined);
+  }
+
+  @Get(':id/dependents')
+  dependents(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SourceIdParams)) p: { id: string },
+  ): Promise<SourceDependents> {
+    return this.sources.dependents(merchantId, p.id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async remove(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SourceIdParams)) p: { id: string },
+    @Query(new ZodPipe(DeleteSourceQuery)) q: { withProjects: boolean },
+  ): Promise<void> {
+    await this.sources.delete(merchantId, p.id, q.withProjects);
   }
 
   @Get(':id')

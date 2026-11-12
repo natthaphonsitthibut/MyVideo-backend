@@ -87,6 +87,19 @@ export const getProject = defineRoute({
   },
 });
 
+export const deleteProject = defineRoute({
+  operationId: 'deleteProject',
+  method: 'delete',
+  path: '/projects/{id}',
+  summary:
+    'Delete a project with all its versions and renders; running work for it is cancelled and its render files ' +
+    'are removed by a retry-safe job. The source videos stay in the library. Idempotent: an unknown id is 204.',
+  tags: ['projects'],
+  auth: true,
+  request: { params: ProjectIdParams },
+  responses: { 204: { description: 'Deleted (or already gone)' } },
+});
+
 export const saveProject = defineRoute({
   operationId: 'saveProject',
   method: 'put',

@@ -13,6 +13,7 @@ import {
   JobRunner,
   liveToClipsHandlers,
   loadStageBundle,
+  purgeHandler,
   QueueSet,
   QueueWorkers,
   renderHandler,
@@ -118,6 +119,7 @@ export class WorkerModule {
 export async function defaultHandlers(env: Env, ds: DataSource): Promise<HandlerRegistry> {
   const registry = new HandlerRegistry();
   for (const h of systemHandlers) registry.register(h);
+  registry.register(purgeHandler(createStorage(env)));
   const ingest = ingestHandlers({
     ds,
     storage: createStorage(env),

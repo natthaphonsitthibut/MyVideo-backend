@@ -27,6 +27,7 @@ export const WORKFLOW_KINDS = [
   'build_clips',
   'review_to_video',
   'render',
+  'purge',
   'system_test',
 ] as const;
 export type WorkflowKind = (typeof WORKFLOW_KINDS)[number];

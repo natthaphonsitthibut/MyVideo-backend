@@ -13,6 +13,7 @@ import { cancelJob, retryJob } from './http/jobs.js';
 import { getLibrarySound } from './http/library.js';
 import {
   createProject,
+  deleteProject,
   getProject,
   getProjectVersion,
   listProjects,
@@ -24,9 +25,11 @@ import { getRender, getRenderFile, listProjectRenders, listRenders, requestRende
 import { createReviewVideo, getReviewVideo, listTemplates, swapTemplate } from './http/review-videos.js';
 import { createTestRun, getRun, listRuns, runEvents } from './http/runs.js';
 import {
+  deleteSource,
   getSource,
   getSourceAsset,
   getSourceByUpload,
+  getSourceDependents,
   getSpriteSheet,
   getUploadConfig,
   listSources,
@@ -59,6 +62,8 @@ export const routes: RouteContract[] = [
   createTestRun,
   getSourceByUpload,
   getSource,
+  getSourceDependents,
+  deleteSource,
   getSourceAsset,
   getSpriteSheet,
   getUploadConfig,
@@ -70,6 +75,7 @@ export const routes: RouteContract[] = [
   revertTranscriptWord,
   reviewTranscriptWord,
   createProject,
+  deleteProject,
   listProjects,
   getProject,
   saveProject,

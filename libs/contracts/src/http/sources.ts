@@ -99,6 +99,51 @@ export const getSource = defineRoute({
   },
 });
 
+/** What else goes when a source is deleted (projects whose document uses it). */
+export const SourceDependents = named(
+  'SourceDependents',
+  z.object({ projects: z.array(z.object({ id: z.uuid(), title: z.string() })) }),
+);
+export type SourceDependents = z.infer<typeof SourceDependents>;
+
+export const getSourceDependents = defineRoute({
+  operationId: 'getSourceDependents',
+  method: 'get',
+  path: '/sources/{id}/dependents',
+  summary: 'Projects that use this source (they are deleted with it, after the merchant confirms)',
+  tags: ['sources'],
+  auth: true,
+  request: { params: SourceIdParams },
+  responses: {
+    200: { description: 'Projects using the source', schema: SourceDependents },
+    404: { description: 'No such source for this merchant', schema: ApiErrorBody },
+  },
+});
+
+export const DeleteSourceQuery = z.object({
+  /** Must be true when projects use the source (the merchant confirmed deleting them too). */
+  withProjects: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+});
+
+export const deleteSource = defineRoute({
+  operationId: 'deleteSource',
+  method: 'delete',
+  path: '/sources/{id}',
+  summary:
+    'Delete an uploaded video, its derived files and analyses (and, with withProjects=true, the projects using it). ' +
+    'Running work for it is cancelled; files are removed by a retry-safe job. Idempotent: an unknown id is 204.',
+  tags: ['sources'],
+  auth: true,
+  request: { params: SourceIdParams, query: DeleteSourceQuery },
+  responses: {
+    204: { description: 'Deleted (or already gone)' },
+    409: { description: 'Projects use this source; repeat with withProjects=true', schema: ApiErrorBody },
+  },
+});
+
 export const AssetParams = z.object({
   id: z.uuid(),
   kind: z.enum(['original', 'proxy', 'audio', 'peaks', 'sprites']),

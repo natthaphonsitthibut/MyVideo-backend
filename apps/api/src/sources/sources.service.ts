@@ -1,17 +1,21 @@
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
-import type { SourceList, SourceSummary } from '@myvideo/contracts';
+import type { SourceDependents, SourceList, SourceSummary } from '@myvideo/contracts';
 import { extensionOf, type StoragePort, storageKeys } from '@myvideo/domain';
 import {
+  cancelSubjectWork,
   createRunInTransaction,
   type Env,
   enqueueInTransaction,
+  enqueuePurge,
   MediaAssetEntity,
+  renderPrefix,
+  sourcePrefix,
   VideoSourceEntity,
 } from '@myvideo/infra';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { FileStore } from '@tus/file-store';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 import { ENV } from '../config/env.module.js';
 import { STORAGE } from '../storage/storage.module.js';
 
@@ -135,6 +139,67 @@ export class SourcesService {
 
   get store(): StoragePort {
     return this.storage;
+  }
+
+  /** Projects of this merchant whose document (any version) uses the source. */
+  private async projectsUsing(
+    q: Pick<EntityManager, 'query'>,
+    merchantId: string,
+    sourceId: string,
+  ): Promise<{ id: string; title: string }[]> {
+    return q.query(
+      `SELECT p.id, p.title FROM projects p
+        WHERE p.merchant_id = $1 AND EXISTS (
+          SELECT 1 FROM project_versions v
+           WHERE v.project_id = p.id AND v.merchant_id = $1
+             AND jsonb_path_exists(v.doc, '$.assets.* ? (@.sourceId == $sid)', jsonb_build_object('sid', $2::text)))
+        ORDER BY p.created_at`,
+      [merchantId, sourceId],
+    );
+  }
+
+  async dependents(merchantId: string, sourceId: string): Promise<SourceDependents> {
+    const exists = await this.ds.getRepository(VideoSourceEntity).existsBy({ id: sourceId, merchantId });
+    if (!exists) throw new NotFoundException('Source not found');
+    return { projects: await this.projectsUsing(this.ds, merchantId, sourceId) };
+  }
+
+  /**
+   * Deletes a source (E12-F02) in one transaction: refuses (409) while projects use it unless the merchant
+   * confirmed `withProjects`; cancels its work and that of the deleted projects; deletes the rows (assets,
+   * transcripts, analyses, suggestions cascade); queues one purge job for its files and the deleted projects'
+   * renders. An unknown id (or another merchant's) changes nothing and is not an error (idempotent).
+   */
+  async delete(merchantId: string, sourceId: string, withProjects: boolean): Promise<void> {
+    await this.ds.transaction(async (em) => {
+      const locked: { id: string }[] = await em.query(
+        'SELECT id FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE',
+        [sourceId, merchantId],
+      );
+      if (locked.length === 0) return;
+      const projects = await this.projectsUsing(em, merchantId, sourceId);
+      if (projects.length > 0 && !withProjects) {
+        throw new ConflictException(`วิดีโอนี้ถูกใช้ใน ${projects.length} โปรเจกต์ ต้องยืนยันให้ลบโปรเจกต์เหล่านั้นด้วย`);
+      }
+      const projectIds = projects.map((p) => p.id);
+      await cancelSubjectWork(em, merchantId, { sourceIds: [sourceId], projectIds });
+      const renders: { id: string }[] = projectIds.length
+        ? await em.query('SELECT id FROM renders WHERE merchant_id = $1 AND project_id = ANY($2::uuid[])', [
+            merchantId,
+            projectIds,
+          ])
+        : [];
+      if (projectIds.length)
+        await em.query('DELETE FROM projects WHERE merchant_id = $1 AND id = ANY($2::uuid[])', [
+          merchantId,
+          projectIds,
+        ]);
+      await em.query('DELETE FROM video_sources WHERE id = $1 AND merchant_id = $2', [sourceId, merchantId]);
+      await enqueuePurge(em, merchantId, { type: 'source', id: sourceId }, [
+        sourcePrefix(merchantId, sourceId),
+        ...renders.map((r) => renderPrefix(merchantId, r.id)),
+      ]);
+    });
   }
 
   async get(merchantId: string, id: string): Promise<SourceSummary> {
