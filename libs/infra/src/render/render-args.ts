@@ -51,7 +51,7 @@ export function cutArgs(input: string, cut: MediaCut, fps: Fps, out: string): st
     '-preset',
     'ultrafast',
     '-crf',
-    '12',
+    '4',
     '-x264-params',
     'keyint=1',
     '-movflags',

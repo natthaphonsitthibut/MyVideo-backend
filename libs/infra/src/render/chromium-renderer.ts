@@ -151,7 +151,7 @@ export class ChromiumRenderer implements VideoRenderer {
           },
         );
         encoder.catch(() => {}); // awaited below; avoid an unhandled rejection while frames are captured
-        const quality = this.opts.jpegQuality ?? 92;
+        const quality = this.opts.jpegQuality ?? 98;
         for (let f = 0; f < durationFrames; f++) {
           if (signal.aborted) throw signal.reason;
           await page.evaluate(
