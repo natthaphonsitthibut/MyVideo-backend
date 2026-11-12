@@ -3,6 +3,7 @@ export * from './http/errors.js';
 export * from './http/health.js';
 export * from './http/jobs.js';
 export * from './http/projects.js';
+export * from './http/renders.js';
 export * from './http/runs.js';
 export * from './http/sources.js';
 export * from './http/transcripts.js';

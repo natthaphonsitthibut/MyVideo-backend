@@ -10,6 +10,7 @@ import { DatabaseModule } from './db/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
+import { RendersModule } from './renders/renders.module.js';
 import { RunsModule } from './runs/runs.module.js';
 import { SourcesModule } from './sources/sources.module.js';
 import { StorageModule } from './storage/storage.module.js';
@@ -53,6 +54,7 @@ export class AppModule {
         SourcesModule,
         TranscriptsModule,
         ProjectsModule,
+        RendersModule,
       ],
     };
   }

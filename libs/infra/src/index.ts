@@ -97,6 +97,11 @@ export { ChromiumRenderer, type ChromiumRendererOptions } from './render/chromiu
 export { cutArgs, encodeArgs, PRESET_SETTINGS } from './render/render-args.js';
 export { type RenderDeps, renderHandler } from './render/render-handler.js';
 export {
+  RenderRequestError,
+  type RenderRequestInput,
+  requestRender,
+} from './render/request-render.js';
+export {
   defaultStageBundleRoot,
   loadStageBundle,
   manifestVersion,

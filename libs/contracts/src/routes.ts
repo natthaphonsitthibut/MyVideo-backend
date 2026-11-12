@@ -8,6 +8,7 @@ import {
   restoreProjectVersion,
   saveProject,
 } from './http/projects.js';
+import { getRender, getRenderFile, listProjectRenders, listRenders, requestRender } from './http/renders.js';
 import { createTestRun, getRun, listRuns, runEvents } from './http/runs.js';
 import {
   getSource,
@@ -54,4 +55,9 @@ export const routes: RouteContract[] = [
   saveProject,
   listProjectVersions,
   restoreProjectVersion,
+  requestRender,
+  listProjectRenders,
+  listRenders,
+  getRender,
+  getRenderFile,
 ];
