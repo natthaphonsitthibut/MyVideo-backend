@@ -15,6 +15,9 @@ export const TranscriptWord = named(
     kind: z.string(),
     /** The ASR text when the merchant corrected this word (then `text` is the correction); null = not edited. */
     original: z.string().nullable(),
+    aiFixed: z.boolean(),
+    /** Original heard ASR text for either correction origin; null when unchanged. */
+    heard: z.string().nullable(),
   }),
 );
 

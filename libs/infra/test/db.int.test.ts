@@ -80,6 +80,18 @@ describe('database baseline (real Postgres, test database)', () => {
     expect(pending.upQueries.map((q) => q.query)).toEqual([]);
   });
 
+  it('constrains transcript correction origins and retains the user default', async () => {
+    const columns = await ds.query(
+      `SELECT column_default, is_nullable FROM information_schema.columns WHERE table_name = 'transcript_edits' AND column_name = 'origin'`,
+    );
+    expect(columns).toEqual([{ column_default: "'user'::text", is_nullable: 'NO' }]);
+    const checks = await ds.query(
+      `SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conname = 'transcript_edits_origin_valid'`,
+    );
+    expect(checks[0].definition).toContain("'user'::text");
+    expect(checks[0].definition).toContain("'ai'::text");
+  });
+
   it('indexes every foreign key column', async () => {
     const unindexed = await ds.query(`
       SELECT c.conrelid::regclass::text AS tbl, a.attname AS col

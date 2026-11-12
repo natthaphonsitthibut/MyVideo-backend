@@ -149,7 +149,7 @@ describe.skipIf(!has)('transcribe workflow on real Thai speech (C03)', { timeout
       durationMs: 54_500,
     });
     expect(t.chunkCount).toBeGreaterThanOrEqual(3);
-    expect(ran).toBe(t.chunkCount + 2); // plan + one job per chunk + merge
+    expect(ran).toBe(t.chunkCount + 3); // plan + one job per chunk + merge + optional spelling
     expect(ai.asrCalls - before).toBe(t.chunkCount);
 
     const chunks = await ds
@@ -187,8 +187,10 @@ describe.skipIf(!has)('transcribe workflow on real Thai speech (C03)', { timeout
     const before = ai.asrCalls;
     const { runId, created } = await requestTranscription(ds, { merchantId, sourceId: firstSource });
     expect(created).toBe(true);
-    expect(await drain(runId, new JobRunner(ds, registry(), { workerId: 'w2' }))).toBe(1); // only the plan
-    const plan = (await ds.query(`SELECT result FROM jobs WHERE workflow_run_id = $1`, [runId]))[0].result;
+    expect(await drain(runId, new JobRunner(ds, registry(), { workerId: 'w2' }))).toBe(2); // cached plan + optional spelling
+    const plan = (
+      await ds.query(`SELECT result FROM jobs WHERE workflow_run_id = $1 AND type = 'asr.plan'`, [runId])
+    )[0].result;
     expect(plan).toMatchObject({ cached: true });
     expect(ai.asrCalls).toBe(before);
     expect(await ds.getRepository(TranscriptEntity).countBy({ sourceId: firstSource })).toBe(1);

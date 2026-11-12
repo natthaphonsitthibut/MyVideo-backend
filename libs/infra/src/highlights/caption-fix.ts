@@ -4,7 +4,11 @@ import { zodStructuredSchema } from '../llm/schema.js';
 import type { ClipWordMs } from './clip-project.js';
 import { RISKY_TERMS } from './hooks.js';
 
-export type CaptionSegment = { id: string; words: ClipWordMs[] };
+export type CaptionSegment = {
+  id: string;
+  words: ClipWordMs[];
+  context?: { previous: string | null; next: string | null };
+};
 export const CAPTION_FIX_PROMPT_VERSION = 'caption-spelling-v3';
 export const CAPTION_FIX_SYSTEM = [
   'Correct only clear ASR spelling errors in these selected Thai clip captions. Preserve spoken meaning.',
@@ -220,7 +224,7 @@ export async function correctCaptions(
           segments: segments.map((s, i) => ({
             id: s.id,
             tokens: s.words.map((w) => w.text),
-            context: {
+            context: s.context ?? {
               previous: segments[i - 1]?.words.map((w) => w.text).join(' ') ?? null,
               next: segments[i + 1]?.words.map((w) => w.text).join(' ') ?? null,
             },
@@ -237,4 +241,20 @@ export async function correctCaptions(
     // Optional spelling improvement must never prevent a usable ASR-captioned clip.
     return unchanged();
   }
+}
+
+/**
+ * A completed transcript pass already fixed spelling (and carries the undo marks). Only the merchant's product name
+ * still needs a per-clip pass: brand repair ("ควิก บู" → the product name) needs the term, which the transcript pass
+ * does not have.
+ */
+export async function clipCaptionWords(
+  llm: LlmPort,
+  segments: readonly CaptionSegment[],
+  merchantTerms: readonly string[],
+  ctx: LlmCallContext,
+  transcriptFixed: boolean,
+): Promise<ClipWordMs[]> {
+  if (transcriptFixed && merchantTerms.length === 0) return segments.flatMap((segment) => segment.words);
+  return correctCaptions(llm, segments, merchantTerms, ctx);
 }

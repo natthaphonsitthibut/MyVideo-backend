@@ -16,11 +16,12 @@ export type CliExec = (
   args: readonly string[],
   cwd: string,
   timeoutMs: number,
+  signal?: AbortSignal,
 ) => Promise<{ code: number; stdout: string; stderrTail: string }>;
 
-export const realCliExec: CliExec = async (command, args, cwd, timeoutMs) => {
+export const realCliExec: CliExec = async (command, args, cwd, timeoutMs, signal) => {
   const chunks: Buffer[] = [];
-  const r = await runProcess(command, args, { cwd, timeoutMs, onStdoutData: (c) => chunks.push(c) });
+  const r = await runProcess(command, args, { cwd, timeoutMs, signal, onStdoutData: (c) => chunks.push(c) });
   return { code: r.code, stdout: Buffer.concat(chunks).toString('utf8'), stderrTail: r.stderrTail };
 };
 
@@ -132,10 +133,11 @@ export class ClaudeCliAdapter implements LlmAdapter {
   call(c: AdapterCall): Promise<AdapterResult> {
     return this.queue.run(() =>
       withTempDir('myvideo-llm-', async (dir) => {
+        c.signal?.throwIfAborted();
         if ((await readdir(dir)).length !== 0) throw new Error('local agent work dir must be empty');
         let r: Awaited<ReturnType<CliExec>>;
         try {
-          r = await this.exec(this.command, claudeCliArgs(c, this.effort), dir, this.timeoutMs);
+          r = await this.exec(this.command, claudeCliArgs(c, this.effort), dir, this.timeoutMs, c.signal);
         } catch (err) {
           throw new LlmCallError(`local agent did not run: ${(err as Error).message}`, true);
         }

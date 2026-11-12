@@ -111,6 +111,7 @@ export class StructuredLlm implements LlmPort {
   }
 
   async generateStructured<T>(req: LlmRequest<T>, ctx: LlmCallContext): Promise<LlmResult<T>> {
+    ctx.signal?.throwIfAborted();
     const started = performance.now();
     const model = this.adapter.modelFor(req.tier ?? 'fast');
     const key = llmCacheKey(this.mode, model, req as LlmRequest<unknown>);
@@ -127,6 +128,7 @@ export class StructuredLlm implements LlmPort {
     let prompt = req.prompt;
     let lastError = '';
     for (let attempt = 1; attempt <= 2; attempt++) {
+      ctx.signal?.throwIfAborted();
       const runId = ctx.workflowRunId ?? null;
       if (runId && (await this.store.countCalls(runId)) >= this.opts.maxCallsPerRun) {
         throw new LlmBudgetError(runId, this.opts.maxCallsPerRun);
@@ -145,6 +147,7 @@ export class StructuredLlm implements LlmPort {
       let result: Awaited<ReturnType<LlmAdapter['call']>>;
       try {
         result = await this.adapter.call({
+          ...(ctx.signal ? { signal: ctx.signal } : {}),
           system: req.system,
           prompt,
           jsonSchema: req.schema.jsonSchema,

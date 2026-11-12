@@ -23,7 +23,7 @@ import { loudnessFromPeaks, PEAKS_RECIPE, type PeaksJson } from '../media/peaks.
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import type { StageTextLayout } from '../render/text-layout.js';
-import { correctCaptions, selectCaptionSegments } from './caption-fix.js';
+import { clipCaptionWords, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
 import { layoutClipProject, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
@@ -201,7 +201,7 @@ export async function loadCorrectedTranscript(
   ds: DataSource,
   merchantId: string,
   sourceId: string,
-): Promise<{ transcriptId: string; segments: TimedSegment[] }> {
+): Promise<{ transcriptId: string; segments: TimedSegment[]; aiFixed: boolean }> {
   const t = await ds
     .getRepository(TranscriptEntity)
     .findOne({ where: { merchantId, sourceId, status: 'ready' }, order: { createdAt: 'DESC' } });
@@ -213,18 +213,26 @@ export async function loadCorrectedTranscript(
     text: string;
     words: TimedSegment['words'];
   }[] = await ds.query(
-    `SELECT seq, start_ms, end_ms, text, words FROM transcript_segments WHERE transcript_id = $1 ORDER BY seq`,
-    [t.id],
+    `SELECT seq, start_ms, end_ms, text, words FROM transcript_segments WHERE transcript_id = $1 AND merchant_id = $2 ORDER BY seq`,
+    [t.id, merchantId],
   );
-  const edits: { seq: number; word_index: number; text: string }[] = await ds.query(
-    `SELECT seq, word_index, text FROM transcript_edits WHERE transcript_id = $1`,
-    [t.id],
+  const edits: { seq: number; word_index: number; text: string; origin: 'user' | 'ai' }[] = await ds.query(
+    `SELECT seq, word_index, text, origin FROM transcript_edits WHERE transcript_id = $1 AND merchant_id = $2`,
+    [t.id, merchantId],
   );
-  const byKey = new Map(edits.map((e) => [`${e.seq}:${e.word_index}`, e.text]));
+  const byKey = new Map(edits.map((e) => [`${e.seq}:${e.word_index}`, e]));
   return {
     transcriptId: t.id,
+    aiFixed: t.aiFixCompleted || edits.some((e) => e.origin === 'ai'),
     segments: segs.map((s) => {
-      const words = s.words.map((w, i) => ({ ...w, text: byKey.get(`${s.seq}:${i}`) ?? w.text }));
+      const words = s.words.map((w, i) => {
+        const edit = byKey.get(`${s.seq}:${i}`);
+        if (!edit) return w;
+        // only AI corrections carry the undo mark; the merchant's own fix is plain text
+        return edit.origin === 'ai'
+          ? { ...w, text: edit.text, origin: 'ai' as const, asrText: w.text }
+          : { ...w, text: edit.text };
+      });
       const text = edits.some((e) => e.seq === s.seq) ? words.map((w) => w.text).join('') : s.text;
       return { startMs: s.start_ms, endMs: s.end_ms, text, words };
     }),
@@ -543,7 +551,7 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       if (s.status === 'ready' || s.status === 'discarded') return { suggestionId: s.id, reused: true };
       const product = (job.payload.product ?? {}) as ProductInfo;
 
-      const { segments } = await loadCorrectedTranscript(ds, job.merchantId, source.id);
+      const { segments, aiFixed } = await loadCorrectedTranscript(ds, job.merchantId, source.id);
       const words = flattenWords(segments);
       const firstSegment = words[s.startWord]?.segment ?? 0;
       const lastSegment = words[s.endWord]?.segment ?? firstSegment;
@@ -562,11 +570,12 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       }
       const hook = suggestions.find((x) => x.kind === 'hook');
       const title = suggestions.find((x) => x.kind === 'title')?.text ?? source.title;
-      const clipWords = await correctCaptions(
+      const clipWords = await clipCaptionWords(
         llm,
         selectCaptionSegments(segments, s.startWord, s.endWord),
         product.name ? [product.name] : [],
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
+        aiFixed,
       );
       const projectId = clipProjectId(planRunId, rank);
       const buildInput = clipBuildInput({

@@ -23,6 +23,9 @@ const list = (xs: readonly string[]) => xs.map((s) => `'${s}'`).join(', ');
 @Index('transcripts_cache_key', ['sourceId', 'audioSha256', 'model', 'recipeVersion'], { unique: true })
 @Index('transcripts_merchant_id_idx', ['merchantId'])
 export class TranscriptEntity extends BaseRow {
+  @Column({ name: 'ai_fix_completed', type: 'boolean', default: false })
+  aiFixCompleted!: boolean;
+
   @Column({ name: 'merchant_id', type: 'uuid' })
   merchantId!: string;
 
@@ -151,15 +154,19 @@ export class TranscriptSegmentEntity extends BaseRow {
 }
 
 /**
- * The merchant's correction of one display word (user layer over the ASR original, which is never changed). The word
+ * A correction of one display word (a layer over the ASR original, which is never changed). The word
  * keeps its ASR timing; only the text is replaced. Deleting the row restores the original word.
  */
 @Entity({ name: 'transcript_edits' })
 @Check('transcript_edits_text_valid', `length(btrim(text)) > 0 AND length(text) <= 200`)
 @Check('transcript_edits_position_valid', `seq >= 0 AND word_index >= 0`)
+@Check('transcript_edits_origin_valid', `origin IN ('user', 'ai')`)
 @Index('transcript_edits_word_key', ['transcriptId', 'seq', 'wordIndex'], { unique: true })
 @Index('transcript_edits_merchant_id_idx', ['merchantId'])
 export class TranscriptEditEntity extends BaseRow {
+  @Column({ type: 'text', default: 'user' })
+  origin!: 'user' | 'ai';
+
   @Column({ name: 'merchant_id', type: 'uuid' })
   merchantId!: string;
 

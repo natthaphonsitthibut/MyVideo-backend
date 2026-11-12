@@ -30,7 +30,7 @@ export type LlmRequest<T> = {
 };
 
 /** Who is asking: rows and budgets are per merchant, the call cap is per workflow run. */
-export type LlmCallContext = { merchantId: string; workflowRunId?: string | null };
+export type LlmCallContext = { merchantId: string; workflowRunId?: string | null; signal?: AbortSignal };
 
 export type LlmUsage = {
   inputTokens: number;

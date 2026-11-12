@@ -126,6 +126,7 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
   for (const h of ingest) registry.register(h);
   const transcribe = transcribeHandlers({
     ds,
+    llm: createLlm(env, new DbLlmCallStore(ds)),
     storage: createStorage(env),
     ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
   });

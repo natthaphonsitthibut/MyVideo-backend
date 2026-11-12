@@ -13,6 +13,7 @@ import { ShotAnalyses1794467847630 } from './1794467847630-ShotAnalyses.js';
 import { ClipSuggestions1794468684239 } from './1794468684239-ClipSuggestions.js';
 import { ClipRestyle1794480000000 } from './1794480000000-ClipRestyle.js';
 import { BuildClipsRun1794490000000 } from './1794490000000-BuildClipsRun.js';
+import { TranscriptAiEdits1794491000000 } from './1794491000000-TranscriptAiEdits.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -32,4 +33,5 @@ export const migrations: Function[] = [
   ClipSuggestions1794468684239,
   ClipRestyle1794480000000,
   BuildClipsRun1794490000000,
+  TranscriptAiEdits1794491000000,
 ];

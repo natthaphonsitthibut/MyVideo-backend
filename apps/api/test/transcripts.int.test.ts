@@ -172,6 +172,8 @@ describe('transcript API (real Postgres)', () => {
           endMs: FIXTURE.segments[0]?.end_ms,
           kind: 'word',
           original: null,
+          aiFixed: false,
+          heard: null,
         },
       ],
     });
@@ -244,10 +246,53 @@ describe('transcript API (real Postgres)', () => {
       });
     const wordPath = `/sources/${id}/transcript/words/0/2`;
 
+    await ds.getRepository(TranscriptEditEntity).insert({
+      merchantId: merchantA,
+      transcriptId: t.id,
+      seq: 0,
+      wordIndex: 2,
+      text: 'ทำไลฟ์สด',
+      origin: 'ai',
+    });
+    const aiPage = (await (
+      await api(`/sources/${id}/transcript/segments`, cookieA)
+    ).json()) as TranscriptSegmentPage;
+    expect(aiPage.items[0]?.words[2]).toMatchObject({
+      text: 'ทำไลฟ์สด',
+      original: null,
+      aiFixed: true,
+      heard: 'ทำไลฟสด',
+    });
+    const aiRevert = await api(wordPath, cookieA, { method: 'DELETE' });
+    expect(((await aiRevert.json()) as TranscriptSegment).words[2]).toMatchObject({
+      text: 'ทำไลฟสด',
+      aiFixed: false,
+      heard: null,
+    });
+    await ds.getRepository(TranscriptEditEntity).insert({
+      merchantId: merchantA,
+      transcriptId: t.id,
+      seq: 0,
+      wordIndex: 2,
+      text: 'ทำไลฟ์สด',
+      origin: 'ai',
+    });
+
     const res = await put(wordPath, cookieA, '  ทำไลฟ์สด ');
     expect(res.status).toBe(200);
     const edited = (await res.json()) as TranscriptSegment;
-    expect(edited.words[2]).toEqual({ ...words[2], text: 'ทำไลฟ์สด', original: 'ทำไลฟสด' });
+    expect(edited.words[2]).toEqual({
+      ...words[2],
+      text: 'ทำไลฟ์สด',
+      original: 'ทำไลฟสด',
+      aiFixed: false,
+      heard: 'ทำไลฟสด',
+    });
+    expect(
+      await ds
+        .getRepository(TranscriptEditEntity)
+        .findOneByOrFail({ transcriptId: t.id, seq: 0, wordIndex: 2 }),
+    ).toMatchObject({ origin: 'user' });
     expect(edited.text).toBe('ก็คือคุณทำไลฟ์สด');
     expect(edited.words[0]?.original).toBeNull();
 
@@ -282,7 +327,12 @@ describe('transcript API (real Postgres)', () => {
     // revert → back to the recognised word
     const rev = await api(wordPath, cookieA, { method: 'DELETE' });
     expect(rev.status).toBe(200);
-    expect(((await rev.json()) as TranscriptSegment).words[2]).toEqual({ ...words[2], original: null });
+    expect(((await rev.json()) as TranscriptSegment).words[2]).toEqual({
+      ...words[2],
+      original: null,
+      aiFixed: false,
+      heard: null,
+    });
     expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
     // writing the recognised text itself stores no correction
     expect((await put(wordPath, cookieA, 'ทำไลฟสด')).status).toBe(200);

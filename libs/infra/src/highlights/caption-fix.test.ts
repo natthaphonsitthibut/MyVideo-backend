@@ -22,6 +22,23 @@ const corrected = ['สวัสดีค่ะ', 'สุนัข', 'รับ�
 const answer = { segments: corrected.map((text, i) => ({ id: `s${i}`, tokens: [text] })) };
 
 describe('caption spelling validation and timing (hand-written validator cases, not LLM responses)', () => {
+  it('keeps the clip prompt version and default neighbour context unchanged', async () => {
+    const observed: { prompt: string; promptVersion: string }[] = [];
+    const llm: LlmPort = {
+      mode: 'local-agent',
+      async generateStructured(request) {
+        observed.push(request);
+        throw new Error('stub unavailable');
+      },
+    };
+    expect(await correctCaptions(llm, input, [], { merchantId: 'm' })).toEqual(input.flatMap((s) => s.words));
+    expect(observed).toHaveLength(1);
+    expect(observed[0]?.promptVersion).toBe('caption-spelling-v3');
+    const prompt = JSON.parse(observed[0]!.prompt);
+    expect(prompt.merchantTerms).toEqual([]);
+    expect(prompt.segments[0].context).toEqual({ previous: null, next: 'สุนัก' });
+    expect(prompt.segments[1].context).toEqual({ previous: 'สวัสดีคะ', next: 'รับพิม' });
+  });
   const timed = (tokens: string[]) => [
     {
       id: 's',

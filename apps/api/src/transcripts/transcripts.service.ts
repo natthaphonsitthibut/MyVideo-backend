@@ -106,12 +106,16 @@ export class TranscriptsService {
   }
 
   /** Corrections of these segments, keyed `seq:index`. */
-  private async editsFor(transcriptId: string, seqs: number[]): Promise<Map<string, string>> {
+  private async editsFor(
+    merchantId: string,
+    transcriptId: string,
+    seqs: number[],
+  ): Promise<Map<string, TranscriptEditEntity>> {
     if (seqs.length === 0) return new Map();
     const rows = await this.ds
       .getRepository(TranscriptEditEntity)
-      .find({ where: { transcriptId, seq: In(seqs) }, select: { seq: true, wordIndex: true, text: true } });
-    return new Map(rows.map((r) => [`${r.seq}:${r.wordIndex}`, r.text]));
+      .find({ where: { merchantId, transcriptId, seq: In(seqs) } });
+    return new Map(rows.map((r) => [`${r.seq}:${r.wordIndex}`, r]));
   }
 
   async segments(
@@ -130,6 +134,7 @@ export class TranscriptsService {
     const total = await repo.countBy({ transcriptId: t.id });
     const page = rows.slice(0, limit);
     const edits = await this.editsFor(
+      merchantId,
       t.id,
       page.map((s) => s.seq),
     );
@@ -166,12 +171,12 @@ export class TranscriptsService {
         .delete({ transcriptId: t.id, merchantId, seq, wordIndex: index });
     } else {
       await this.ds.query(
-        `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text) VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (transcript_id, seq, word_index) DO UPDATE SET text = EXCLUDED.text, updated_at = now()`,
+        `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin) VALUES ($1, $2, $3, $4, $5, 'user')
+         ON CONFLICT (transcript_id, seq, word_index) DO UPDATE SET text = EXCLUDED.text, origin = 'user', updated_at = now()`,
         [merchantId, t.id, seq, index, text],
       );
     }
-    return withEdits(segment, await this.editsFor(t.id, [seq]));
+    return withEdits(segment, await this.editsFor(merchantId, t.id, [seq]));
   }
 
   async revertWord(
@@ -184,19 +189,38 @@ export class TranscriptsService {
     await this.ds
       .getRepository(TranscriptEditEntity)
       .delete({ transcriptId: t.id, merchantId, seq, wordIndex: index });
-    return withEdits(segment, await this.editsFor(t.id, [seq]));
+    return withEdits(segment, await this.editsFor(merchantId, t.id, [seq]));
   }
 }
 
-/** A stored segment with the merchant's corrections laid over its words. */
-function withEdits(s: TranscriptSegmentEntity, edits: Map<string, string>): TranscriptSegment {
+/** Corrections over immutable ASR words; merchant and AI markings stay distinct. */
+export function withEdits(
+  s: TranscriptSegmentEntity,
+  edits: Map<string, TranscriptEditEntity>,
+): TranscriptSegment {
   let edited = false;
   const words = s.words.map((w, i) => {
     const fix = edits.get(`${s.seq}:${i}`);
     if (fix === undefined)
-      return { text: w.text, startMs: w.startMs, endMs: w.endMs, kind: w.kind, original: null };
+      return {
+        text: w.text,
+        startMs: w.startMs,
+        endMs: w.endMs,
+        kind: w.kind,
+        original: null,
+        aiFixed: false,
+        heard: null,
+      };
     edited = true;
-    return { text: fix, startMs: w.startMs, endMs: w.endMs, kind: w.kind, original: w.text };
+    return {
+      text: fix.text,
+      startMs: w.startMs,
+      endMs: w.endMs,
+      kind: w.kind,
+      original: fix.origin === 'user' ? w.text : null,
+      aiFixed: fix.origin === 'ai',
+      heard: w.text,
+    };
   });
   return {
     seq: s.seq,

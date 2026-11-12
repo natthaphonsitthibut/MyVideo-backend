@@ -68,15 +68,18 @@ export class AnthropicApiAdapter implements LlmAdapter {
   async call(c: AdapterCall): Promise<AdapterResult> {
     let msg: Anthropic.Message;
     try {
-      msg = await this.client.messages.create({
-        model: c.model,
-        max_tokens: c.maxOutputTokens,
-        ...(c.system
-          ? { system: [{ type: 'text' as const, text: c.system, cache_control: { type: 'ephemeral' } }] }
-          : {}),
-        messages: [{ role: 'user', content: c.prompt }],
-        output_config: { effort: this.effort, format: { type: 'json_schema', schema: c.jsonSchema } },
-      });
+      msg = await this.client.messages.create(
+        {
+          model: c.model,
+          max_tokens: c.maxOutputTokens,
+          ...(c.system
+            ? { system: [{ type: 'text' as const, text: c.system, cache_control: { type: 'ephemeral' } }] }
+            : {}),
+          messages: [{ role: 'user', content: c.prompt }],
+          output_config: { effort: this.effort, format: { type: 'json_schema', schema: c.jsonSchema } },
+        },
+        { signal: c.signal },
+      );
     } catch (err) {
       if (err instanceof Anthropic.APIError) {
         const status = err.status ?? 0;

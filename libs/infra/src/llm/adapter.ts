@@ -2,6 +2,7 @@ import type { LlmMode, LlmTier, LlmUsage } from '@myvideo/domain';
 
 /** One raw model call, already turned into plain data. Adapters do no validation and no caching. */
 export type AdapterCall = {
+  signal?: AbortSignal;
   system?: string;
   prompt: string;
   jsonSchema: Record<string, unknown>;

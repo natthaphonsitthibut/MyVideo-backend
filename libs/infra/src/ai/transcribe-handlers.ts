@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import {
   type ChunkSpan,
+  type LlmPort,
   offsetChunkSegments,
   planChunks,
   type StoragePort,
@@ -17,16 +18,19 @@ import {
 } from '../db/entities/transcript.entity.js';
 import { FatalJobError, type JobHandler, type NextStep } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
+import { RulesOnlyLlm } from '../llm/structured-llm.js';
 import { AUDIO_RECIPE } from '../media/audio-handler.js';
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import { runProcess, withTempDir } from '../process/run-process.js';
 import { type AiServiceClient, AiServiceError } from './ai-service.client.js';
+import { transcriptFixHandler } from './transcript-fix.js';
 
 export type TranscribeDeps = {
   ds: DataSource;
   storage: StoragePort;
   ai: AiServiceClient;
+  llm?: LlmPort;
   /** Longest ASR chunk (default 10 min). */
   maxChunkMs?: number;
   /** While the AI service answers "busy" (409): poll interval (default 5 s) and longest wait (default 20 min). */
@@ -142,6 +146,13 @@ const mergeStep = (sourceId: string, transcriptId: string): NextStep => ({
   timeoutMs: 10 * 60_000,
 });
 
+const fixStep = (transcriptId: string): NextStep => ({
+  type: 'transcript.fix',
+  queue: 'ai',
+  payload: { transcriptId },
+  timeoutMs: 30 * 60_000,
+});
+
 /**
  * Transcribe step 1: cache lookup by (source, audio sha256, model, recipe) → VAD → chunk plan (cuts at
  * silences, ≤ 10 min). A transcript left unfinished by an earlier run keeps its done chunks (resume).
@@ -222,7 +233,7 @@ export function asrPlanHandler({ ds, storage, ai, maxChunkMs }: TranscribeDeps):
       };
     },
     next(job, result) {
-      if (result.cached) return [];
+      if (result.cached) return [fixStep(String(result.transcriptId))];
       const sourceId = String(job.payload.sourceId);
       const transcriptId = String(result.transcriptId);
       const pending = (result.pending as number[]) ?? [];
@@ -430,10 +441,18 @@ export function asrMergeHandler({ ds, storage }: TranscribeDeps): JobHandler {
         words: segments.reduce((n, s) => n + s.words.length, 0),
       };
     },
+    next(_job, result) {
+      return [fixStep(String(result.transcriptId))];
+    },
     onDead: markTranscriptFailed,
   };
 }
 
 export function transcribeHandlers(deps: TranscribeDeps): JobHandler[] {
-  return [asrPlanHandler(deps), asrChunkHandler(deps), asrMergeHandler(deps)];
+  return [
+    asrPlanHandler(deps),
+    asrChunkHandler(deps),
+    asrMergeHandler(deps),
+    transcriptFixHandler({ ds: deps.ds, llm: deps.llm ?? new RulesOnlyLlm() }),
+  ];
 }
