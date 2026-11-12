@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from . import __version__
 from .asr import ENGINE, AsrBusyError, WhisperServer, decode_flags
+from .faces import FACES_ENGINE, YUNET_FILE, face_stats
 from .settings import PathNotAllowed, Settings, checked_dir, checked_path
 from .shots import ENGINE as SHOTS_ENGINE
 from .shots import RECIPE as SHOTS_RECIPE
@@ -101,6 +102,21 @@ class ShotsResponse(BaseModel):
     elapsed_ms: int
 
 
+class FacesRequest(BaseModel):
+    paths: list[str] = Field(min_length=1, max_length=200, description="Local keyframe images")
+
+
+class FaceOut(BaseModel):
+    path: str
+    faces: int
+    largest_ratio: float
+
+
+class FacesResponse(BaseModel):
+    engine: str
+    images: list[FaceOut]
+
+
 class VadResponse(BaseModel):
     segments: list[Segment]
     speech_ms: int
@@ -178,6 +194,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             shots=[ShotOut(start_ms=s.start_ms, end_ms=s.end_ms, keyframes=s.keyframes) for s in r.shots],
             elapsed_ms=r.elapsed_ms,
         )
+
+    @app.post("/faces")
+    def faces(req: FacesRequest) -> FacesResponse:
+        try:
+            images = [checked_path(cfg, p) for p in req.paths]
+        except PathNotAllowed as err:
+            raise HTTPException(status_code=400, detail=str(err)) from err
+        model = cfg.models_dir.parent / "vision" / YUNET_FILE
+        if not model.is_file():
+            raise HTTPException(status_code=503, detail=f"face model not installed: {model}")
+        out: list[FaceOut] = []
+        for img in images:
+            try:
+                st = face_stats(img, model)
+            except OSError as err:
+                raise HTTPException(status_code=400, detail=str(err)) from err
+            out.append(FaceOut(path=str(img), faces=st.faces, largest_ratio=st.largest_ratio))
+        return FacesResponse(engine=FACES_ENGINE, images=out)
 
     @app.post("/asr")
     def transcribe(req: AsrRequest) -> AsrResponse:

@@ -52,6 +52,12 @@ export const ShotsResult = z.object({
 });
 export type ShotsResult = z.infer<typeof ShotsResult>;
 
+export const FacesResult = z.object({
+  engine: z.string(),
+  images: z.array(z.object({ path: z.string(), faces: z.number().int(), largest_ratio: z.number() })),
+});
+export type FacesResult = z.infer<typeof FacesResult>;
+
 export const AsrResult = z.object({
   language: z.string(),
   duration_ms: z.number().int(),
@@ -155,6 +161,16 @@ export class AiServiceClient {
       method: 'POST',
       body: { path, start_ms: opts.startMs, end_ms: opts.endMs, keyframes_dir: opts.keyframesDir },
       timeoutMs: 30 * 60_000,
+      signal: opts.signal,
+    });
+  }
+
+  /** Face presence per local keyframe image (YuNet): count and largest face / frame area. */
+  faces(paths: string[], opts: { signal?: AbortSignal } = {}): Promise<FacesResult> {
+    return this.request('/faces', FacesResult, {
+      method: 'POST',
+      body: { paths },
+      timeoutMs: 5 * 60_000,
       signal: opts.signal,
     });
   }
