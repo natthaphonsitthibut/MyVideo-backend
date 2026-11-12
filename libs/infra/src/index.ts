@@ -178,3 +178,11 @@ export { StageTextLayout } from './render/text-layout.js';
 export { createStorage } from './storage/create-storage.js';
 export { LocalStorage } from './storage/local-storage.js';
 export { S3Storage, type S3StorageConfig } from './storage/s3-storage.js';
+export {
+  REVIEW_MAX_SOURCES,
+  type ReviewInput,
+  type ReviewResult,
+  ReviewVideoUnavailableError,
+  requestReviewVideo,
+  reviewBuildHandler,
+} from './templates/review-to-video.js';

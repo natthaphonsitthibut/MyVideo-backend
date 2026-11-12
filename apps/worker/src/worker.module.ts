@@ -16,6 +16,7 @@ import {
   QueueSet,
   QueueWorkers,
   renderHandler,
+  reviewBuildHandler,
   StageTextLayout,
   shotsHandler,
   systemHandlers,
@@ -150,6 +151,14 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
   });
   for (const h of clips) registry.register(h);
   registry.register(clipsRestyleHandler({ ds, openLayout: () => StageTextLayout.open(bundle) }));
+  registry.register(
+    reviewBuildHandler({
+      ds,
+      storage: createStorage(env),
+      ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+      openLayout: () => StageTextLayout.open(bundle),
+    }),
+  );
   registry.register(
     renderHandler({ ds, storage: createStorage(env), renderer, soundLibraryDir: env.SOUND_LIBRARY_DIR }),
   );

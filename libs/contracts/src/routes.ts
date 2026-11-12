@@ -20,6 +20,7 @@ import {
   saveProject,
 } from './http/projects.js';
 import { getRender, getRenderFile, listProjectRenders, listRenders, requestRender } from './http/renders.js';
+import { createReviewVideo, getReviewVideo, listTemplates, swapTemplate } from './http/review-videos.js';
 import { createTestRun, getRun, listRuns, runEvents } from './http/runs.js';
 import {
   getSource,
@@ -85,4 +86,8 @@ export const routes: RouteContract[] = [
   listStylePacks,
   restyleProject,
   getLibrarySound,
+  listTemplates,
+  createReviewVideo,
+  getReviewVideo,
+  swapTemplate,
 ];

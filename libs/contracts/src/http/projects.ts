@@ -48,7 +48,7 @@ export const ProjectVersionSummary = named(
     version: z.number().int().min(1),
     createdAt: z.iso.datetime({ offset: true }),
     /** `user` save, `restore` of an older version, `restyle` (AI clip rebuilt with another style), or creation. */
-    reason: z.enum(['create', 'save', 'restore', 'restyle']),
+    reason: z.enum(['create', 'save', 'restore', 'restyle', 'template']),
     restoredFrom: z.number().int().nullable(),
   }),
 );

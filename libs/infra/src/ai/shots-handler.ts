@@ -6,6 +6,7 @@ import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import { withTempDir } from '../process/run-process.js';
+import { reviewBuildStep } from '../templates/review-to-video.js';
 import type { AiServiceClient } from './ai-service.client.js';
 
 export type ShotsDeps = { ds: DataSource; storage: StoragePort; ai: AiServiceClient; partMs?: number };
@@ -109,7 +110,9 @@ export function shotsHandler({ ds, storage, ai, partMs }: ShotsDeps): JobHandler
         detectMs: parts.reduce((n, p) => n + (p.elapsedMs ?? 0), 0),
       };
     },
-    next(job) {
+    next(job, _result, em) {
+      // review-to-video: one detection per clip; the build follows once every clip of the run is done
+      if (job.payload.nextStep === 'review.build') return reviewBuildStep(em, job.workflowRunId, job.id);
       // inside a live-to-clips run, planning follows shot detection
       if (job.payload.nextStep !== 'clips.plan') return [];
       return [
