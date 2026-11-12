@@ -114,7 +114,8 @@ export const MAX_LLM_INPUT_SHARE = 0.25;
 
 /**
  * The longest prefix of the (rule-ranked) candidates whose transcript text stays within `maxShare` of the
- * transcript characters in `[fromWord, toWord]` (default: the whole transcript).
+ * transcript characters in `[fromWord, toWord]` (default: the whole transcript) — but never empty: the best
+ * candidate is always kept, so a recording shorter than ~4 windows can exceed the share with that one window.
  */
 export function limitByInputShare(
   candidates: readonly HighlightCandidate[],
@@ -128,7 +129,9 @@ export function limitByInputShare(
   let used = 0;
   for (const c of candidates) {
     const n = chars(c.firstWord, c.lastWord);
-    if (used + n > budget) break;
+    // the cap is a cost guard for long recordings; a short one (one window > the share) still gets its best window,
+    // otherwise LLM modes would return no clip at all (seen: 55-s live clip → 0 clips)
+    if (used + n > budget && out.length > 0) break;
     used += n;
     out.push(c);
   }

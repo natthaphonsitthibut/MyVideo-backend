@@ -112,6 +112,16 @@ describe('rerankCandidates on a real recorded answer', () => {
     expect(chosen).toEqual(all.slice(0, chosen.length)); // a prefix: best rule windows first
   });
 
+  it('limitByInputShare always sends the best window of a short recording (one window > 25 %)', () => {
+    // a 55-s live clip: its best window alone is far more than a quarter of the transcript
+    const all = findHighlights({ segments }, { topN: 20 });
+    const first = all[0];
+    if (!first) throw new Error('no window');
+    // the whole "recording" is that window: it is 100 % of the transcript
+    const chosen = limitByInputShare(all, words, 0.25, { fromWord: first.firstWord, toWord: first.lastWord });
+    expect(chosen).toEqual([first]);
+  });
+
   it('rules mode makes no call and keeps the rule order', async () => {
     const out = await rerankCandidates(new RulesOnlyLlm(), segments, candidates, { merchantId: 'm1' });
     expect(out.calls).toBe(0);
