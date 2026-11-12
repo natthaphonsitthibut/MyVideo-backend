@@ -214,17 +214,15 @@ describe('transcript API (real Postgres)', () => {
       { text: 'คุณ', startMs: seg.start_ms + 400, endMs: seg.start_ms + 700, kind: 'word' },
       { text: 'ทำไลฟสด', startMs: seg.start_ms + 700, endMs: seg.end_ms, kind: 'word' },
     ];
-    await ds
-      .getRepository(TranscriptSegmentEntity)
-      .insert({
-        merchantId: merchantA,
-        transcriptId: t.id,
-        seq: 0,
-        startMs: seg.start_ms,
-        endMs: seg.end_ms,
-        text: 'ก็คือคุณทำไลฟสด',
-        words,
-      });
+    await ds.getRepository(TranscriptSegmentEntity).insert({
+      merchantId: merchantA,
+      transcriptId: t.id,
+      seq: 0,
+      startMs: seg.start_ms,
+      endMs: seg.end_ms,
+      text: 'ก็คือคุณทำไลฟสด',
+      words,
+    });
     // the merged original ASR JSON as the merge step stores it
     const storage = new LocalStorage(resolve(testEnv().STORAGE_LOCAL_DIR));
     const key = storageKeys.derived(merchantA, id, t.id, 'transcript', 1, 'json');
