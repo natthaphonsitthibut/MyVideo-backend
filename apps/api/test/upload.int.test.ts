@@ -4,7 +4,13 @@ import { readFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LocalStorage, MediaAssetEntity, seedMerchant, VideoSourceEntity } from '@myvideo/infra';
+import {
+  LocalStorage,
+  MediaAssetEntity,
+  normalizeProbe,
+  seedMerchant,
+  VideoSourceEntity,
+} from '@myvideo/infra';
 import type { INestApplication } from '@nestjs/common';
 import * as tus from 'tus-js-client';
 import type { DataSource } from 'typeorm';
@@ -211,6 +217,28 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
         }
       ).status,
     ).toBe('processing');
+  });
+
+  it('exposes the probed project frame rate and length in frames (what a clip project is built from)', async () => {
+    const list = (await (
+      await fetch(`${base}/sources?limit=1`, { headers: { cookie: cookieA } })
+    ).json()) as { items: { id: string; fps: unknown; durationFrames: unknown }[] };
+    const src = list.items[0];
+    expect(src).toMatchObject({ fps: null, durationFrames: null }); // not probed yet
+    // recorded ffprobe output of a real vertical clip (libs/infra/test/fixtures/probe/README.md)
+    const raw = await readFile(
+      new URL('../../../libs/infra/test/fixtures/probe/vertical.json', import.meta.url),
+      'utf8',
+    );
+    const probed = normalizeProbe(JSON.parse(raw));
+    if (!probed.ok) throw new Error('fixture must probe ok');
+    await ds.query('UPDATE video_sources SET probe = $2 WHERE id = $1', [src?.id, probed.info]);
+    const got = (await (
+      await fetch(`${base}/sources/${src?.id}`, { headers: { cookie: cookieA } })
+    ).json()) as { fps: unknown; durationFrames: unknown };
+    expect(got.fps).toEqual(probed.info.video.fps);
+    expect(got.durationFrames).toBe(probed.info.video.durationFrames);
+    expect(probed.info.video.durationFrames).toBeGreaterThan(0);
   });
 
   it('tells the UI the limits', async () => {
