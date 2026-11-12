@@ -153,6 +153,66 @@ describe('clips API (real Postgres)', () => {
     expect(after.clips.map((c) => c.rank)).toEqual([1]);
   });
 
+  it('style packs are listed with Thai names', async () => {
+    const r = await api('/style-packs', cookieA);
+    expect(r.status).toBe(200);
+    const body = (await r.json()) as { items: { id: string; name: string; description: string }[] };
+    expect(body.items.map((p) => p.id)).toEqual(['sale-fast', 'friendly', 'premium', 'fun', 'simple']);
+    expect(body.items.every((p) => p.name.length > 0 && p.description.length > 0)).toBe(true);
+  });
+
+  it('restyle: 400 unknown style, 404 other merchant / unknown, 409 without build input, 202 + job', async () => {
+    const id = await source(true);
+    const s = (await (
+      await api(`/sources/${id}/clips`, cookieA, { method: 'POST', body: '{}' })
+    ).json()) as ClipsState;
+    const projectId = uuidv7();
+    await ds.query(`INSERT INTO projects (id, merchant_id, title, current_version) VALUES ($1, $2, 'c', 1)`, [
+      projectId,
+      merchantA,
+    ]);
+    await ds.query(
+      `INSERT INTO clip_suggestions (merchant_id, source_id, workflow_run_id, rank, status, start_ms, end_ms, start_word,
+         end_word, score, type, reason, title, origin, mode, project_id)
+       VALUES ($1, $2, $3, 1, 'ready', 0, 20000, 0, 10, 80, 'faq', 'r', 't', 'rules', 'rules', $4)`,
+      [merchantA, id, s.runId, projectId],
+    );
+    const post = (pid: string, cookie: string, styleId: string) =>
+      api(`/projects/${pid}/restyle`, cookie, { method: 'POST', body: JSON.stringify({ styleId }) });
+
+    expect((await post(projectId, cookieA, 'nope')).status).toBe(400);
+    expect((await post(projectId, cookieB, 'fun')).status).toBe(404);
+    expect((await post(uuidv7(), cookieA, 'fun')).status).toBe(404);
+    const old = await post(projectId, cookieA, 'fun');
+    expect(old.status).toBe(409);
+    expect(((await old.json()) as ApiErrorBody).message).toMatch(/สร้างคลิปใหม่/);
+
+    const input = {
+      version: 1,
+      startMs: 0,
+      endMs: 20_000,
+      words: [{ text: 'ตัวนี้', startMs: 0, endMs: 500 }],
+      speech: [{ startMs: 0, endMs: 600 }],
+      title: 't',
+      hook: null,
+    };
+    await ds.query(`UPDATE clip_suggestions SET build_input = $1 WHERE project_id = $2`, [
+      JSON.stringify(input),
+      projectId,
+    ]);
+    const ok = await post(projectId, cookieA, 'premium');
+    expect(ok.status).toBe(202);
+    const { runId } = (await ok.json()) as { runId: string };
+    const jobs = await ds.query(`SELECT type, queue, payload FROM jobs WHERE workflow_run_id = $1`, [runId]);
+    expect(jobs).toEqual([
+      { type: 'clips.restyle', queue: 'ai', payload: { projectId, styleId: 'premium' } },
+    ]);
+    const run = await ds.query(`SELECT kind, subject_type, subject_id FROM workflow_runs WHERE id = $1`, [
+      runId,
+    ]);
+    expect(run[0]).toEqual({ kind: 'restyle_clip', subject_type: 'project', subject_id: projectId });
+  });
+
   it('GET /projects lists only the merchant own projects, newest first', async () => {
     const res = await api('/projects', cookieA);
     expect(res.status).toBe(200);

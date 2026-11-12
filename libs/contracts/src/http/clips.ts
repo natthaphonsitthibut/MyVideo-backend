@@ -106,3 +106,40 @@ export const discardClip = defineRoute({
     404: { description: 'No such suggestion', schema: ApiErrorBody },
   },
 });
+
+export const StylePackSummary = named(
+  'StylePackSummary',
+  z.object({ id: z.string(), name: z.string(), description: z.string() }),
+);
+export const StylePackList = named('StylePackList', z.object({ items: z.array(StylePackSummary) }));
+
+export const listStylePacks = defineRoute({
+  operationId: 'listStylePacks',
+  method: 'get',
+  path: '/style-packs',
+  summary: 'Edit styles an AI clip can be built or restyled with (Thai names)',
+  tags: ['clips'],
+  auth: true,
+  responses: { 200: { description: 'Style packs', schema: StylePackList } },
+});
+
+export const RestyleBody = named('RestyleBody', z.object({ styleId: z.string().min(1).max(64) }));
+export const RestyleAccepted = named('RestyleAccepted', z.object({ runId: z.uuid() }));
+
+export const restyleProject = defineRoute({
+  operationId: 'restyleProject',
+  method: 'post',
+  path: '/projects/{id}/restyle',
+  summary:
+    'Rebuild an AI-made clip with another style pack from its stored inputs (no AI call); saved as a new project version',
+  tags: ['clips'],
+  auth: true,
+  request: { params: z.object({ id: z.uuid() }), body: RestyleBody },
+  responses: {
+    202: { description: 'Restyle run started (follow `/workflow-runs/{runId}`)', schema: RestyleAccepted },
+    400: { description: 'Unknown style', schema: ApiErrorBody },
+    404: { description: 'No such project for this merchant', schema: ApiErrorBody },
+    409: { description: 'Not an AI clip with stored build inputs (Thai message)', schema: ApiErrorBody },
+    429: { description: 'Too many unfinished runs', schema: ApiErrorBody },
+  },
+});

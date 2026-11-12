@@ -1,6 +1,7 @@
 import {
   AiServiceClient,
   ChromiumRenderer,
+  clipsRestyleHandler,
   createDataSource,
   createLlm,
   createStorage,
@@ -147,6 +148,7 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     openLayout: () => StageTextLayout.open(bundle),
   });
   for (const h of clips) registry.register(h);
+  registry.register(clipsRestyleHandler({ ds, openLayout: () => StageTextLayout.open(bundle) }));
   registry.register(
     renderHandler({ ds, storage: createStorage(env), renderer, soundLibraryDir: env.SOUND_LIBRARY_DIR }),
   );

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateProject } from '@myvideo/contracts';
+import { type Project, validateProject } from '@myvideo/contracts';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startAiService } from '../../../test/ai-service.js';
@@ -14,11 +14,13 @@ import { requestTranscription, transcribeHandlers } from '../src/ai/transcribe-h
 import { ClipSuggestionEntity } from '../src/db/entities/clip-suggestion.entity.js';
 import { ProjectVersionEntity } from '../src/db/entities/project.entity.js';
 import { seedMerchant } from '../src/db/seed.js';
+import { parseClipBuildInput } from '../src/highlights/clip-build-input.js';
 import {
   LiveToClipsUnavailableError,
   liveToClipsHandlers,
   requestLiveToClips,
 } from '../src/highlights/live-to-clips.js';
+import { clipsRestyleHandler, requestRestyle } from '../src/highlights/restyle.js';
 import { HandlerRegistry } from '../src/jobs/handlers.js';
 import { JobRunner } from '../src/jobs/runner.js';
 import { RulesOnlyLlm } from '../src/llm/structured-llm.js';
@@ -29,6 +31,17 @@ import { StageTextLayout } from '../src/render/text-layout.js';
 import { LocalStorage } from '../src/storage/local-storage.js';
 
 const CLIP = 'live-tiedye-th-vertical-b.mp4'; // C02 = S01 @ 20:00, 55 s, real Thai live selling
+
+/** All caption words of a project in time order, joined. */
+function captionText(p: Project): string {
+  return Object.values(p.elements)
+    .flatMap((e) =>
+      e.type === 'caption' ? [{ at: e.startFrame, text: e.words.map((w) => w.text).join('') }] : [],
+    )
+    .sort((a, b) => a.at - b.at)
+    .map((x) => x.text)
+    .join('');
+}
 const has = !!footageClip(CLIP);
 
 describe.skipIf(!has)(
@@ -159,6 +172,90 @@ describe.skipIf(!has)(
         const sorted = [...clips].sort((a, b) => a.startMs - b.startMs);
         expect(sorted[i]?.startMs ?? 0).toBeGreaterThanOrEqual(sorted[i - 1]?.endMs ?? 0);
       }
+    });
+
+    it('restyle rebuilds a clip with another style from its stored input — no AI call, a new version', async () => {
+      const clip = await ds
+        .getRepository(ClipSuggestionEntity)
+        .findOneOrFail({ where: { merchantId, status: 'ready' }, order: { rank: 'ASC' } });
+      const projectId = clip.projectId ?? '';
+      // the build stored what it gave the builder
+      const stored = parseClipBuildInput(clip.buildInput);
+      expect(stored).not.toBeNull();
+      expect(stored?.startMs).toBe(clip.startMs);
+      expect(stored?.endMs).toBe(clip.endMs);
+      expect(stored?.words.length).toBeGreaterThan(0);
+      expect(stored?.title).toBe(clip.title);
+
+      const v1 = await ds.getRepository(ProjectVersionEntity).findOneByOrFail({ projectId, version: 1 });
+      const llmCallsBefore = Number((await ds.query(`SELECT count(*) AS n FROM llm_calls`))[0].n);
+      // the restyle handler is given no LLM at all (it has no such dependency); llm_calls must not grow either
+      const bundle = await loadStageBundle();
+      const reg = new HandlerRegistry().register(
+        clipsRestyleHandler({ ds, openLayout: () => StageTextLayout.open(bundle) }),
+      );
+      const restyle = async (styleId: string) => {
+        const { runId } = await requestRestyle(ds, { merchantId, projectId, styleId });
+        expect(await drain(runId, new JobRunner(ds, reg, { workerId: 'restyle' }))).toEqual([
+          'clips.restyle',
+        ]);
+        expect((await ds.query(`SELECT status FROM workflow_runs WHERE id = $1`, [runId]))[0].status).toBe(
+          'succeeded',
+        );
+      };
+
+      await restyle('premium');
+      const versions = await ds
+        .getRepository(ProjectVersionEntity)
+        .find({ where: { projectId }, order: { version: 'ASC' } });
+      expect(versions.map((v) => [v.version, v.reason])).toEqual([
+        [1, 'create'],
+        [2, 'restyle'],
+      ]);
+      const v2 = versions[1]?.doc as Project;
+      expect(validateProject(v2).ok).toBe(true);
+      expect(v2.meta).toMatchObject({ createdBy: 'ai', styleId: 'premium' });
+      expect((v1.doc as Project).meta.styleId).not.toBe('premium');
+      // same words on screen (only the look and cuts change)
+      expect(captionText(v2)).toBe(captionText(v1.doc as Project));
+      expect(captionText(v2).length).toBeGreaterThan(0);
+      // same seed → same project and ids as a fresh build of that style would give
+      expect(v2.id).toBe(projectId);
+      expect(Number((await ds.query(`SELECT count(*) AS n FROM llm_calls`))[0].n)).toBe(llmCallsBefore);
+
+      // the same style again: no new version; another style: version 3; v1 still restorable as stored
+      await restyle('premium');
+      expect(await ds.getRepository(ProjectVersionEntity).countBy({ projectId })).toBe(2);
+      await restyle('fun');
+      const v3 = await ds.getRepository(ProjectVersionEntity).findOneByOrFail({ projectId, version: 3 });
+      expect((v3.doc as Project).meta.styleId).toBe('fun');
+      expect(
+        (await ds.getRepository(ProjectVersionEntity).findOneByOrFail({ projectId, version: 1 })).doc,
+      ).toEqual(v1.doc);
+
+      // another merchant cannot restyle it; unknown styles are refused
+      const other = await seedMerchant(ds, {
+        merchantName: 'B',
+        merchantSlug: 'shop-b',
+        email: 'b@b.local',
+        password: 'password-b',
+        displayName: 'B',
+      });
+      await expect(
+        requestRestyle(ds, { merchantId: other.merchant.id, projectId, styleId: 'fun' }),
+      ).rejects.toMatchObject({ reason: 'not_found' });
+      await expect(requestRestyle(ds, { merchantId, projectId, styleId: 'nope' })).rejects.toMatchObject({
+        reason: 'unknown_style',
+      });
+      // a clip built before build inputs were stored
+      await ds.query(`UPDATE clip_suggestions SET build_input = NULL WHERE id = $1`, [clip.id]);
+      await expect(requestRestyle(ds, { merchantId, projectId, styleId: 'simple' })).rejects.toMatchObject({
+        reason: 'no_build_input',
+      });
+      await ds.query(`UPDATE clip_suggestions SET build_input = $2 WHERE id = $1`, [
+        clip.id,
+        JSON.stringify(clip.buildInput),
+      ]);
     });
 
     it('re-running a finished build does nothing (idempotent)', async () => {

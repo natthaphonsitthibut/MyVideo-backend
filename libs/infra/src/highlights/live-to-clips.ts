@@ -23,6 +23,7 @@ import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { correctCaptions, selectCaptionSegments } from './caption-fix.js';
+import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
 import { layoutClipProject, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
@@ -352,6 +353,52 @@ async function ranksOf(ds: DataSource, runId: string): Promise<number[]> {
   return rows.map((r) => r.rank);
 }
 
+/** The project id of the clip at `rank` of a run — the same on rebuilds and restyles. */
+export function clipProjectId(workflowRunId: string, rank: number): string {
+  return seededIds(`${workflowRunId}:${rank}:project`)();
+}
+
+export function sourceInfo(sourceId: string, probe: ProbeInfo) {
+  return {
+    sourceId,
+    fps: probe.video.fps,
+    durationFrames: probe.video.durationFrames,
+    hasAudio: probe.audio !== null,
+  };
+}
+
+/**
+ * Stage layout + pure builder from a stored build input (no AI): used by the build and by restyles. The seed is the
+ * run + rank, so the same input and style give the same project (element ids included).
+ */
+export async function layoutClip(
+  openLayout: () => Promise<StageTextLayout>,
+  a: {
+    projectId: string;
+    merchantId: string;
+    workflowRunId: string;
+    rank: number;
+    source: ReturnType<typeof sourceInfo>;
+    input: ClipBuildInput;
+    styleId: string | undefined;
+  },
+) {
+  const layout = await openLayout();
+  try {
+    return await layoutClipProject(layout, {
+      projectId: a.projectId,
+      merchantId: a.merchantId,
+      workflowRunId: a.workflowRunId,
+      source: a.source,
+      plan: planOf(a.input),
+      seed: `${a.workflowRunId}:${a.rank}`,
+      style: { ...(a.styleId ? { styleId: a.styleId } : {}), speech: a.input.speech },
+    });
+  } finally {
+    await layout.close();
+  }
+}
+
 export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): JobHandler {
   return {
     type: 'clips.build',
@@ -395,37 +442,27 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         product.name ? [product.name] : [],
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
       );
-      const projectId = seededIds(`${job.workflowRunId}:${rank}:project`)();
-      const layout = await openLayout();
-      let project: Awaited<ReturnType<typeof layoutClipProject>>;
-      try {
-        project = await layoutClipProject(layout, {
-          projectId,
-          merchantId: job.merchantId,
-          workflowRunId: job.workflowRunId,
-          source: {
-            sourceId: source.id,
-            fps: probe.video.fps,
-            durationFrames: probe.video.durationFrames,
-            hasAudio: probe.audio !== null,
-          },
-          plan: {
-            startMs: s.startMs,
-            endMs: s.endMs,
-            words: clipWords,
-            title,
-            hook: hook ? { text: hook.text, origin: hook.origin } : undefined,
-          },
-          seed: `${job.workflowRunId}:${rank}`,
-          // older queued jobs have no speech spans: then only filler words are cut
-          style: {
-            ...(typeof job.payload.styleId === 'string' ? { styleId: job.payload.styleId } : {}),
-            speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
-          },
-        });
-      } finally {
-        await layout.close();
-      }
+      const projectId = clipProjectId(job.workflowRunId, rank);
+      const buildInput = clipBuildInput({
+        plan: {
+          startMs: s.startMs,
+          endMs: s.endMs,
+          words: clipWords,
+          title,
+          ...(hook ? { hook: { text: hook.text, origin: hook.origin } } : {}),
+        },
+        // older queued jobs have no speech spans: then only filler words are cut
+        speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
+      });
+      const project = await layoutClip(openLayout, {
+        projectId,
+        merchantId: job.merchantId,
+        workflowRunId: job.workflowRunId,
+        rank,
+        source: sourceInfo(source.id, probe),
+        input: buildInput,
+        styleId: typeof job.payload.styleId === 'string' ? job.payload.styleId : undefined,
+      });
       await ds.transaction(async (em) => {
         const exists = await em.getRepository(ProjectEntity).existsBy({ id: projectId });
         if (!exists) {
@@ -444,12 +481,17 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
             restoredFrom: null,
           });
         }
-        await em
-          .getRepository(ClipSuggestionEntity)
-          .update(
-            { id: s.id, status: 'planned' },
-            { status: 'ready', projectId, hook: hook?.text ?? null, title: title.slice(0, 200), error: null },
-          );
+        await em.getRepository(ClipSuggestionEntity).update(
+          { id: s.id, status: 'planned' },
+          {
+            status: 'ready',
+            projectId,
+            hook: hook?.text ?? null,
+            title: title.slice(0, 200),
+            error: null,
+            buildInput: buildInput as never,
+          },
+        );
       });
       return { suggestionId: s.id, projectId, hookFallback };
     },

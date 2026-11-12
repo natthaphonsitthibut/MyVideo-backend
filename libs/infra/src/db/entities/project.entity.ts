@@ -28,7 +28,7 @@ export class ProjectEntity extends BaseRow {
 /** One immutable saved version of a project's JSON. Restoring copies an old doc into a new version. */
 @Entity({ name: 'project_versions' })
 @Check('project_versions_version_valid', `version >= 1`)
-@Check('project_versions_reason_valid', `reason IN ('create', 'save', 'restore')`)
+@Check('project_versions_reason_valid', `reason IN ('create', 'save', 'restore', 'restyle')`)
 @Index('project_versions_project_version_key', ['projectId', 'version'], { unique: true })
 @Index('project_versions_merchant_id_idx', ['merchantId'])
 export class ProjectVersionEntity extends BaseRow {
@@ -53,7 +53,7 @@ export class ProjectVersionEntity extends BaseRow {
   doc!: Record<string, unknown>;
 
   @Column({ type: 'text' })
-  reason!: 'create' | 'save' | 'restore';
+  reason!: 'create' | 'save' | 'restore' | 'restyle';
 
   @Column({ name: 'restored_from', type: 'integer', nullable: true })
   restoredFrom!: number | null;

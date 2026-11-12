@@ -1,4 +1,5 @@
 import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import type { ClipBuildInput } from '../../highlights/clip-build-input.js';
 import { BaseRow } from './base.js';
 import { MerchantEntity } from './merchant.entity.js';
 import { ProjectEntity } from './project.entity.js';
@@ -99,4 +100,11 @@ export class ClipSuggestionEntity extends BaseRow {
 
   @Column({ type: 'text', nullable: true })
   error!: string | null;
+
+  /**
+   * What `clips.build` gave the pure project builder (AI-corrected words, VAD speech, hook, title): a restyle
+   * rebuilds the clip from it with another style pack without any AI call. Null for clips built before it existed.
+   */
+  @Column({ name: 'build_input', type: 'jsonb', nullable: true })
+  buildInput!: ClipBuildInput | null;
 }

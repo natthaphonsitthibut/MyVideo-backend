@@ -23,6 +23,7 @@ export const WORKFLOW_KINDS = [
   'ingest',
   'transcribe',
   'live_to_clips',
+  'restyle_clip',
   'review_to_video',
   'render',
   'system_test',

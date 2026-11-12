@@ -3,6 +3,8 @@ import {
   ClipSuggestionParams,
   type ClipsState,
   GenerateClipsBody,
+  ProjectIdParams,
+  RestyleBody,
   SourceIdParams,
 } from '@myvideo/contracts';
 import { Body, Controller, Get, HttpCode, Inject, Param, Post } from '@nestjs/common';
@@ -30,6 +32,21 @@ export class ClipsController {
     @Body(new ZodPipe(GenerateClipsBody)) body: { productName?: string; fresh?: boolean; styleId?: string },
   ): Promise<ClipsState> {
     return this.clips.generate(merchantId, p.id, body);
+  }
+
+  @Get('style-packs')
+  styles(): { items: { id: string; name: string; description: string }[] } {
+    return this.clips.listStyles();
+  }
+
+  @Post('projects/:id/restyle')
+  @HttpCode(202)
+  restyle(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(ProjectIdParams)) p: { id: string },
+    @Body(new ZodPipe(RestyleBody)) body: { styleId: string },
+  ): Promise<{ runId: string }> {
+    return this.clips.restyle(merchantId, p.id, body.styleId);
   }
 
   @Post('clip-suggestions/:id/discard')

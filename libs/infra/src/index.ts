@@ -85,6 +85,7 @@ export {
   type RankedClip,
   rerankCandidates,
 } from './highlights/rerank.js';
+export { clipsRestyleHandler, RestyleUnavailableError, requestRestyle } from './highlights/restyle.js';
 export { Dispatcher, type DispatcherOptions } from './jobs/dispatcher.js';
 export {
   FatalJobError,

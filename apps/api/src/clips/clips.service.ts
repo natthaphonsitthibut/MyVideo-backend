@@ -1,11 +1,19 @@
-import type { ClipSuggestion, ClipsState } from '@myvideo/contracts';
+import { type ClipSuggestion, type ClipsState, STYLE_PACKS } from '@myvideo/contracts';
 import {
   ClipSuggestionEntity,
   type Env,
   LiveToClipsUnavailableError,
+  RestyleUnavailableError,
   requestLiveToClips,
+  requestRestyle,
 } from '@myvideo/infra';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ENV } from '../config/env.module.js';
 
@@ -13,6 +21,7 @@ const CONFLICT_TH: Record<'not_ready' | 'no_transcript', string> = {
   not_ready: 'วิดีโอยังเตรียมไม่เสร็จ รอให้ประมวลผลเสร็จก่อนแล้วค่อยสร้างคลิป',
   no_transcript: 'ยังไม่มีคำถอดเสียง กด "ถอดเสียงวิดีโอนี้" ก่อน แล้วค่อยสร้างคลิปอัตโนมัติ',
 };
+const RESTYLE_UNAVAILABLE_TH = 'คลิปนี้สร้างก่อนรองรับการเปลี่ยนสไตล์ — สร้างคลิปใหม่อีกครั้ง';
 const BUILD_FAILED_TH = 'สร้างคลิปนี้ไม่สำเร็จ ลองกด "สร้างใหม่" อีกครั้ง';
 
 function toDto(r: ClipSuggestionEntity): ClipSuggestion {
@@ -87,6 +96,29 @@ export class ClipsService {
       throw err;
     }
     return this.state(merchantId, sourceId);
+  }
+
+  listStyles(): { items: { id: string; name: string; description: string }[] } {
+    return { items: STYLE_PACKS.map(({ id, name, description }) => ({ id, name, description })) };
+  }
+
+  async restyle(merchantId: string, projectId: string, styleId: string): Promise<{ runId: string }> {
+    try {
+      return await requestRestyle(this.ds, {
+        merchantId,
+        projectId,
+        styleId,
+        maxUnfinishedRuns: this.env.MERCHANT_MAX_ACTIVE_RUNS,
+      });
+    } catch (err) {
+      if (err instanceof RestyleUnavailableError) {
+        if (err.reason === 'not_found') throw new NotFoundException('Project not found');
+        if (err.reason === 'unknown_style')
+          throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
+        throw new ConflictException(RESTYLE_UNAVAILABLE_TH);
+      }
+      throw err;
+    }
   }
 
   async discard(merchantId: string, id: string): Promise<ClipSuggestion> {
