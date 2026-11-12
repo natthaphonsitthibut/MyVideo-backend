@@ -77,6 +77,7 @@ export const ReviewVideoState = named(
 export type ReviewVideoState = z.infer<typeof ReviewVideoState>;
 
 const IdParams = z.object({ id: z.uuid() });
+export const TemplateList = named('TemplateList', z.object({ items: z.array(TemplateVersion) }));
 
 export const listTemplates = defineRoute({
   operationId: 'listTemplates',
@@ -85,7 +86,7 @@ export const listTemplates = defineRoute({
   summary: 'Templates the merchant can pick (newest version of each)',
   tags: ['templates'],
   auth: true,
-  responses: { 200: { description: 'Templates', schema: z.object({ items: z.array(TemplateVersion) }) } },
+  responses: { 200: { description: 'Templates', schema: TemplateList } },
 });
 
 export const createReviewVideo = defineRoute({
