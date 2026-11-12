@@ -1,3 +1,4 @@
+export * from './highlights/clip-rules.js';
 export * from './highlights/eval.js';
 export * from './highlights/lexicon.js';
 export * from './highlights/scorer.js';

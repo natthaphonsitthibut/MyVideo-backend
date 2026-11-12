@@ -5,6 +5,10 @@ this repo): the **real** stored ASR transcript (whisper.cpp large-v3-turbo, tran
 92 segments with word timings on the source timeline — and loudness per 100 ms derived from the source's real
 waveform peaks (`peaks-v1.json`, same formula as `loudnessFromPeaks` in `libs/infra/src/media/peaks.ts`).
 
+`vad.speech` — the **real** Silero VAD (whisper.cpp `ggml-silero-v6.2.0.bin`, min silence 300 ms) speech segments
+of the same 4 minutes, from our AI service `POST /vad` on the excerpt's 16 kHz audio (51 segments, 208.7 s of
+speech), shifted to the source timeline. Added 2026-11-12 for clip boundary snapping (E07-F04).
+
 Source: "ไลฟ์สดขายเสื้อมัดย้อม EP.8", สุรป่าน Channel, https://www.youtube.com/watch?v=ZXgMkBc01mI —
 licensed CC BY 3.0 (attribution: สุรป่าน Channel). The excerpt contains ASR errors on purpose: the scorer has
 to work on what the recogniser really produces.
