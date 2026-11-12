@@ -25,6 +25,7 @@ import { loadSource } from '../media/source-helpers.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { clipCaptionWords, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
+import { clipEndWithTail, normalizeThaiSpelling } from './clip-ending.js';
 import { layoutClipProject, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { keyMomentKind } from './jump-cuts.js';
@@ -578,7 +579,7 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         hookFallback = true;
       }
       const hook = suggestions.find((x) => x.kind === 'hook');
-      const title = suggestions.find((x) => x.kind === 'title')?.text ?? source.title;
+      const title = normalizeThaiSpelling(suggestions.find((x) => x.kind === 'title')?.text ?? source.title);
       const clipWords = await clipCaptionWords(
         llm,
         selectCaptionSegments(segments, s.startWord, s.endWord),
@@ -587,13 +588,14 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         aiFixed,
       );
       const projectId = clipProjectId(planRunId, rank);
+      const endMs = clipEndWithTail(s.endMs, words[s.endWord + 1]?.startMs, probe.durationMs);
       const buildInput = clipBuildInput({
         plan: {
           startMs: s.startMs,
-          endMs: s.endMs,
-          words: clipWords,
+          endMs,
+          words: clipWords.map((w) => ({ ...w, text: normalizeThaiSpelling(w.text) })),
           title,
-          ...(hook ? { hook: { text: hook.text, origin: hook.origin } } : {}),
+          ...(hook ? { hook: { text: normalizeThaiSpelling(hook.text), origin: hook.origin } } : {}),
         },
         // older queued jobs have no speech spans: then only filler words are cut
         speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
