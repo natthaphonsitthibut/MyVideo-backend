@@ -33,7 +33,7 @@ htmlcov/
 # Generated media
 outputs/
 output/
-renders/
+/renders/
 uploads/
 
 # AI models / weights / datasets
