@@ -11,6 +11,7 @@ export * from './http/renders.js';
 export * from './http/review-videos.js';
 export * from './http/runs.js';
 export * from './http/sources.js';
+export * from './http/timings.js';
 export * from './http/transcripts.js';
 export { buildOpenApi } from './openapi.js';
 export * from './project/migrate.js';

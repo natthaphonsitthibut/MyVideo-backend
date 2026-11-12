@@ -232,9 +232,18 @@ export class SourcesService {
     const filename = String(meta.filename ?? 'video');
     const ext = extensionOf(filename) || 'bin';
     const key = storageKeys.original(merchantId, sourceId, ext);
+    const receivedAt = new Date();
     const stored = await this.storage.put(key, createReadStream(join(this.env.UPLOAD_TMP_DIR, uploadId)), {
       contentType: CONTENT_TYPES[ext] ?? 'application/octet-stream',
     });
+    const storedAt = new Date();
+    // measured upload facts for the timings page: client upload (tus creation → finished), then copy into storage
+    const uploadTiming = {
+      startedAt: upload.creation_date ?? receivedAt.toISOString(),
+      receivedAt: receivedAt.toISOString(),
+      storedAt: storedAt.toISOString(),
+      bytes: stored.size,
+    };
     await this.ds.transaction(async (em) => {
       const inserted: { id: string }[] = await em.query(
         `INSERT INTO video_sources (id, merchant_id, upload_id, title, original_filename, size_bytes, sha256)
@@ -267,7 +276,7 @@ export class SourcesService {
         kind: 'ingest',
         subjectType: 'source',
         subjectId: sourceId,
-        input: { sourceId },
+        input: { sourceId, upload: uploadTiming },
       });
       await enqueueInTransaction(em, {
         merchantId,

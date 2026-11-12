@@ -35,6 +35,7 @@ import {
   getUploadConfig,
   listSources,
 } from './http/sources.js';
+import { listTimings } from './http/timings.js';
 import {
   editTranscriptWord,
   getTranscript,
@@ -62,6 +63,7 @@ export const routes: RouteContract[] = [
   getRun,
   runEvents,
   createTestRun,
+  listTimings,
   getSourceByUpload,
   getSource,
   getSourceDependents,

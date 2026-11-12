@@ -253,6 +253,69 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
     expect(cfg.extensions).toContain('mp4');
   });
 
+  it('reports measured upload, step and model-call times on the timings page, merchant-scoped', async () => {
+    type T = {
+      items: {
+        runId: string;
+        kind: string;
+        subjectTitle: string | null;
+        upload: {
+          bytes: number;
+          uploadMs: number;
+          storeMs: number;
+          startedAt: string;
+          storedAt: string;
+        } | null;
+        steps: { type: string; status: string; runMs: number | null; waitMs: number | null }[];
+        llm: { calls: number; inputTokens: number; outputTokens: number; costUsd: number | null } | null;
+        totalMs: number;
+      }[];
+    };
+    const first = (await (
+      await fetch(`${base}/timings?limit=50`, { headers: { cookie: cookieA } })
+    ).json()) as T;
+    const ingest = first.items.filter((r) => r.kind === 'ingest');
+    expect(ingest.length).toBeGreaterThanOrEqual(2);
+    const run = ingest[0];
+    expect(run?.subjectTitle).toBe('ไลฟ์ทดสอบ');
+    expect(run?.upload?.bytes).toBe(file.length);
+    expect(run?.upload?.uploadMs).toBeGreaterThanOrEqual(0);
+    expect(Date.parse(run?.upload?.storedAt ?? '')).toBeGreaterThanOrEqual(
+      Date.parse(run?.upload?.startedAt ?? ''),
+    );
+    expect(run?.steps[0]).toMatchObject({ type: 'media.probe', runMs: null }); // not started: no invented time
+    expect(run?.llm).toBeNull();
+
+    // a finished step and two logged model calls → measured numbers, summed per run
+    await ds.query(
+      `UPDATE jobs SET started_at = created_at + interval '2 seconds', finished_at = created_at + interval '7 seconds'
+        WHERE workflow_run_id = $1`,
+      [run?.runId],
+    );
+    const merchant: { merchant_id: string }[] = await ds.query(
+      'SELECT merchant_id FROM workflow_runs WHERE id = $1',
+      [run?.runId],
+    );
+    for (const cost of [0.002, 0.001]) {
+      await ds.query(
+        `INSERT INTO llm_calls (merchant_id, workflow_run_id, cache_key, mode, model, prompt_version, schema_name,
+                                attempt, status, input_tokens, output_tokens, cost_usd_estimate, duration_ms)
+         VALUES ($1, $2, 'k', 'api', 'vendor/model', 'v1', 's', 1, 'ok', 100, 20, $3, 1500)`,
+        [merchant[0]?.merchant_id, run?.runId, cost],
+      );
+    }
+    const second = (await (
+      await fetch(`${base}/timings?limit=50`, { headers: { cookie: cookieA } })
+    ).json()) as T;
+    const again = second.items.find((r) => r.runId === run?.runId);
+    expect(again?.steps[0]).toMatchObject({ waitMs: 2000, runMs: 5000 });
+    expect(again?.llm).toMatchObject({ calls: 2, inputTokens: 200, outputTokens: 40 });
+    expect(again?.llm?.costUsd).toBeCloseTo(0.003, 9);
+
+    const theirs = (await (await fetch(`${base}/timings`, { headers: { cookie: cookieB } })).json()) as T;
+    expect(theirs.items).toHaveLength(0);
+  });
+
   it('keeps uploads private to the merchant and rejects bad requests', async () => {
     const { url } = await startUpload(cookieA);
     const id = url.split('/').pop() ?? '';
