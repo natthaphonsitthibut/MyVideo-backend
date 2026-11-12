@@ -32,7 +32,8 @@ const HOOK_STYLE = { fontWeight: 800, fontSizes: [88, 76, 64, 56], maxWidth: 880
  * Seen on S01a: a centred 1.28× punch-in cut the seller's eyes off; 0.7 keeps the face, the frame stays covered.
  */
 const ZOOM_KEEP_TOP = 0.7;
-const END_CARD_STYLE = { fontWeight: 800, fontSizes: [80, 68, 56], maxWidth: 840, maxLines: 3 };
+/** Centred mid-frame, where platforms put their button column on the right 15 %: lines stay within 162–918 px. */
+const END_CARD_STYLE = { fontWeight: 800, fontSizes: [80, 68, 56], maxWidth: 756, maxLines: 3 };
 
 export type ClipSourceInfo = {
   sourceId: string;

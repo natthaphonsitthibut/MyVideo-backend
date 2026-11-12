@@ -1,6 +1,6 @@
 {
   "name": "@myvideo/stage",
-  "version": "f2523d2f2e33",
+  "version": "fb10d0dcb657",
   "files": {
     "fonts/noto-sans-latin-ext-wght-normal.woff2": {
       "sha256": "6d5a79315528df191b9d86f97b0c4272a8b588fcb166773fe6588ac795de0613",
@@ -31,8 +31,8 @@
       "size": 2131
     },
     "stage.js": {
-      "sha256": "dc334d829ef7d7d8f390e3ad64c8a752bef0a437909bd2cd18e41dcd480e0715",
-      "size": 28799
+      "sha256": "edc41048769ee33b3de617ada624ac330eaf8eccb4fd5f66308e5d60cdd562fb",
+      "size": 28822
     }
   }
 }
