@@ -91,6 +91,8 @@ const visual = {
 };
 
 const Animation = z.object({ presetId: z.string().min(1).max(64), durationFrames: frames });
+/** Entrance/exit presets for any visual element (E09-F09). */
+const animations = { animationIn: Animation.optional(), animationOut: Animation.optional() };
 
 /** A hex colour, or a brand kit token resolved by the stage from the merchant's current kit (E08-F08). */
 const StyleColor = z.string().regex(/^(#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?|brand:(primary|accent|text))$/);
@@ -109,9 +111,21 @@ export const TextStyle = named(
   }),
 );
 
-export const VideoElement = z.object({ type: z.literal('video'), ...common, ...media, ...visual });
+export const VideoElement = z.object({
+  type: z.literal('video'),
+  ...common,
+  ...media,
+  ...visual,
+  ...animations,
+});
 export const AudioElement = z.object({ type: z.literal('audio'), ...common, ...media });
-export const ImageElement = z.object({ type: z.literal('image'), ...common, assetId: id, ...visual });
+export const ImageElement = z.object({
+  type: z.literal('image'),
+  ...common,
+  assetId: id,
+  ...visual,
+  ...animations,
+});
 export const TextElement = z.object({
   type: z.literal('text'),
   ...common,
@@ -119,6 +133,7 @@ export const TextElement = z.object({
   styleRef: z.string().min(1).max(64).optional(),
   style: TextStyle.optional(),
   transform: Transform,
+  opacity: z.number().min(0).max(1).optional(),
   animationIn: Animation.optional(),
   animationOut: Animation.optional(),
 });
@@ -146,6 +161,8 @@ export const CaptionElement = z.object({
   lines: z.array(z.array(z.number().int().min(0)).min(1)).min(1),
   styleRef: z.enum(CAPTION_STYLE_IDS),
   transform: Transform,
+  opacity: z.number().min(0).max(1).optional(),
+  ...animations,
 });
 
 export const ShapeElement = z.object({
@@ -158,6 +175,8 @@ export const ShapeElement = z.object({
   fill: z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/),
   radius: z.number().min(0).optional(),
   transform: Transform,
+  opacity: z.number().min(0).max(1).optional(),
+  ...animations,
 });
 
 export const CtaElement = z.object({
@@ -166,6 +185,8 @@ export const CtaElement = z.object({
   label: z.string().min(1).max(80),
   styleRef: z.string().min(1).max(64),
   transform: Transform,
+  opacity: z.number().min(0).max(1).optional(),
+  ...animations,
 });
 
 export const ProjectElement = named(
@@ -184,7 +205,17 @@ export type ProjectElement = z.infer<typeof ProjectElement>;
 export type ElementType = ProjectElement['type'];
 
 export const TRACK_KINDS = ['video', 'audio', 'caption', 'overlay'] as const;
-export const Track = named('Track', z.object({ id, kind: z.enum(TRACK_KINDS), elementIds: z.array(id) }));
+export const Track = named(
+  'Track',
+  z.object({
+    id,
+    kind: z.enum(TRACK_KINDS),
+    elementIds: z.array(id),
+    /** Advanced timeline (E09): locked = its elements cannot be edited; muted = its audio is silent. */
+    locked: z.boolean().optional(),
+    muted: z.boolean().optional(),
+  }),
+);
 export type Track = z.infer<typeof Track>;
 
 export const ProjectAsset = named(

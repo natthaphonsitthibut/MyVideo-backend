@@ -74,6 +74,11 @@ export function planRender(input: RenderProject): RenderPlan {
   const audio: AudioClip[] = [];
   const images = new Set<string>();
   const assets: RenderProject['assets'] = {};
+  const mutedTracks = new Set(
+    ((p.tracks as { id: string; muted?: boolean }[] | undefined) ?? [])
+      .filter((t) => t.muted)
+      .map((t) => t.id),
+  );
   for (const e of Object.values(p.elements)) {
     if (e.type !== 'video' && e.type !== 'audio' && e.type !== 'image') continue;
     const sourceAssetId = e.assetId as string;
@@ -87,7 +92,8 @@ export function planRender(input: RenderProject): RenderPlan {
     const rate = e.playbackRate ?? 1;
     const startSec = sec(e.sourceInFrame ?? 0, p.fps);
     const durationSec = (sec(e.durationFrames, p.fps) * rate) as number;
-    const volume = e.volume ?? 1;
+    // a muted track (advanced timeline) is silent in the render exactly as in the preview
+    const volume = mutedTracks.has(e.trackId as string) ? 0 : (e.volume ?? 1);
     if (asset.hasAudio && volume > 0)
       audio.push({ sourceAssetId, startSec, durationSec, delaySec: sec(e.startFrame, p.fps), rate, volume });
     if (e.type === 'video') {

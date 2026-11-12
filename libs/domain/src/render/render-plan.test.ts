@@ -94,6 +94,13 @@ describe('planRender', () => {
     expect(planRender(p).audio).toEqual([]);
   });
 
+  it('a muted track is silent in the render', () => {
+    const p = project({ tracks: [{ id: T, kind: 'video', elementIds: [V1, V2], muted: true }] });
+    expect(planRender(p).audio).toEqual([]);
+    const loud = project({ tracks: [{ id: T, kind: 'video', elementIds: [V1, V2] }] });
+    expect(planRender(loud).audio).toHaveLength(1);
+  });
+
   it('passes images through and plans audio elements', () => {
     const p = project({
       assets: {
