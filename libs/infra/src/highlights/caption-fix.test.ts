@@ -4,7 +4,12 @@ import type { LlmPort } from '@myvideo/domain';
 import { describe, expect, it } from 'vitest';
 import { ClaudeCliAdapter } from '../llm/local-agent-claude.js';
 import { MemoryLlmCallStore, RulesOnlyLlm, StructuredLlm } from '../llm/structured-llm.js';
-import { applyCaptionFix, correctCaptions, selectCaptionSegments } from './caption-fix.js';
+import {
+  applyCaptionFix,
+  CAPTION_FIX_PROMPT_VERSION,
+  correctCaptions,
+  selectCaptionSegments,
+} from './caption-fix.js';
 import { buildClipProject, clipFrames } from './clip-project.js';
 import { RISKY_TERMS } from './hooks.js';
 
@@ -17,6 +22,90 @@ const corrected = ['สวัสดีค่ะ', 'สุนัข', 'รับ�
 const answer = { segments: corrected.map((text, i) => ({ id: `s${i}`, tokens: [text] })) };
 
 describe('caption spelling validation and timing (hand-written validator cases, not LLM responses)', () => {
+  const timed = (tokens: string[]) => [
+    {
+      id: 's',
+      words: tokens.map((text, i) => ({ text, startMs: i * 100, endMs: i * 100 + 90 })),
+    },
+  ];
+  it.each([
+    [
+      ['รับ', 'พิม', 'ลับ', 'มา'],
+      ['รับ', 'พิมพ์', 'กลับ', 'มา'],
+    ],
+    [['ไซต์'], ['ไซซ์']],
+  ])('accepts reported live-selling spelling %j', (before, after) => {
+    expect(
+      applyCaptionFix(timed(before), { segments: [{ id: 's', tokens: after }] }, []).map((w) => w.text),
+    ).toEqual(after);
+  });
+  // Synthetic transliteration for mapping mechanics, NOT a recorded ASR brand or LLM answer.
+  const brandInput = timed(['ลิ', 'ควิด', 'บลู', 'มา']);
+  it('merges an exact merchant term with the complete audio span and original text', () => {
+    const words = applyCaptionFix(
+      brandInput,
+      { segments: [{ id: 's', tokens: ['Liquid Blue', '', '', 'มา'] }] },
+      ['Liquid Blue'],
+    );
+    expect(words).toEqual([
+      { text: 'Liquid Blue', startMs: 0, endMs: 290, origin: 'ai', asrText: 'ลิ ควิด บลู' },
+      brandInput[0]!.words[3],
+    ]);
+    const source = { sourceId: 's', fps: { num: 100, den: 1 }, durationFrames: 40, hasAudio: true };
+    const plan = { startMs: 0, endMs: 400, words, title: 'clip' };
+    const project = buildClipProject({
+      projectId: 'p',
+      merchantId: 'm',
+      source,
+      plan,
+      seed: 'merge',
+      pages: [{ startFrame: 0, durationFrames: 40, words: clipFrames(source, plan).words, lines: [[0, 1]] }],
+    });
+    const caption = Object.values(project.elements).find((e) => e.type === 'caption');
+    if (caption?.type !== 'caption') throw new Error('no caption');
+    expect(CaptionWord.parse(caption.words[0])).toEqual({
+      text: 'Liquid Blue',
+      startFrame: 0,
+      endFrame: 29,
+      origin: 'ai',
+      asrText: 'ลิ ควิด บลู',
+    });
+  });
+  it.each([
+    { tokens: ['Liquid Blue', '', '', 'มา'], terms: [] },
+    { tokens: ['liquid blue', '', '', 'มา'], terms: ['Liquid Blue'] },
+    { tokens: ['LiquidBlue', '', '', 'มา'], terms: ['Liquid Blue'] },
+    { tokens: ['คำอื่น', '', '', 'มา'], terms: ['Liquid Blue'] },
+    { tokens: ['', 'Liquid Blue', '', 'มา'], terms: ['Liquid Blue'] },
+    { tokens: ['Liquid Blue', ' ', '', 'มา'], terms: ['Liquid Blue'] },
+    { tokens: ['Liquid Blue 99', '', '', 'มา'], terms: ['Liquid Blue 99'] },
+    { tokens: ['Liquid Blue', '', '', 'ฟรี'], terms: ['Liquid Blue'] },
+    { tokens: ['Liquid Blue', '', '', 'เปลี่ยนทุกอย่าง'], terms: ['Liquid Blue'] },
+  ])('rejects invalid merges or unsafe edits: %j', ({ tokens, terms }) => {
+    expect(applyCaptionFix(brandInput, { segments: [{ id: 's', tokens }] }, terms)).toEqual(
+      brandInput.flatMap((s) => s.words),
+    );
+  });
+  it('sends neighbours as read-only context without adding them to target tokens', async () => {
+    let request: unknown;
+    const unavailable: LlmPort = {
+      mode: 'local-agent',
+      generateStructured: async (value) => {
+        request = JSON.parse(value.prompt);
+        throw new Error('inspect request only; no fabricated LLM response');
+      },
+    };
+    await correctCaptions(unavailable, input, ['Liquid Blue'], { merchantId: 'm' });
+    expect(request).toEqual({
+      merchantTerms: ['Liquid Blue'],
+      segments: [
+        { id: 's0', tokens: ['สวัสดีคะ'], context: { previous: null, next: 'สุนัก' } },
+        { id: 's1', tokens: ['สุนัก'], context: { previous: 'สวัสดีคะ', next: 'รับพิม' } },
+        { id: 's2', tokens: ['รับพิม'], context: { previous: 'สุนัก', next: 'ตำหนี' } },
+        { id: 's3', tokens: ['ตำหนี'], context: { previous: 'รับพิม', next: null } },
+      ],
+    });
+  });
   it('corrects reported spelling, preserving every time and original text', () => {
     const out = applyCaptionFix(input, answer, []);
     expect(out.map((w) => w.text)).toEqual(corrected);
@@ -160,11 +249,12 @@ describe('caption spelling validation and timing (hand-written validator cases, 
   });
 });
 
-const fixture = new URL('./fixtures/caption-fix.json', import.meta.url);
+const fixture = new URL(`./fixtures/${CAPTION_FIX_PROMPT_VERSION}.json`, import.meta.url);
 it.skipIf(!existsSync(fixture))(
-  'replays real caption correction (SKIP until llm-caption-fix.live.int.test.ts records fixtures/caption-fix.json)',
+  `replays real caption correction (SKIP until live recorder creates fixtures/${CAPTION_FIX_PROMPT_VERSION}.json)`,
   async () => {
     const recording = JSON.parse(readFileSync(fixture, 'utf8'));
+    expect(recording.promptVersion).toBe(CAPTION_FIX_PROMPT_VERSION);
     const responses = [...recording.responses];
     const store = new MemoryLlmCallStore();
     const llm = new StructuredLlm(

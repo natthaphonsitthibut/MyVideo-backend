@@ -8,15 +8,29 @@ import {
 import { ClaudeCliAdapter, type CliExec, realCliExec } from '../src/llm/local-agent-claude.js';
 import { MemoryLlmCallStore, StructuredLlm } from '../src/llm/structured-llm.js';
 
-/** Explicit opt-in only. Real user-reported ASR text; times are plumbing inputs, not audio measurements.
- * The exact garbled Liquid Blue transcription is unknown, so it is NOT fabricated here.
+/** Explicit opt-in only. Real reported ASR errors; neighbours are an assembled test sequence,
+ * not a contiguous transcript excerpt. Times are plumbing inputs, not audio measurements.
+ * The two brand segments are REAL whisper output (large-v3-turbo) of live-tiedye-th-vertical-b at 24 s and
+ * 41 s, split by our Thai word splitter: the seller says the tie-dye brand "Liquid Blue".
  * Review the saved input/output before accepting this fixture as spelling-quality evidence.
  */
 describe.skipIf(process.env.LLM_LIVE !== '1')('caption spelling live recording', () => {
   it('records real responses and reversible caption words', { timeout: 300_000 }, async () => {
-    const segments: CaptionSegment[] = ['สวัสดีคะ', 'สุนัก', 'รับพิม', 'ตำหนี'].map((text, i) => ({
+    const segments: CaptionSegment[] = [
+      ['สวัสดีคะ'],
+      ['รับ', 'พิม', 'ลับ', 'มา', 'ให้', 'นะ', 'คะ'],
+      ['ไซต์'],
+      ['สุนัก'],
+      ['ตำหนี'],
+      ['1995', 'ริก', 'ฤิกบู', 'นะจ๊ะ'],
+      ['ไป', 'ด้วย', 'ควิก', 'บู'],
+    ].map((tokens, i) => ({
       id: `s${i}`,
-      words: [{ text, startMs: i * 1000, endMs: i * 1000 + 900 }],
+      words: tokens.map((text, j) => ({
+        text,
+        startMs: i * 2000 + j * 200,
+        endMs: i * 2000 + j * 200 + 190,
+      })),
     }));
     const merchantTerms = ['Liquid Blue'];
     const responses: unknown[] = [];
@@ -35,7 +49,7 @@ describe.skipIf(process.env.LLM_LIVE !== '1')('caption spelling live recording',
       workflowRunId: 'caption-fix-live',
     });
     writeFileSync(
-      new URL('../src/highlights/fixtures/caption-fix.json', import.meta.url),
+      new URL(`../src/highlights/fixtures/${CAPTION_FIX_PROMPT_VERSION}.json`, import.meta.url),
       `${JSON.stringify(
         {
           recordedAt: new Date().toISOString(),
@@ -43,7 +57,7 @@ describe.skipIf(process.env.LLM_LIVE !== '1')('caption spelling live recording',
           effort: 'medium',
           promptVersion: CAPTION_FIX_PROMPT_VERSION,
           source:
-            'User-reported ASR errors; timing is test-only; exact garbled brand transcription not supplied',
+            'Reported ASR errors in an assembled neighbour sequence, not a continuous excerpt; timing is test-only; brand segments s5/s6 are real whisper output of live-tiedye-th-vertical-b',
           segments,
           merchantTerms,
           responses,
@@ -54,13 +68,35 @@ describe.skipIf(process.env.LLM_LIVE !== '1')('caption spelling live recording',
       )}\n`,
     );
     expect(store.rows.some((r) => r.status === 'ok')).toBe(true);
-    expect(words).toHaveLength(4);
-    expect(words.some((w) => w.asrText !== undefined)).toBe(true);
+    // Save the genuine response even if acceptance fails, so failures remain reviewable.
+    expect(words.map((w) => w.text)).toEqual([
+      'สวัสดีค่ะ',
+      'รับ',
+      'พิมพ์',
+      'กลับ',
+      'มา',
+      'ให้',
+      'นะ',
+      'คะ',
+      'ไซซ์',
+      'สุนัข',
+      'ตำหนิ',
+      '1995',
+      'Liquid Blue',
+      'นะจ๊ะ',
+      'ไป',
+      'ด้วย',
+      'Liquid Blue',
+    ]);
+    // merged brand words span their first to last original slot; every other word keeps its own time
     expect(words.map((w) => [w.startMs, w.endMs])).toEqual([
-      [0, 900],
-      [1000, 1900],
-      [2000, 2900],
-      [3000, 3900],
+      ...segments.slice(0, 5).flatMap((s) => s.words.map((w) => [w.startMs, w.endMs])),
+      [10_000, 10_190],
+      [10_200, 10_590],
+      [10_600, 10_790],
+      [12_000, 12_190],
+      [12_200, 12_390],
+      [12_400, 12_790],
     ]);
     console.log(JSON.stringify(words, null, 2));
   });
