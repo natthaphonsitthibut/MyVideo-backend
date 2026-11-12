@@ -5,7 +5,7 @@ import {
   TranscriptEntity,
   TranscriptSegmentEntity,
 } from '../db/entities/transcript.entity.js';
-import { correctTranscriptSlots } from '../highlights/caption-fix.js';
+import { rewriteTranscriptLines } from '../highlights/sentence-fix.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { buildTranscriptContext, type TranscriptContext } from './transcript-context.js';
 
@@ -33,30 +33,19 @@ export async function fixTranscriptBatches(
 ): Promise<Fix[]> {
   signal.throwIfAborted();
   if (llm.mode === 'rules') return [];
-  const terms = context?.terms.map((t) => t.term) ?? [];
+  const glossary = (context?.terms ?? []).map((t) => ({ term: t.term, heardAs: t.heardAs }));
   const topic = context?.topic ?? '';
-  // a glossary term is an approved spelling only for what was heard as that term (its verbatim heard variants)
-  const squash = (t: string) => t.normalize('NFC').replace(/\s+/g, '');
-  const heardFor = new Map(
-    (context?.terms ?? []).map((t) => [t.term, new Set([t.term, ...t.heardAs].map(squash))]),
-  );
-  const termAllowed = (text: string, heard: string) => {
-    const variants = heardFor.get(text);
-    return !variants || variants.has(squash(heard));
-  };
   const edits: Fix[] = [];
   for (let start = 0; start < segments.length; start += BATCH) {
     signal.throwIfAborted();
     const batch = segments.slice(start, start + BATCH);
-    const selected = batch.map((s, i) => ({
+    const lines = batch.map((s, i) => ({
       id: String(s.seq),
-      words: s.words,
-      context: {
-        previous: segments[start + i - 1]?.words.map((w) => w.text).join(' ') ?? null,
-        next: segments[start + i + 1]?.words.map((w) => w.text).join(' ') ?? null,
-      },
+      words: s.words.map((w) => w.text),
+      previous: segments[start + i - 1]?.words.map((w) => w.text).join(' ') ?? null,
+      next: segments[start + i + 1]?.words.map((w) => w.text).join(' ') ?? null,
     }));
-    const slots = await correctTranscriptSlots(llm, selected, { topic, terms }, { ...ctx, signal });
+    const slots = await rewriteTranscriptLines(llm, lines, { topic, glossary }, { ...ctx, signal });
     signal.throwIfAborted();
     batch.forEach((segment, b) => {
       const tokens = slots[b];
@@ -69,13 +58,7 @@ export async function fixTranscriptBatches(
           span.some((_, k) => protectedWords.has(`${segment.seq}:${j + k}`)) ||
           span.some((w) => DIGITS.test(w.text));
         const text = tokens[j] ?? '';
-        const heard = span.map((w) => w.text).join(' ');
-        if (
-          !touched &&
-          text.trim() &&
-          (last > j || text !== segment.words[j]?.text) &&
-          termAllowed(text, heard)
-        ) {
+        if (!touched && text.trim() && (last > j || text !== segment.words[j]?.text)) {
           edits.push({ seq: segment.seq, wordIndex: j, text });
           for (let k = j + 1; k <= last; k++) edits.push({ seq: segment.seq, wordIndex: k, text: '' });
         }

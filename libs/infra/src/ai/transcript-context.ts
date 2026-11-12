@@ -9,7 +9,7 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * repair a name ASR split over several tokens ("ควิก บู" → Liquid Blue). Every heard variant must occur verbatim in
  * the transcript, and no term may contain a number (numbers are never changed by the AI — D-027).
  */
-export const TRANSCRIPT_CONTEXT_PROMPT_VERSION = 'transcript-context-v2';
+export const TRANSCRIPT_CONTEXT_PROMPT_VERSION = 'transcript-context-v3';
 export const TERM_KINDS = [
   'brand',
   'product',
@@ -40,6 +40,12 @@ const SYSTEM = [
   'appear in the transcript (copy character for character; tokens separated by one space as given), including the',
   'garbled variants that are clearly the same spoken word or phrase. Use the whole transcript to decide what was',
   'really said. Include an entry only when you are confident from the context. Never include numbers or prices.',
+  'term is always the correctly spelled word the seller said (never a garbled form), and heardAs only what the ASR',
+  'wrote. Thai ASR habits to look for: tone marks and vowel length dropped or added (so an animal, fruit or object',
+  'name in a pattern name after ลาย/ตัว can be written as a different, out-of-place word); a size letter glued to a',
+  'garbled ไซซ์ (one token: ไซ + the letter sound); in clothing sales, garment measurements are said as',
+  'อก <number> ยาว <number> (chest, length) and อก is often written as a longer, wrong word before the number.',
+  'Spell size as ไซซ์ (e.g. ไซซ์ M).',
   'Return JSON {topic, terms:[{term, kind, heardAs}]}.',
 ].join('\n');
 
