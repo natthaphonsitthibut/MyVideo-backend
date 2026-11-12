@@ -87,6 +87,7 @@ describe('transcript correction batches', () => {
         llm,
         segments,
         new Set(),
+        null,
         { merchantId: 'm' },
         new AbortController().signal,
         async () => {
@@ -99,6 +100,7 @@ describe('transcript correction batches', () => {
       llm,
       segments,
       new Set(['0:0']),
+      null,
       { merchantId: 'm' },
       new AbortController().signal,
       async () => {},
@@ -125,7 +127,15 @@ describe('transcript correction batches', () => {
       { maxCallsPerRun: 10 },
     );
     await expect(
-      fixTranscriptBatches(llm, segments, new Set(), { merchantId: 'm' }, controller.signal, async () => {}),
+      fixTranscriptBatches(
+        llm,
+        segments,
+        new Set(),
+        null,
+        { merchantId: 'm' },
+        controller.signal,
+        async () => {},
+      ),
     ).rejects.toThrow('cancelled in call');
     expect(started).toBe(true);
   });
@@ -136,9 +146,10 @@ describe('transcript correction batches', () => {
       stub(calls),
       segments,
       new Set(['0:0']),
+      null,
       { merchantId: 'm' },
       new AbortController().signal,
-      async (p) => {
+      async (p: number) => {
         progress.push(p);
       },
     );
@@ -146,7 +157,7 @@ describe('transcript correction batches', () => {
     expect(edits.some((e) => e.seq === 0)).toBe(false);
     expect(edits[0]).toEqual({ seq: 1, wordIndex: 0, text: 'รับพิมพ์' });
     expect(calls).toHaveLength(2);
-    expect(calls[0]).toMatchObject({ merchantTerms: [], segments: expect.any(Array) });
+    expect(calls[0]).toMatchObject({ topic: '', merchantTerms: [], segments: expect.any(Array) });
     const batches = calls as { segments: { context: { previous: string | null; next: string | null } }[] }[];
     expect(batches.map((b) => b.segments.length)).toEqual([40, 1]);
     expect(batches[0]?.segments[39]?.context.next).toBe('รับพิม');
@@ -160,6 +171,7 @@ describe('transcript correction batches', () => {
           stub([], tokens),
           segments.slice(0, 1),
           new Set(),
+          null,
           { merchantId: 'm' },
           new AbortController().signal,
           async () => {},
@@ -172,6 +184,7 @@ describe('transcript correction batches', () => {
         stub([], ['รับพิมพ์', '']),
         pair,
         new Set(),
+        null,
         { merchantId: 'm' },
         new AbortController().signal,
         async () => {},
@@ -194,6 +207,7 @@ describe('transcript correction batches', () => {
           port,
           segments,
           new Set(),
+          null,
           { merchantId: 'm' },
           new AbortController().signal,
           async () => {},
@@ -203,7 +217,73 @@ describe('transcript correction batches', () => {
     const controller = new AbortController();
     controller.abort(new Error('cancelled'));
     await expect(
-      fixTranscriptBatches(llm, segments, new Set(), { merchantId: 'm' }, controller.signal, async () => {}),
+      fixTranscriptBatches(
+        llm,
+        segments,
+        new Set(),
+        null,
+        { merchantId: 'm' },
+        controller.signal,
+        async () => {},
+      ),
     ).rejects.toThrow('cancelled');
+  });
+
+  it('a glossary term repairs a split brand: the term on the first word, the rest become continuations', async () => {
+    // real ASR of the S01 tie-dye live: "ของ ควิก บู นะ" (brand Liquid Blue)
+    const brand = [
+      {
+        seq: 7,
+        words: ['ของ', 'ควิก', 'บู', 'นะ'].map((text, i) => ({
+          text,
+          startMs: i * 300,
+          endMs: i * 300 + 290,
+          kind: 'word',
+        })),
+      },
+    ];
+    const context = {
+      topic: 'ไลฟ์ขายเสื้อมัดย้อม',
+      terms: [{ term: 'Liquid Blue', kind: 'brand' as const, heardAs: ['ควิก บู'] }],
+    };
+    const calls: unknown[] = [];
+    const fixes = await fixTranscriptBatches(
+      stub(calls, ['ของ', 'Liquid Blue', '', 'นะ']),
+      brand,
+      new Set(),
+      context,
+      { merchantId: 'm' },
+      new AbortController().signal,
+      async () => {},
+    );
+    expect(fixes).toEqual([
+      { seq: 7, wordIndex: 1, text: 'Liquid Blue' },
+      { seq: 7, wordIndex: 2, text: '' },
+    ]);
+    expect(calls[0]).toMatchObject({ topic: 'ไลฟ์ขายเสื้อมัดย้อม', merchantTerms: ['Liquid Blue'] });
+    // a term may only replace what was heard as that term: "ของ" (not a heard variant) is never turned into it
+    expect(
+      await fixTranscriptBatches(
+        stub([], ['Liquid Blue', 'ควิก', 'บู', 'นะ']),
+        brand,
+        new Set(),
+        context,
+        { merchantId: 'm' },
+        new AbortController().signal,
+        async () => {},
+      ),
+    ).toEqual([]);
+    // the merchant already edited "บู": the whole span stays as heard
+    expect(
+      await fixTranscriptBatches(
+        stub([], ['ของ', 'Liquid Blue', '', 'นะ']),
+        brand,
+        new Set(['7:2']),
+        context,
+        { merchantId: 'm' },
+        new AbortController().signal,
+        async () => {},
+      ),
+    ).toEqual([]);
   });
 });

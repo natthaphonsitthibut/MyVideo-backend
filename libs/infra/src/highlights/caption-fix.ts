@@ -116,13 +116,16 @@ function validTokens(original: string[], tokens: string[], merchantTerms: readon
   return local && edits / Math.max(length, 1) <= 1 / 3;
 }
 
-/** Pure, defensive mapping. Bad envelope rejects the batch; bad content rejects only its segment. */
-export function applyCaptionFix(
+/**
+ * The model's tokens per segment after validation: one slot per original token ("" = merged into the term before),
+ * or null when that segment is rejected. A bad envelope rejects the whole batch (all null).
+ */
+export function validatedSlots(
   segments: readonly CaptionSegment[],
   value: unknown,
   merchantTerms: readonly string[],
-): ClipWordMs[] {
-  const unchanged = () => segments.flatMap((s) => s.words);
+): (string[] | null)[] {
+  const none = segments.map(() => null);
   // Parse segments separately below so one malformed segment cannot discard good neighbours.
   const envelope = z
     .object({ segments: z.array(z.object({ id: z.string(), tokens: z.unknown() })) })
@@ -133,8 +136,8 @@ export function applyCaptionFix(
     envelope.data.segments.some((s, i) => s.id !== segments[i]?.id) ||
     new Set(segments.map((s) => s.id)).size !== segments.length
   )
-    return unchanged();
-  return segments.flatMap((s, i) => {
+    return none;
+  return segments.map((s, i) => {
     const result = z.array(z.string()).safeParse(envelope.data.segments[i]?.tokens);
     if (
       !result.success ||
@@ -144,14 +147,28 @@ export function applyCaptionFix(
         merchantTerms,
       )
     )
-      return s.words;
+      return null;
+    return result.data;
+  });
+}
+
+/** Pure, defensive mapping. Bad envelope rejects the batch; bad content rejects only its segment. */
+export function applyCaptionFix(
+  segments: readonly CaptionSegment[],
+  value: unknown,
+  merchantTerms: readonly string[],
+): ClipWordMs[] {
+  const slots = validatedSlots(segments, value, merchantTerms);
+  return segments.flatMap((s, i) => {
+    const tokens = slots[i];
+    if (!tokens) return s.words;
     const words: ClipWordMs[] = [];
     for (let j = 0; j < s.words.length; j++) {
       const w = s.words[j];
       if (!w) return s.words;
-      const text = result.data[j] ?? w.text;
+      const text = tokens[j] ?? w.text;
       let last = j;
-      while (result.data[last + 1] === '') last++;
+      while (tokens[last + 1] === '') last++;
       // One caption word covers only the original contiguous audio span. Joined ASR text
       // supports text undo; individual pre-merge timestamps remain in the source transcript.
       words.push(
@@ -240,6 +257,56 @@ export async function correctCaptions(
   } catch {
     // Optional spelling improvement must never prevent a usable ASR-captioned clip.
     return unchanged();
+  }
+}
+
+/**
+ * Transcript pass (E07-F15): the same rules as the clip pass plus whole-video context — what the video is about
+ * and a glossary of names inferred from the whole transcript. Glossary terms are approved spellings and may repair
+ * a name split over tokens, exactly like merchant terms. Returns validated slots per segment (null = keep heard).
+ */
+export const TRANSCRIPT_SPELLING_PROMPT_VERSION = 'caption-spelling-v4';
+const TRANSCRIPT_SPELLING_SYSTEM = [
+  CAPTION_FIX_SYSTEM,
+  'This is the transcript of ONE whole video. "topic" says what it is about; "merchantTerms" here is a glossary of',
+  'names found across the whole video (brand, product, material, size word, colour, pattern) with their correct',
+  'spelling: use them as approved spellings and to understand what a garbled word most likely is.',
+].join('\n');
+
+export async function correctTranscriptSlots(
+  llm: LlmPort,
+  segments: readonly CaptionSegment[],
+  context: { topic: string; terms: readonly string[] },
+  ctx: LlmCallContext,
+): Promise<(string[] | null)[]> {
+  const none = segments.map(() => null);
+  if (llm.mode === 'rules' || segments.length === 0) return none;
+  try {
+    const result = await llm.generateStructured(
+      {
+        schema: zodStructuredSchema('caption-spelling', responseSchema),
+        system: TRANSCRIPT_SPELLING_SYSTEM,
+        prompt: JSON.stringify({
+          topic: context.topic,
+          merchantTerms: context.terms,
+          segments: segments.map((s, i) => ({
+            id: s.id,
+            tokens: s.words.map((w) => w.text),
+            context: s.context ?? {
+              previous: segments[i - 1]?.words.map((w) => w.text).join(' ') ?? null,
+              next: segments[i + 1]?.words.map((w) => w.text).join(' ') ?? null,
+            },
+          })),
+        }),
+        promptVersion: TRANSCRIPT_SPELLING_PROMPT_VERSION,
+        tier: 'fast',
+        maxOutputTokens: 8192,
+      },
+      ctx,
+    );
+    return validatedSlots(segments, result.value, context.terms);
+  } catch {
+    return none;
   }
 }
 

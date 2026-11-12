@@ -18,6 +18,10 @@ export const TranscriptWord = named(
     aiFixed: z.boolean(),
     /** Original heard ASR text for either correction origin; null when unchanged. */
     heard: z.string().nullable(),
+    /** Set when the AI merged this word into a name on an earlier word (that word's index); the UI hides it. */
+    mergedInto: z.number().int().nullable(),
+    /** An AI correction the merchant has not checked yet (shown with a mark and in the review queue). */
+    needsReview: z.boolean(),
   }),
 );
 
@@ -97,6 +101,9 @@ export const TranscriptState = named(
     model: z.string().nullable(),
     /** Merchant-readable reason (Thai) when failed. */
     error: z.string().nullable(),
+    /** Words the AI corrected (merged names count once) and how many of them still need the merchant's check. */
+    aiFixedCount: z.number().int(),
+    needsReviewCount: z.number().int(),
   }),
 );
 export type TranscriptState = z.infer<typeof TranscriptState>;
@@ -161,5 +168,19 @@ export const listTranscriptSegments = defineRoute({
   responses: {
     200: { description: 'A page of segments', schema: TranscriptSegmentPage },
     404: { description: 'No such source, or no ready transcript', schema: ApiErrorBody },
+  },
+});
+
+export const reviewTranscriptWord = defineRoute({
+  operationId: 'reviewTranscriptWord',
+  method: 'post',
+  path: '/sources/{id}/transcript/words/{seq}/{index}/review',
+  summary: 'Accept an AI correction after checking it (a merged name: its whole span)',
+  tags: ['transcripts'],
+  auth: true,
+  request: { params: TranscriptWordParams },
+  responses: {
+    200: { description: 'The segment with the word marked as checked', schema: TranscriptSegment },
+    404: { description: 'No such source/word, or the word has no AI correction', schema: ApiErrorBody },
   },
 });

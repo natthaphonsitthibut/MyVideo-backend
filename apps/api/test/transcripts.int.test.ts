@@ -174,6 +174,8 @@ describe('transcript API (real Postgres)', () => {
           original: null,
           aiFixed: false,
           heard: null,
+          mergedInto: null,
+          needsReview: false,
         },
       ],
     });
@@ -262,12 +264,16 @@ describe('transcript API (real Postgres)', () => {
       original: null,
       aiFixed: true,
       heard: 'ทำไลฟสด',
+      mergedInto: null,
+      needsReview: true,
     });
     const aiRevert = await api(wordPath, cookieA, { method: 'DELETE' });
     expect(((await aiRevert.json()) as TranscriptSegment).words[2]).toMatchObject({
       text: 'ทำไลฟสด',
       aiFixed: false,
       heard: null,
+      mergedInto: null,
+      needsReview: false,
     });
     await ds.getRepository(TranscriptEditEntity).insert({
       merchantId: merchantA,
@@ -287,6 +293,8 @@ describe('transcript API (real Postgres)', () => {
       original: 'ทำไลฟสด',
       aiFixed: false,
       heard: 'ทำไลฟสด',
+      mergedInto: null,
+      needsReview: false,
     });
     expect(
       await ds
@@ -332,11 +340,55 @@ describe('transcript API (real Postgres)', () => {
       original: null,
       aiFixed: false,
       heard: null,
+      mergedInto: null,
+      needsReview: false,
     });
     expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
     // writing the recognised text itself stores no correction
     expect((await put(wordPath, cookieA, 'ทำไลฟสด')).status).toBe(200);
     expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
+
+    // an AI merge over words 0–1 (head + continuation; mechanism check on the same real words)
+    const merge = async () => {
+      await ds.getRepository(TranscriptEditEntity).insert([
+        { merchantId: merchantA, transcriptId: t.id, seq: 0, wordIndex: 0, text: 'ก็คือคุณ', origin: 'ai' },
+        { merchantId: merchantA, transcriptId: t.id, seq: 0, wordIndex: 1, text: '', origin: 'ai' },
+      ]);
+    };
+    await merge();
+    const mergedPage = (await (
+      await api(`/sources/${id}/transcript/segments`, cookieA)
+    ).json()) as TranscriptSegmentPage;
+    expect(mergedPage.items[0]?.words[0]).toMatchObject({ text: 'ก็คือคุณ', heard: 'ก็คือ คุณ', mergedInto: null });
+    expect(mergedPage.items[0]?.words[1]).toMatchObject({ text: '', mergedInto: 0 });
+    // checking the merged name accepts the whole span; the counts follow; a plain word has nothing to check
+    const stateBefore = await (await api(`/sources/${id}/transcript`, cookieA)).json();
+    expect(stateBefore).toMatchObject({ aiFixedCount: 1, needsReviewCount: 1 });
+    expect(mergedPage.items[0]?.words[0]).toMatchObject({ needsReview: true });
+    const reviewed = await api(`/sources/${id}/transcript/words/0/1/review`, cookieA, { method: 'POST' });
+    expect(reviewed.status).toBe(200);
+    expect(((await reviewed.json()) as TranscriptSegment).words[0]).toMatchObject({ needsReview: false });
+    expect(await (await api(`/sources/${id}/transcript`, cookieA)).json()).toMatchObject({
+      aiFixedCount: 1,
+      needsReviewCount: 0,
+    });
+    expect(
+      (await api(`/sources/${id}/transcript/words/0/2/review`, cookieA, { method: 'POST' })).status,
+    ).toBe(404);
+    expect(
+      (await api(`/sources/${id}/transcript/words/0/0/review`, cookieB, { method: 'POST' })).status,
+    ).toBe(404);
+    // revert from the continuation restores the whole span
+    expect((await api(`/sources/${id}/transcript/words/0/1`, cookieA, { method: 'DELETE' })).status).toBe(
+      200,
+    );
+    expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
+    // a merchant edit on the head replaces the AI merge: only the merchant's word stays
+    await merge();
+    expect((await put(`/sources/${id}/transcript/words/0/0`, cookieA, 'ก็คือว่า')).status).toBe(200);
+    const left = await ds.getRepository(TranscriptEditEntity).findBy({ transcriptId: t.id });
+    expect(left.map((e) => [e.wordIndex, e.text, e.origin])).toEqual([[0, 'ก็คือว่า', 'user']]);
+    await ds.getRepository(TranscriptEditEntity).delete({ transcriptId: t.id });
     await storage.delete(key);
   });
 });

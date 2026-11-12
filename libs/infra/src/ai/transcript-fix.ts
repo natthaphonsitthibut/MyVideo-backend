@@ -5,27 +5,49 @@ import {
   TranscriptEntity,
   TranscriptSegmentEntity,
 } from '../db/entities/transcript.entity.js';
-import { correctCaptions } from '../highlights/caption-fix.js';
+import { correctTranscriptSlots } from '../highlights/caption-fix.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
+import { buildTranscriptContext, type TranscriptContext } from './transcript-context.js';
 
 type Segment = { seq: number; words: TimedWord[] };
+/** `text` "" = a continuation: this word was merged into the glossary term on the word before it. */
 type Fix = { seq: number; wordIndex: number; text: string };
 
-/** Read immutable input on retries so the shared LLM cache sees identical batches. */
+const BATCH = 40;
+const DIGITS = /[0-9๐-๙]/u;
+
+/**
+ * The correction batches of the transcript pass. Every segment keeps its token slots, so a correction maps to one
+ * word position; a glossary term spanning several heard tokens becomes the term on the first word plus empty
+ * continuations. Words the merchant edited, and spans touching them, are never changed; words with digits are never
+ * changed (D-027). Inputs are immutable on retries so the LLM cache sees identical batches.
+ */
 export async function fixTranscriptBatches(
   llm: LlmPort,
   segments: readonly Segment[],
   protectedWords: ReadonlySet<string>,
-  context: LlmCallContext,
+  context: TranscriptContext | null,
+  ctx: LlmCallContext,
   signal: AbortSignal,
   progress: (value: number) => Promise<void>,
 ): Promise<Fix[]> {
   signal.throwIfAborted();
   if (llm.mode === 'rules') return [];
+  const terms = context?.terms.map((t) => t.term) ?? [];
+  const topic = context?.topic ?? '';
+  // a glossary term is an approved spelling only for what was heard as that term (its verbatim heard variants)
+  const squash = (t: string) => t.normalize('NFC').replace(/\s+/g, '');
+  const heardFor = new Map(
+    (context?.terms ?? []).map((t) => [t.term, new Set([t.term, ...t.heardAs].map(squash))]),
+  );
+  const termAllowed = (text: string, heard: string) => {
+    const variants = heardFor.get(text);
+    return !variants || variants.has(squash(heard));
+  };
   const edits: Fix[] = [];
-  for (let start = 0; start < segments.length; start += 40) {
+  for (let start = 0; start < segments.length; start += BATCH) {
     signal.throwIfAborted();
-    const batch = segments.slice(start, start + 40);
+    const batch = segments.slice(start, start + BATCH);
     const selected = batch.map((s, i) => ({
       id: String(s.seq),
       words: s.words,
@@ -34,30 +56,33 @@ export async function fixTranscriptBatches(
         next: segments[start + i + 1]?.words.map((w) => w.text).join(' ') ?? null,
       },
     }));
-    const fixed = await correctCaptions(llm, selected, [], { ...context, signal });
+    const slots = await correctTranscriptSlots(llm, selected, { topic, terms }, { ...ctx, signal });
     signal.throwIfAborted();
-    // No merchant terms means continuation slots are rejected by the shared validator.
-    // Keep the positional guard too: transcript edits must always be one token to one token.
-    if (fixed.length === batch.reduce((n, s) => n + s.words.length, 0)) {
-      let index = 0;
-      for (const segment of batch) {
-        for (const [wordIndex, word] of segment.words.entries()) {
-          const replacement = fixed[index++];
-          if (
-            replacement &&
-            replacement.text !== word.text &&
-            replacement.text.trim() &&
-            !protectedWords.has(`${segment.seq}:${wordIndex}`) &&
-            !/[0-9๐-๙]/u.test(word.text) &&
-            replacement.startMs === word.startMs &&
-            replacement.endMs === word.endMs
-          ) {
-            edits.push({ seq: segment.seq, wordIndex, text: replacement.text });
-          }
+    batch.forEach((segment, b) => {
+      const tokens = slots[b];
+      if (!tokens || tokens.length !== segment.words.length) return;
+      for (let j = 0; j < tokens.length; j++) {
+        let last = j;
+        while (tokens[last + 1] === '') last++;
+        const span = segment.words.slice(j, last + 1);
+        const touched =
+          span.some((_, k) => protectedWords.has(`${segment.seq}:${j + k}`)) ||
+          span.some((w) => DIGITS.test(w.text));
+        const text = tokens[j] ?? '';
+        const heard = span.map((w) => w.text).join(' ');
+        if (
+          !touched &&
+          text.trim() &&
+          (last > j || text !== segment.words[j]?.text) &&
+          termAllowed(text, heard)
+        ) {
+          edits.push({ seq: segment.seq, wordIndex: j, text });
+          for (let k = j + 1; k <= last; k++) edits.push({ seq: segment.seq, wordIndex: k, text: '' });
         }
+        j = last;
       }
-    }
-    await progress(Math.min(start + 40, segments.length) / segments.length);
+    });
+    await progress(Math.min(start + BATCH, segments.length) / segments.length);
   }
   return edits;
 }
@@ -79,15 +104,20 @@ export function transcriptFixHandler({ ds, llm }: { ds: DataSource; llm: LlmPort
         .getRepository(TranscriptSegmentEntity)
         .find({ where: scope, order: { seq: 'ASC' } });
       const existing = await ds.getRepository(TranscriptEditEntity).findBy(scope);
+      const llmCtx = { merchantId: job.merchantId, workflowRunId: job.workflowRunId };
+      // whole-video context first (topic + glossary); the batches use it
+      const context = await buildTranscriptContext(llm, segments, { ...llmCtx, signal });
+      signal.throwIfAborted();
       const fixes = await fixTranscriptBatches(
         llm,
         segments,
         new Set(existing.map((e) => `${e.seq}:${e.wordIndex}`)),
-        { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
+        context,
+        llmCtx,
         signal,
         progress,
       );
-      // Commit all edits and the pass marker together. A failed/cancelled attempt writes nothing.
+      // Commit all edits, the context and the pass marker together. A failed/cancelled attempt writes nothing.
       await ds.transaction(async (em) => {
         signal.throwIfAborted();
         const rows: { ai_fix_completed: boolean }[] = await em.query(
@@ -95,20 +125,37 @@ export function transcriptFixHandler({ ds, llm }: { ds: DataSource; llm: LlmPort
           [transcriptId, job.merchantId],
         );
         if (rows[0]?.ai_fix_completed) return;
-        for (const fix of fixes) {
-          signal.throwIfAborted();
-          await em.query(
-            `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin)
-             VALUES ($1, $2, $3, $4, $5, 'ai') ON CONFLICT (transcript_id, seq, word_index) DO NOTHING`,
-            [job.merchantId, transcriptId, fix.seq, fix.wordIndex, fix.text],
-          );
+        // a span is written whole or not at all: if the merchant edited any of its words meanwhile, skip it
+        const taken: { seq: number; word_index: number }[] = await em.query(
+          `SELECT seq, word_index FROM transcript_edits WHERE transcript_id = $1 AND merchant_id = $2`,
+          [transcriptId, job.merchantId],
+        );
+        const busy = new Set(taken.map((t) => `${t.seq}:${t.word_index}`));
+        for (let i = 0; i < fixes.length; i++) {
+          const head = fixes[i] as Fix;
+          let end = i;
+          while (fixes[end + 1]?.text === '' && fixes[end + 1]?.seq === head.seq) end++;
+          const span = fixes.slice(i, end + 1);
+          i = end;
+          if (span.some((f) => busy.has(`${f.seq}:${f.wordIndex}`))) continue;
+          for (const fix of span) {
+            signal.throwIfAborted();
+            await em.query(
+              `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin)
+               VALUES ($1, $2, $3, $4, $5, 'ai') ON CONFLICT (transcript_id, seq, word_index) DO NOTHING`,
+              [job.merchantId, transcriptId, fix.seq, fix.wordIndex, fix.text],
+            );
+          }
         }
         signal.throwIfAborted();
         await em
           .getRepository(TranscriptEntity)
-          .update({ id: transcriptId, merchantId: job.merchantId }, { aiFixCompleted: true });
+          .update(
+            { id: transcriptId, merchantId: job.merchantId },
+            { aiFixCompleted: true, aiContext: context as never },
+          );
       });
-      return { transcriptId, edits: fixes.length };
+      return { transcriptId, edits: fixes.length, terms: context?.terms.length ?? 0 };
     },
   };
 }

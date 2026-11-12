@@ -50,6 +50,15 @@ export class TranscriptsController {
     return this.transcripts.revertWord(merchantId, p.id, p.seq, p.index);
   }
 
+  @Post('words/:seq/:index/review')
+  @HttpCode(200)
+  reviewWord(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(TranscriptWordParams)) p: { id: string; seq: number; index: number },
+  ): Promise<TranscriptSegment> {
+    return this.transcripts.reviewWord(merchantId, p.id, p.seq, p.index);
+  }
+
   @Get('segments')
   segments(
     @CurrentMerchant() merchantId: string,

@@ -76,6 +76,7 @@ export class TranscriptsService {
       language: t?.language ?? null,
       model: t?.model ?? null,
       error: status === 'failed' ? (err && THAI.test(err) ? err : GENERIC_FAILURE) : null,
+      ...(await this.aiCounts(merchantId, t?.id ?? null)),
     };
   }
 
@@ -164,6 +165,8 @@ export class TranscriptsService {
     text: string,
   ): Promise<TranscriptSegment> {
     const { t, segment } = await this.word(merchantId, sourceId, seq, index);
+    // the merchant takes over a word the AI merged into a name: the AI merge of that span goes first
+    await this.deleteAiSpan(merchantId, t.id, segment, index);
     if (segment.words[index]?.text === text) {
       // same as recognised → no correction needed
       await this.ds
@@ -186,11 +189,86 @@ export class TranscriptsService {
     index: number,
   ): Promise<TranscriptSegment> {
     const { t, segment } = await this.word(merchantId, sourceId, seq, index);
+    // reverting a merged name restores every word of its span
+    await this.deleteAiSpan(merchantId, t.id, segment, index);
     await this.ds
       .getRepository(TranscriptEditEntity)
       .delete({ transcriptId: t.id, merchantId, seq, wordIndex: index });
     return withEdits(segment, await this.editsFor(merchantId, t.id, [seq]));
   }
+
+  /** AI corrections (a merged name counts once) and those not yet checked by the merchant. */
+  private async aiCounts(
+    merchantId: string,
+    transcriptId: string | null,
+  ): Promise<{ aiFixedCount: number; needsReviewCount: number }> {
+    if (!transcriptId) return { aiFixedCount: 0, needsReviewCount: 0 };
+    const rows: { fixed: number; open: number }[] = await this.ds.query(
+      `SELECT count(*)::int AS fixed, count(*) FILTER (WHERE reviewed_at IS NULL)::int AS open
+         FROM transcript_edits WHERE transcript_id = $1 AND merchant_id = $2 AND origin = 'ai' AND text <> ''`,
+      [transcriptId, merchantId],
+    );
+    return { aiFixedCount: rows[0]?.fixed ?? 0, needsReviewCount: rows[0]?.open ?? 0 };
+  }
+
+  /** The merchant checked an AI correction and keeps it (a merged name: the whole span). */
+  async reviewWord(
+    merchantId: string,
+    sourceId: string,
+    seq: number,
+    index: number,
+  ): Promise<TranscriptSegment> {
+    const { t, segment } = await this.word(merchantId, sourceId, seq, index);
+    const edits = await this.editsFor(merchantId, t.id, [seq]);
+    const span = aiSpanAt(edits, seq, index, segment.words.length) ?? [index, index];
+    const head = edits.get(`${seq}:${span[0]}`);
+    if (head?.origin !== 'ai') throw new NotFoundException('This word has no AI correction');
+    await this.ds.query(
+      `UPDATE transcript_edits SET reviewed_at = now(), updated_at = now()
+        WHERE transcript_id = $1 AND merchant_id = $2 AND seq = $3 AND origin = 'ai' AND word_index BETWEEN $4 AND $5`,
+      [t.id, merchantId, seq, span[0], span[1]],
+    );
+    return withEdits(segment, await this.editsFor(merchantId, t.id, [seq]));
+  }
+
+  private async deleteAiSpan(
+    merchantId: string,
+    transcriptId: string,
+    segment: TranscriptSegmentEntity,
+    index: number,
+  ): Promise<void> {
+    const edits = await this.editsFor(merchantId, transcriptId, [segment.seq]);
+    const span = aiSpanAt(edits, segment.seq, index, segment.words.length);
+    if (!span) return;
+    await this.ds.query(
+      `DELETE FROM transcript_edits WHERE transcript_id = $1 AND merchant_id = $2 AND seq = $3 AND origin = 'ai'
+         AND word_index BETWEEN $4 AND $5`,
+      [transcriptId, merchantId, segment.seq, span[0], span[1]],
+    );
+  }
+}
+
+/**
+ * The AI-merged span (head + empty continuations) that contains word `index`, as [first, last]; null when the word is
+ * not part of a merge.
+ */
+export function aiSpanAt(
+  edits: Map<string, Pick<TranscriptEditEntity, 'origin' | 'text'>>,
+  seq: number,
+  index: number,
+  length: number,
+): [number, number] | null {
+  const isCont = (i: number) => {
+    const e = edits.get(`${seq}:${i}`);
+    return e?.origin === 'ai' && e.text === '';
+  };
+  let first = index;
+  while (first > 0 && isCont(first)) first--;
+  const head = edits.get(`${seq}:${first}`);
+  if (head?.origin !== 'ai' || head.text === '') return null;
+  let last = first;
+  while (last + 1 < length && isCont(last + 1)) last++;
+  return last > first ? [first, last] : null;
 }
 
 /** Corrections over immutable ASR words; merchant and AI markings stay distinct. */
@@ -199,6 +277,7 @@ export function withEdits(
   edits: Map<string, TranscriptEditEntity>,
 ): TranscriptSegment {
   let edited = false;
+  let head = -1;
   const words = s.words.map((w, i) => {
     const fix = edits.get(`${s.seq}:${i}`);
     if (fix === undefined)
@@ -210,8 +289,13 @@ export function withEdits(
         original: null,
         aiFixed: false,
         heard: null,
+        mergedInto: null,
+        needsReview: false,
       };
     edited = true;
+    // an empty AI edit is a continuation of the name on the word before (kept for index alignment, not shown)
+    const continuation = fix.origin === 'ai' && fix.text === '' && head >= 0;
+    if (!continuation) head = i;
     return {
       text: fix.text,
       startMs: w.startMs,
@@ -220,8 +304,16 @@ export function withEdits(
       original: fix.origin === 'user' ? w.text : null,
       aiFixed: fix.origin === 'ai',
       heard: w.text,
+      mergedInto: continuation ? head : null,
+      needsReview: fix.origin === 'ai' && !continuation && fix.reviewedAt === null,
     };
   });
+  // the merged word's heard text covers its whole span
+  for (const w of words) {
+    if (w.mergedInto === null) continue;
+    const h = words[w.mergedInto];
+    if (h) h.heard = `${h.heard ?? ''} ${w.heard ?? ''}`.trim();
+  }
   return {
     seq: s.seq,
     startMs: s.startMs,

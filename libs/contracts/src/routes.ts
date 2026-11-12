@@ -33,6 +33,7 @@ import {
   getTranscript,
   listTranscriptSegments,
   revertTranscriptWord,
+  reviewTranscriptWord,
   startTranscript,
 } from './http/transcripts.js';
 import type { RouteContract } from './route.js';
@@ -60,6 +61,7 @@ export const routes: RouteContract[] = [
   listTranscriptSegments,
   editTranscriptWord,
   revertTranscriptWord,
+  reviewTranscriptWord,
   createProject,
   listProjects,
   getProject,

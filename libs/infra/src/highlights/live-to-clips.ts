@@ -225,13 +225,22 @@ export async function loadCorrectedTranscript(
     transcriptId: t.id,
     aiFixed: t.aiFixCompleted || edits.some((e) => e.origin === 'ai'),
     segments: segs.map((s) => {
-      const words = s.words.map((w, i) => {
+      type Word = TimedSegment['words'][number] & { origin?: 'ai'; asrText?: string };
+      const words: Word[] = [];
+      s.words.forEach((w, i) => {
         const edit = byKey.get(`${s.seq}:${i}`);
-        if (!edit) return w;
+        const prev = words[words.length - 1];
+        // an empty AI edit continues the glossary term on the word before: one word over both audio spans
+        if (edit?.origin === 'ai' && edit.text === '' && prev) {
+          prev.endMs = w.endMs;
+          prev.asrText = `${prev.asrText ?? prev.text} ${w.text}`;
+          return;
+        }
+        if (!edit) words.push(w);
         // only AI corrections carry the undo mark; the merchant's own fix is plain text
-        return edit.origin === 'ai'
-          ? { ...w, text: edit.text, origin: 'ai' as const, asrText: w.text }
-          : { ...w, text: edit.text };
+        else if (edit.origin === 'ai')
+          words.push({ ...w, text: edit.text, origin: 'ai' as const, asrText: w.text });
+        else words.push({ ...w, text: edit.text });
       });
       const text = edits.some((e) => e.seq === s.seq) ? words.map((w) => w.text).join('') : s.text;
       return { startMs: s.start_ms, endMs: s.end_ms, text, words };

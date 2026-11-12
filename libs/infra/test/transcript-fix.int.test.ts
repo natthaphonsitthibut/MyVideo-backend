@@ -143,6 +143,50 @@ describe('whole transcript correction persistence', () => {
     expect(calls).toBe(count);
     expect(await ds.getRepository(TranscriptEditEntity).findOneBy({ id: ai.id })).toBeNull();
   });
+  it('a merged name is one word for clips (span audio) and the context is stored', async () => {
+    const { t, sourceId } = await setup();
+    // two real segments made into one 3-word segment: words 1–2 merged into a name by the AI
+    const seg = fixture.segments[0] as { text: string; start_ms: number; end_ms: number };
+    const third = (seg.end_ms - seg.start_ms) / 3;
+    await ds.getRepository(TranscriptSegmentEntity).update(
+      { transcriptId: t.id, seq: 0 },
+      {
+        words: ['ของ', 'ควิก', 'บู'].map((text, i) => ({
+          text,
+          kind: 'word',
+          startMs: Math.round(seg.start_ms + i * third),
+          endMs: Math.round(seg.start_ms + (i + 1) * third),
+        })),
+      },
+    );
+    await ds.getRepository(TranscriptEditEntity).insert([
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 1, text: 'Liquid Blue', origin: 'ai' },
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 2, text: '', origin: 'ai' },
+    ]);
+    const corrected = await loadCorrectedTranscript(ds, merchantId, sourceId);
+    const words = corrected.segments[0]?.words ?? [];
+    expect(words.map((w) => w.text)).toEqual(['ของ', 'Liquid Blue']);
+    expect(words[1]).toMatchObject({ origin: 'ai', asrText: 'ควิก บู', endMs: Math.round(seg.end_ms) });
+    // an empty text is refused for a merchant edit (only AI continuations may be empty)
+    await expect(
+      ds.query(
+        `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin) VALUES ($1, $2, 1, 0, '', 'user')`,
+        [merchantId, t.id],
+      ),
+    ).rejects.toThrow();
+    await ds.getRepository(TranscriptEntity).update(
+      { id: t.id },
+      {
+        aiContext: {
+          topic: 'ไลฟ์ขายเสื้อมัดย้อม',
+          terms: [{ term: 'Liquid Blue', kind: 'brand', heardAs: ['ควิก บู'] }],
+        },
+      },
+    );
+    expect((await ds.getRepository(TranscriptEntity).findOneByOrFail({ id: t.id })).aiContext).toMatchObject({
+      topic: 'ไลฟ์ขายเสื้อมัดย้อม',
+    });
+  });
   it('rules and unavailable models leave the transcript usable without edits', async () => {
     for (const mode of ['rules', 'local-agent'] as const) {
       const { t, ctx } = await setup();
