@@ -54,6 +54,27 @@ export { migrations } from './db/migrations/index.js';
 export { type SeedInput, seedMerchant } from './db/seed.js';
 export { TenantRepository, type TenantRow } from './db/tenant/tenant-repository.js';
 export { type ProbeResult, probePostgres, probeRedis } from './health/probes.js';
+export {
+  buildClipProject,
+  type ClipPlan,
+  type ClipSourceInfo,
+  clipFrames,
+  InvalidClipProjectError,
+  layoutClipProject,
+  seededIds,
+} from './highlights/clip-project.js';
+export {
+  type HookSuggestion,
+  type ProductInfo,
+  suggestHooks,
+  suggestHooksRules,
+} from './highlights/hooks.js';
+export {
+  flattenWords,
+  limitByInputShare,
+  type RankedClip,
+  rerankCandidates,
+} from './highlights/rerank.js';
 export { Dispatcher, type DispatcherOptions } from './jobs/dispatcher.js';
 export {
   FatalJobError,
@@ -138,6 +159,7 @@ export {
   type StageBundleManifest,
 } from './render/stage-bundle.js';
 export { type StaticServer, serveFiles } from './render/static-server.js';
+export { StageTextLayout } from './render/text-layout.js';
 export { createStorage } from './storage/create-storage.js';
 export { LocalStorage } from './storage/local-storage.js';
 export { S3Storage, type S3StorageConfig } from './storage/s3-storage.js';
