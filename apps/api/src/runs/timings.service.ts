@@ -77,7 +77,7 @@ export class TimingsService {
            ON r.subject_type = 'source' AND s.id = r.subject_id AND s.merchant_id = r.merchant_id
          LEFT JOIN projects p
            ON r.subject_type = 'project' AND p.id = r.subject_id AND p.merchant_id = r.merchant_id
-        WHERE r.merchant_id = $1 AND r.kind <> 'system_test'
+        WHERE r.merchant_id = $1 AND r.kind NOT IN ('system_test', 'purge')
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT $2`,
       [merchantId, limit],

@@ -312,6 +312,16 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
     expect(again?.llm).toMatchObject({ calls: 2, inputTokens: 200, outputTokens: 40 });
     expect(again?.llm?.costUsd).toBeCloseTo(0.003, 9);
 
+    // housekeeping runs (storage purge) are not presentation numbers
+    await ds.query(
+      `INSERT INTO workflow_runs (merchant_id, kind, status) VALUES ($1, 'purge', 'succeeded')`,
+      [merchant[0]?.merchant_id],
+    );
+    const third = (await (
+      await fetch(`${base}/timings?limit=50`, { headers: { cookie: cookieA } })
+    ).json()) as T;
+    expect(third.items.some((r) => r.kind === 'purge')).toBe(false);
+
     const theirs = (await (await fetch(`${base}/timings`, { headers: { cookie: cookieB } })).json()) as T;
     expect(theirs.items).toHaveLength(0);
   });
