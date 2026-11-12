@@ -1,0 +1,38 @@
+{
+  "name": "@myvideo/stage",
+  "version": "c2c6ae9756dc",
+  "files": {
+    "fonts/noto-sans-latin-ext-wght-normal.woff2": {
+      "sha256": "6d5a79315528df191b9d86f97b0c4272a8b588fcb166773fe6588ac795de0613",
+      "size": 167960
+    },
+    "fonts/noto-sans-latin-wght-normal.woff2": {
+      "sha256": "51ca196f49a33e79e7870ff88ebd2829a3f627a51e7d690986618f0e7ad2b52d",
+      "size": 35820
+    },
+    "fonts/noto-sans-thai-latin-ext-wght-normal.woff2": {
+      "sha256": "49929deb3afa3fea37b19fdd148889ef19b3e44a8452b13568af089a7d5db934",
+      "size": 15944
+    },
+    "fonts/noto-sans-thai-latin-wght-normal.woff2": {
+      "sha256": "1a66f268c8d76575807979309cbbac3aff7b61919f59ea19fdc821d92fb407f3",
+      "size": 30748
+    },
+    "fonts/noto-sans-thai-thai-wght-normal.woff2": {
+      "sha256": "1f5a173641bbcb3ca4fb0a986858b6b07f8cd5dd2ed61236b40548c7a3c7292f",
+      "size": 26924
+    },
+    "index.html": {
+      "sha256": "e3f3a84a5c05d4d028bc61ad6c0a36dc045eed8b50515c53c71e06641cab3f64",
+      "size": 191
+    },
+    "stage.css": {
+      "sha256": "fd1d97d2c392d56b754ebdbd60691e87d2f5fa8e2544f9c5a9cc416f9caace30",
+      "size": 2131
+    },
+    "stage.js": {
+      "sha256": "ab9f213fcfea4f6c922c67b5fd36e32c11677750f49e7ebd725f076a4c04dcd4",
+      "size": 25268
+    }
+  }
+}
