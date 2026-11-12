@@ -1,0 +1,657 @@
+{
+  "schemaVersion": 1,
+  "id": "b2ff3d8e-1e1b-5cba-b08d-abdeb618d702",
+  "merchantId": "9b6e23f5-0d51-593e-b7ef-2ed8f52c1326",
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "width": 1080,
+  "height": 1920,
+  "durationFrames": 710,
+  "assets": {
+    "e6297a9e-64da-595b-b1b1-c9a281beea98": {
+      "sourceId": "01a1cd80-4521-7148-a1c5-41320a85f1b8",
+      "kind": "video",
+      "durationFrames": 81000,
+      "hasAudio": true,
+      "width": 406,
+      "height": 720
+    }
+  },
+  "tracks": [
+    {
+      "id": "0893784d-f653-5b40-91e2-407efd0d67fc",
+      "kind": "video",
+      "elementIds": ["a56b68ee-4b7f-5c36-a327-8f9290b7619c"]
+    },
+    {
+      "id": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "kind": "caption",
+      "elementIds": [
+        "e9c3252c-07f3-566f-aca5-ed0a65371dd5",
+        "67ecb067-622d-5c1c-aef5-189008ed2b89",
+        "b6cc53ea-b7b7-5fff-aecb-9c64915a2b7b",
+        "faf48db6-8ae0-5382-b3c1-d4618746838a",
+        "9d3eb69e-f49a-5a78-a760-c789e9d7e082",
+        "9655ab19-5d99-58a0-97db-81ef345845ff",
+        "b9a8e19c-cade-5d07-baa2-c1df06111f76",
+        "92c9d5f6-5887-5fcf-9128-057d30efbb4b",
+        "bef4c923-ed73-5f41-aa9c-36961036b690",
+        "bac5615e-1583-5062-918b-0f0cbdd43a17",
+        "2cbf5904-b4af-582f-8566-64b5fefdaec0",
+        "f19db39b-2c0c-54b5-be60-3811042f3d8e",
+        "3e760873-d1a0-5231-93f8-27e0c7abedb2"
+      ]
+    }
+  ],
+  "elements": {
+    "a56b68ee-4b7f-5c36-a327-8f9290b7619c": {
+      "type": "video",
+      "id": "a56b68ee-4b7f-5c36-a327-8f9290b7619c",
+      "trackId": "0893784d-f653-5b40-91e2-407efd0d67fc",
+      "startFrame": 0,
+      "durationFrames": 710,
+      "origin": "ai",
+      "assetId": "e6297a9e-64da-595b-b1b1-c9a281beea98",
+      "sourceInFrame": 21615,
+      "playbackRate": 1,
+      "volume": 1,
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "scale": 1,
+        "rotation": 0
+      },
+      "fit": "cover"
+    },
+    "e9c3252c-07f3-566f-aca5-ed0a65371dd5": {
+      "type": "caption",
+      "id": "e9c3252c-07f3-566f-aca5-ed0a65371dd5",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 0,
+      "durationFrames": 30,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "เป็น",
+          "startFrame": 0,
+          "endFrame": 7
+        },
+        {
+          "text": "สัก",
+          "startFrame": 7,
+          "endFrame": 11
+        },
+        {
+          "text": "แอล",
+          "startFrame": 11,
+          "endFrame": 18
+        },
+        {
+          "text": "สัก",
+          "startFrame": 18,
+          "endFrame": 23
+        },
+        {
+          "text": "แอล",
+          "startFrame": 23,
+          "endFrame": 30
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "67ecb067-622d-5c1c-aef5-189008ed2b89": {
+      "type": "caption",
+      "id": "67ecb067-622d-5c1c-aef5-189008ed2b89",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 30,
+      "durationFrames": 149,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "ไป",
+          "startFrame": 0,
+          "endFrame": 9
+        },
+        {
+          "text": "เอ่อ",
+          "startFrame": 9,
+          "endFrame": 24
+        },
+        {
+          "text": "ไป",
+          "startFrame": 24,
+          "endFrame": 33
+        },
+        {
+          "text": "บท",
+          "startFrame": 33,
+          "endFrame": 43
+        },
+        {
+          "text": "เออ",
+          "startFrame": 43,
+          "endFrame": 57
+        },
+        {
+          "text": "แบด",
+          "startFrame": 57,
+          "endFrame": 72
+        },
+        {
+          "text": "บอย",
+          "startFrame": 72,
+          "endFrame": 86
+        },
+        {
+          "text": "แบด",
+          "startFrame": 86,
+          "endFrame": 101
+        },
+        {
+          "text": "บอย",
+          "startFrame": 101,
+          "endFrame": 115
+        },
+        {
+          "text": "ไป",
+          "startFrame": 115,
+          "endFrame": 125
+        },
+        {
+          "text": "บด",
+          "startFrame": 125,
+          "endFrame": 134
+        },
+        {
+          "text": "บอย",
+          "startFrame": 134,
+          "endFrame": 149
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "b6cc53ea-b7b7-5fff-aecb-9c64915a2b7b": {
+      "type": "caption",
+      "id": "b6cc53ea-b7b7-5fff-aecb-9c64915a2b7b",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 179,
+      "durationFrames": 60,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "อบ",
+          "startFrame": 0,
+          "endFrame": 8
+        },
+        {
+          "text": "21.5",
+          "startFrame": 8,
+          "endFrame": 25
+        },
+        {
+          "text": "ยา",
+          "startFrame": 25,
+          "endFrame": 34
+        },
+        {
+          "text": "28.5",
+          "startFrame": 34,
+          "endFrame": 51
+        },
+        {
+          "text": "นะ",
+          "startFrame": 51,
+          "endFrame": 60
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "faf48db6-8ae0-5382-b3c1-d4618746838a": {
+      "type": "caption",
+      "id": "faf48db6-8ae0-5382-b3c1-d4618746838a",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 239,
+      "durationFrames": 102,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "เป็นงาน",
+          "startFrame": 0,
+          "endFrame": 19
+        },
+        {
+          "text": "ของ",
+          "startFrame": 19,
+          "endFrame": 28
+        },
+        {
+          "text": "แบด",
+          "startFrame": 28,
+          "endFrame": 38
+        },
+        {
+          "text": "บอย",
+          "startFrame": 38,
+          "endFrame": 48
+        },
+        {
+          "text": "นะ",
+          "startFrame": 48,
+          "endFrame": 54
+        },
+        {
+          "text": "ครับผม",
+          "startFrame": 54,
+          "endFrame": 70
+        },
+        {
+          "text": "เป็นงาน",
+          "startFrame": 70,
+          "endFrame": 89
+        },
+        {
+          "text": "แบน",
+          "startFrame": 89,
+          "endFrame": 99
+        },
+        {
+          "text": "ด",
+          "startFrame": 99,
+          "endFrame": 102
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4, 5], [6, 7, 8]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "9d3eb69e-f49a-5a78-a760-c789e9d7e082": {
+      "type": "caption",
+      "id": "9d3eb69e-f49a-5a78-a760-c789e9d7e082",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 341,
+      "durationFrames": 75,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "จะ",
+          "startFrame": 0,
+          "endFrame": 6
+        },
+        {
+          "text": "เอา",
+          "startFrame": 6,
+          "endFrame": 16
+        },
+        {
+          "text": "ตรงไหน",
+          "startFrame": 16,
+          "endFrame": 34
+        },
+        {
+          "text": "ที่",
+          "startFrame": 34,
+          "endFrame": 38
+        },
+        {
+          "text": "เขียบ",
+          "startFrame": 38,
+          "endFrame": 50
+        },
+        {
+          "text": "ว่า",
+          "startFrame": 50,
+          "endFrame": 56
+        },
+        {
+          "text": "Bad",
+          "startFrame": 56,
+          "endFrame": 66
+        },
+        {
+          "text": "Boy",
+          "startFrame": 66,
+          "endFrame": 75
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4, 5], [6, 7]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "9655ab19-5d99-58a0-97db-81ef345845ff": {
+      "type": "caption",
+      "id": "9655ab19-5d99-58a0-97db-81ef345845ff",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 416,
+      "durationFrames": 30,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "สภาพ",
+          "startFrame": 0,
+          "endFrame": 17
+        },
+        {
+          "text": "ใหม่",
+          "startFrame": 17,
+          "endFrame": 30
+        }
+      ],
+      "lines": [[0, 1]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "b9a8e19c-cade-5d07-baa2-c1df06111f76": {
+      "type": "caption",
+      "id": "b9a8e19c-cade-5d07-baa2-c1df06111f76",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 446,
+      "durationFrames": 30,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "จะ",
+          "startFrame": 0,
+          "endFrame": 5
+        },
+        {
+          "text": "เอา",
+          "startFrame": 5,
+          "endFrame": 12
+        },
+        {
+          "text": "ตรงไหน",
+          "startFrame": 12,
+          "endFrame": 26
+        },
+        {
+          "text": "นะ",
+          "startFrame": 26,
+          "endFrame": 30
+        }
+      ],
+      "lines": [[0, 1, 2], [3]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "92c9d5f6-5887-5fcf-9128-057d30efbb4b": {
+      "type": "caption",
+      "id": "92c9d5f6-5887-5fcf-9128-057d30efbb4b",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 476,
+      "durationFrames": 30,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "จะ",
+          "startFrame": 0,
+          "endFrame": 6
+        },
+        {
+          "text": "เอา",
+          "startFrame": 6,
+          "endFrame": 14
+        },
+        {
+          "text": "ตรงไหน",
+          "startFrame": 14,
+          "endFrame": 30
+        }
+      ],
+      "lines": [[0, 1, 2]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "bef4c923-ed73-5f41-aa9c-36961036b690": {
+      "type": "caption",
+      "id": "bef4c923-ed73-5f41-aa9c-36961036b690",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 506,
+      "durationFrames": 30,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "มี",
+          "startFrame": 0,
+          "endFrame": 8
+        },
+        {
+          "text": "ทุกที่",
+          "startFrame": 8,
+          "endFrame": 30
+        }
+      ],
+      "lines": [[0, 1]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "bac5615e-1583-5062-918b-0f0cbdd43a17": {
+      "type": "caption",
+      "id": "bac5615e-1583-5062-918b-0f0cbdd43a17",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 536,
+      "durationFrames": 37,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "รับ",
+          "startFrame": 0,
+          "endFrame": 7
+        },
+        {
+          "text": "พิม",
+          "startFrame": 7,
+          "endFrame": 14
+        },
+        {
+          "text": "รับ",
+          "startFrame": 14,
+          "endFrame": 20
+        },
+        {
+          "text": "ตัว",
+          "startFrame": 20,
+          "endFrame": 27
+        },
+        {
+          "text": "นี้",
+          "startFrame": 27,
+          "endFrame": 30
+        },
+        {
+          "text": "มา",
+          "startFrame": 30,
+          "endFrame": 37
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4, 5]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "2cbf5904-b4af-582f-8566-64b5fefdaec0": {
+      "type": "caption",
+      "id": "2cbf5904-b4af-582f-8566-64b5fefdaec0",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 573,
+      "durationFrames": 49,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "ชาย",
+          "startFrame": 0,
+          "endFrame": 29
+        },
+        {
+          "text": "ก็",
+          "startFrame": 29,
+          "endFrame": 39
+        },
+        {
+          "text": "มี",
+          "startFrame": 39,
+          "endFrame": 49
+        }
+      ],
+      "lines": [[0, 1, 2]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "f19db39b-2c0c-54b5-be60-3811042f3d8e": {
+      "type": "caption",
+      "id": "f19db39b-2c0c-54b5-be60-3811042f3d8e",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 622,
+      "durationFrames": 60,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "รับ",
+          "startFrame": 0,
+          "endFrame": 7
+        },
+        {
+          "text": "พิม",
+          "startFrame": 7,
+          "endFrame": 13
+        },
+        {
+          "text": "รับ",
+          "startFrame": 13,
+          "endFrame": 20
+        },
+        {
+          "text": "ตัว",
+          "startFrame": 20,
+          "endFrame": 27
+        },
+        {
+          "text": "นี้",
+          "startFrame": 27,
+          "endFrame": 30
+        },
+        {
+          "text": "มา",
+          "startFrame": 30,
+          "endFrame": 37
+        },
+        {
+          "text": "80",
+          "startFrame": 37,
+          "endFrame": 43
+        },
+        {
+          "text": "บาท",
+          "startFrame": 43,
+          "endFrame": 53
+        },
+        {
+          "text": "นะ",
+          "startFrame": 53,
+          "endFrame": 60
+        }
+      ],
+      "lines": [[0, 1, 2], [3, 4, 5], [6, 7, 8]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    },
+    "3e760873-d1a0-5231-93f8-27e0c7abedb2": {
+      "type": "caption",
+      "id": "3e760873-d1a0-5231-93f8-27e0c7abedb2",
+      "trackId": "cff661d5-1533-5df3-8e8b-2bd559426acf",
+      "startFrame": 682,
+      "durationFrames": 28,
+      "origin": "ai",
+      "words": [
+        {
+          "text": "พอ",
+          "startFrame": 0,
+          "endFrame": 14
+        },
+        {
+          "text": "ถูก",
+          "startFrame": 14,
+          "endFrame": 28
+        }
+      ],
+      "lines": [[0, 1]],
+      "styleRef": "bold-highlight",
+      "transform": {
+        "x": 0,
+        "y": 600,
+        "scale": 1,
+        "rotation": 0
+      }
+    }
+  },
+  "meta": {
+    "createdBy": "ai",
+    "title": "S01 12:00–12:25 (fixture)"
+  }
+}

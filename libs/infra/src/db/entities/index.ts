@@ -3,6 +3,7 @@ import { JobAttemptEntity } from './job-attempt.entity.js';
 import { JobEventEntity } from './job-event.entity.js';
 import { MediaAssetEntity } from './media-asset.entity.js';
 import { MerchantEntity } from './merchant.entity.js';
+import { ProjectEntity, ProjectVersionEntity } from './project.entity.js';
 import { SessionEntity } from './session.entity.js';
 import {
   TranscriptChunkEntity,
@@ -21,6 +22,8 @@ export {
   JobEventEntity,
   MediaAssetEntity,
   MerchantEntity,
+  ProjectEntity,
+  ProjectVersionEntity,
   SessionEntity,
   TranscriptChunkEntity,
   TranscriptEditEntity,
@@ -45,4 +48,6 @@ export const entities = [
   TranscriptChunkEntity,
   TranscriptSegmentEntity,
   TranscriptEditEntity,
+  ProjectEntity,
+  ProjectVersionEntity,
 ];

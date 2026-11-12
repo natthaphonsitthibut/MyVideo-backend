@@ -64,7 +64,12 @@ export class SourcesService {
               : source.status;
       const probe = source.probe as {
         durationMs?: number;
-        video?: { width?: number; height?: number };
+        video?: {
+          width?: number;
+          height?: number;
+          fps?: { num: number; den: number };
+          durationFrames?: number;
+        };
         audio?: unknown;
       } | null;
       return {
@@ -81,6 +86,8 @@ export class SourcesService {
         width: probe?.video?.width ?? null,
         height: probe?.video?.height ?? null,
         hasAudio: probe ? !!probe.audio : null,
+        fps: probe?.video?.fps ? { num: probe.video.fps.num, den: probe.video.fps.den } : null,
+        durationFrames: probe?.video?.durationFrames ?? null,
         hasProxy: mine.some((a) => a.kind === 'proxy'),
         hasPeaks: mine.some((a) => a.kind === 'peaks'),
         sprites: sprites ? (sprites.meta as SourceSummary['sprites']) : null,

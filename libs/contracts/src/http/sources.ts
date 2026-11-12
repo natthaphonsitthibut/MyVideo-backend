@@ -21,6 +21,9 @@ export const SourceSummary = named(
     width: z.number().int().nullable(),
     height: z.number().int().nullable(),
     hasAudio: z.boolean().nullable(),
+    /** Project frame rate of this source (VFR normalised to 30 fps) and its length in those frames. */
+    fps: z.object({ num: z.number().int().positive(), den: z.number().int().positive() }).nullable(),
+    durationFrames: z.number().int().nullable(),
     /** Which derived files exist (the UI shows what is ready). */
     hasProxy: z.boolean(),
     hasPeaks: z.boolean(),
