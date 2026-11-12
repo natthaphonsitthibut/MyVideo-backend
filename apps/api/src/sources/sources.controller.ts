@@ -2,7 +2,9 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
   AssetParams,
+  ListSourcesQuery,
   SourceIdParams,
+  type SourceList,
   type SourceSummary,
   SpriteSheetParams,
   type UploadConfig,
@@ -10,7 +12,7 @@ import {
 } from '@myvideo/contracts';
 import { storageKeys, UPLOAD_EXTENSIONS } from '@myvideo/domain';
 import type { Env } from '@myvideo/infra';
-import { Controller, Get, HttpException, HttpStatus, Inject, Param, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, Inject, Param, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CurrentMerchant } from '../auth/auth-context.js';
 import { ZodPipe } from '../common/zod-pipe.js';
@@ -33,6 +35,14 @@ export class SourcesController {
       extensions: [...UPLOAD_EXTENSIONS],
       chunkBytes: 8 * 1024 * 1024,
     };
+  }
+
+  @Get()
+  list(
+    @CurrentMerchant() merchantId: string,
+    @Query(new ZodPipe(ListSourcesQuery)) q: { limit: number; before?: string },
+  ): Promise<SourceList> {
+    return this.sources.list(merchantId, q.limit, q.before);
   }
 
   @Get('by-upload/:uploadId')

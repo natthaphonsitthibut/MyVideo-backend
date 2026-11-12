@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
-import type { SourceSummary } from '@myvideo/contracts';
+import type { SourceList, SourceSummary } from '@myvideo/contracts';
 import { extensionOf, type StoragePort, storageKeys } from '@myvideo/domain';
 import {
   createRunInTransaction,
@@ -8,7 +8,6 @@ import {
   enqueueInTransaction,
   MediaAssetEntity,
   VideoSourceEntity,
-  WorkflowRunEntity,
 } from '@myvideo/infra';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { FileStore } from '@tus/file-store';
@@ -35,21 +34,74 @@ export class SourcesService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  private async summary(source: VideoSourceEntity): Promise<SourceSummary> {
-    const run = await this.ds.getRepository(WorkflowRunEntity).findOne({
-      where: { merchantId: source.merchantId, subjectType: 'source', subjectId: source.id, kind: 'ingest' },
-      order: { createdAt: 'DESC' },
+  private async summaries(sources: VideoSourceEntity[]): Promise<SourceSummary[]> {
+    if (sources.length === 0) return [];
+    const ids = sources.map((s) => s.id);
+    const merchantId = sources[0]?.merchantId ?? '';
+    const runs: { id: string; subject_id: string }[] = await this.ds.query(
+      `SELECT DISTINCT ON (subject_id) id, subject_id FROM workflow_runs
+        WHERE merchant_id = $1 AND kind = 'ingest' AND subject_type = 'source' AND subject_id = ANY($2::uuid[])
+        ORDER BY subject_id, created_at DESC`,
+      [merchantId, ids],
+    );
+    const assets = await this.ds.getRepository(MediaAssetEntity).find({
+      where: ids.map((id) => ({ merchantId, sourceId: id })),
+      select: { sourceId: true, kind: true, meta: true, recipeVersion: true },
     });
+    return sources.map((source) => {
+      const mine = assets.filter((a) => a.sourceId === source.id);
+      const sprites = mine.find((a) => a.kind === 'sprites');
+      const probe = source.probe as {
+        durationMs?: number;
+        video?: { width?: number; height?: number };
+        audio?: unknown;
+      } | null;
+      return {
+        id: source.id,
+        title: source.title,
+        originalFilename: source.originalFilename,
+        status: source.status,
+        sizeBytes: Number(source.sizeBytes),
+        failureReason: source.failureReason,
+        ingestRunId: runs.find((r) => r.subject_id === source.id)?.id ?? null,
+        createdAt: source.createdAt.toISOString(),
+        durationMs: probe?.durationMs ?? null,
+        width: probe?.video?.width ?? null,
+        height: probe?.video?.height ?? null,
+        hasAudio: probe ? !!probe.audio : null,
+        hasProxy: mine.some((a) => a.kind === 'proxy'),
+        hasPeaks: mine.some((a) => a.kind === 'peaks'),
+        sprites: sprites ? (sprites.meta as SourceSummary['sprites']) : null,
+      };
+    });
+  }
+
+  async list(merchantId: string, limit: number, before?: string): Promise<SourceList> {
+    const qb = this.ds
+      .getRepository(VideoSourceEntity)
+      .createQueryBuilder('s')
+      .where('s.merchant_id = :merchantId', { merchantId })
+      .orderBy('s.created_at', 'DESC')
+      .addOrderBy('s.id', 'DESC')
+      .limit(limit + 1);
+    if (before) {
+      const [at, id] = before.split('|');
+      if (at && id && !Number.isNaN(Date.parse(at)))
+        qb.andWhere('(s.created_at, s.id) < (:at, :id)', { at: new Date(at), id });
+    }
+    const rows = await qb.getMany();
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
     return {
-      id: source.id,
-      title: source.title,
-      originalFilename: source.originalFilename,
-      status: source.status,
-      sizeBytes: Number(source.sizeBytes),
-      failureReason: source.failureReason,
-      ingestRunId: run?.id ?? null,
-      createdAt: source.createdAt.toISOString(),
+      items: await this.summaries(page),
+      nextCursor: rows.length > limit && last ? `${last.createdAt.toISOString()}|${last.id}` : null,
     };
+  }
+
+  private async summary(source: VideoSourceEntity): Promise<SourceSummary> {
+    const [s] = await this.summaries([source]);
+    if (!s) throw new NotFoundException('Source not found');
+    return s;
   }
 
   /** The newest asset of a kind for a source of this merchant (404 when missing). */

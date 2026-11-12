@@ -16,8 +16,51 @@ export const SourceSummary = named(
     /** The ingest run (live progress via /workflow-runs/{id}/events). */
     ingestRunId: z.uuid().nullable(),
     createdAt: z.iso.datetime({ offset: true }),
+    /** From the probe step (null until probed). */
+    durationMs: z.number().int().nullable(),
+    width: z.number().int().nullable(),
+    height: z.number().int().nullable(),
+    hasAudio: z.boolean().nullable(),
+    /** Which derived files exist (the UI shows what is ready). */
+    hasProxy: z.boolean(),
+    hasPeaks: z.boolean(),
+    sprites: z
+      .object({
+        version: z.literal(1),
+        intervalSec: z.number(),
+        cols: z.number().int(),
+        rows: z.number().int(),
+        tileWidth: z.number().int(),
+        tileHeight: z.number().int(),
+        count: z.number().int(),
+        sheets: z.number().int(),
+        durationMs: z.number().int(),
+      })
+      .nullable(),
   }),
 );
+
+export const SourceList = named(
+  'SourceList',
+  z.object({ items: z.array(SourceSummary), nextCursor: z.string().nullable() }),
+);
+export type SourceList = z.infer<typeof SourceList>;
+
+export const ListSourcesQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+  before: z.string().max(200).optional(),
+});
+
+export const listSources = defineRoute({
+  operationId: 'listSources',
+  method: 'get',
+  path: '/sources',
+  summary: 'Uploaded videos of the signed-in merchant, newest first',
+  tags: ['sources'],
+  auth: true,
+  request: { query: ListSourcesQuery },
+  responses: { 200: { description: 'A page of sources', schema: SourceList } },
+});
 export type SourceSummary = z.infer<typeof SourceSummary>;
 
 export const UploadIdParams = z.object({ uploadId: z.string().regex(/^[a-zA-Z0-9_-]{8,128}$/) });

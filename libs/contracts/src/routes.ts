@@ -8,6 +8,7 @@ import {
   getSourceByUpload,
   getSpriteSheet,
   getUploadConfig,
+  listSources,
 } from './http/sources.js';
 import type { RouteContract } from './route.js';
 
@@ -28,4 +29,5 @@ export const routes: RouteContract[] = [
   getSourceAsset,
   getSpriteSheet,
   getUploadConfig,
+  listSources,
 ];

@@ -172,6 +172,25 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
     expect(Number(runs[0]?.n)).toBe(1);
   });
 
+  it('lists sources for the owner only, newest first, with what is ready', async () => {
+    const mine = (await (
+      await fetch(`${base}/sources?limit=50`, { headers: { cookie: cookieA } })
+    ).json()) as {
+      items: { id: string; status: string; hasProxy: boolean; sprites: unknown; durationMs: number | null }[];
+    };
+    expect(mine.items.length).toBeGreaterThanOrEqual(2);
+    expect(mine.items[0]).toMatchObject({
+      status: 'processing',
+      hasProxy: false,
+      sprites: null,
+      durationMs: null,
+    });
+    const theirs = (await (await fetch(`${base}/sources`, { headers: { cookie: cookieB } })).json()) as {
+      items: unknown[];
+    };
+    expect(theirs.items).toHaveLength(0);
+  });
+
   it('tells the UI the limits', async () => {
     const cfg = (await (
       await fetch(`${base}/sources/upload-config`, { headers: { cookie: cookieA } })
