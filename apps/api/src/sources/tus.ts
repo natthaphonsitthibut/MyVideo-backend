@@ -7,9 +7,12 @@ import { Server } from '@tus/server';
 import type { NextFunction, Request, Response } from 'express';
 import { readCookie } from '../auth/cookies.js';
 import type { SessionService } from '../auth/session.service.js';
+import { FixedWindowLimiter } from '../common/rate-limit.js';
 import type { SourcesService } from './sources.service.js';
 
 const MERCHANT_HEADER = 'x-myvideo-merchant';
+/** New uploads one merchant may start per hour (a live seller uploads a few videos a day). */
+const UPLOADS_PER_HOUR = 60;
 const PREFIX_RE = /^\/[a-z0-9-]{0,32}$/;
 
 export function createTusStore(env: Env): FileStore {
@@ -33,6 +36,7 @@ export function createTusMiddleware(
   sessions: SessionService,
   sources: SourcesService,
 ) {
+  const starts = new FixedWindowLimiter({ limit: UPLOADS_PER_HOUR, windowMs: 3600_000 });
   const server = new Server({
     path: '/uploads',
     datastore: store,
@@ -50,6 +54,8 @@ export function createTusMiddleware(
       if (!(UPLOAD_EXTENSIONS as readonly string[]).includes(ext)) {
         throw fail(415, `ไฟล์นี้ไม่ใช่วิดีโอที่รองรับ (รองรับ: ${UPLOAD_EXTENSIONS.join(', ')})`);
       }
+      // at most UPLOADS_PER_HOUR new uploads per merchant (E11-F02); resuming an upload is not counted
+      if (!starts.hit(merchantId)) throw fail(429, 'อัปโหลดบ่อยเกินไป รอสักครู่แล้วลองใหม่');
       return { metadata: { ...upload.metadata, merchantId, sourceId: uuidv7() } };
     },
     onIncomingRequest: async (req, uploadId) => {

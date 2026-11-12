@@ -73,6 +73,21 @@ describe('auth + tenant context (real Postgres)', () => {
     expect(wrong.headers['set-cookie']).toBeUndefined();
   });
 
+  it('slows down password guessing: the 11th try on one account in 15 min gets 429 with retry-after', async () => {
+    const victim = 'guess-me@x.local';
+    for (let i = 0; i < 10; i++) {
+      const r = await http.post('/auth/login').send({ email: victim, password: `wrong-${i}-xx` });
+      expect(r.status).toBe(401);
+    }
+    const blocked = await http
+      .post('/auth/login')
+      .send({ email: victim.toUpperCase(), password: 'wrong-x-xx' });
+    expect(blocked.status).toBe(429);
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+    // another account is unaffected
+    expect((await http.post('/auth/login').send({ email: B.email, password: B.password })).status).toBe(200);
+  });
+
   it('validates the login body (400 with field paths)', async () => {
     const res = await http.post('/auth/login').send({ email: 'not-an-email' });
     expect(res.status).toBe(400);
