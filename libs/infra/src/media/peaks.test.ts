@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { PeaksBuilder } from './peaks.js';
+import { loudnessFromPeaks, noAudioPeaks, PeaksBuilder } from './peaks.js';
+
+describe('loudnessFromPeaks', () => {
+  it('gives dBFS per 100 ms from level 0 (max |peak| of 10 buckets), -90 for silence', () => {
+    const b = new PeaksBuilder(8000);
+    b.push(new Int16Array(8000)); // 1 s silence
+    b.push(Int16Array.from({ length: 8000 }, (_, i) => Math.round(Math.sin(i / 3) * 16000))); // 1 s tone
+    const track = loudnessFromPeaks(b.finish(2000));
+    expect(track.bucketsPerSecond).toBe(10);
+    expect(track.startMs).toBe(0);
+    expect(track.dbfs).toHaveLength(20);
+    expect(track.dbfs.slice(0, 10)).toEqual(Array(10).fill(-90));
+    // 16000/32768·127 → 62 → 20·log10(62/127) = -6.2 dB
+    expect(track.dbfs.slice(10)).toEqual(Array(10).fill(-6.2));
+  });
+
+  it('a source without audio is all silence', () => {
+    expect(new Set(loudnessFromPeaks(noAudioPeaks(1000)).dbfs)).toEqual(new Set([-90]));
+  });
+});
 
 const tone = (n: number, amp: number) =>
   Int16Array.from({ length: n }, (_, i) => Math.round(Math.sin(i / 3) * amp));

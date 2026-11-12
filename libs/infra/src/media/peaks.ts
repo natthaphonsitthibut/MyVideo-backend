@@ -100,6 +100,30 @@ export class PeaksBuilder {
   }
 }
 
+/**
+ * Loudness per 100 ms in dBFS from level 0 (max |peak| of 10 buckets, int8 scale), -90 for digital silence — the
+ * audio feature of the highlight scorer (E07-F01). Same formula as the test-fixture generator
+ * (`libs/domain/src/highlights/fixtures/make-s01-excerpt.py`).
+ */
+export function loudnessFromPeaks(peaks: PeaksJson): {
+  bucketsPerSecond: number;
+  startMs: number;
+  dbfs: number[];
+} {
+  const level = peaks.levels[0];
+  if (!level || level.bucketsPerSecond !== BASE_BPS) throw new Error('peaks level 0 must be 100 buckets/s');
+  const dbfs: number[] = [];
+  const n = Math.ceil(level.max.length / 10);
+  for (let b = 0; b < n; b++) {
+    let peak = 0;
+    for (let i = b * 10; i < Math.min(level.max.length, b * 10 + 10); i++) {
+      peak = Math.max(peak, Math.abs(level.min[i] ?? 0), Math.abs(level.max[i] ?? 0));
+    }
+    dbfs.push(peak === 0 ? -90 : Math.round(20 * Math.log10(peak / 127) * 10) / 10);
+  }
+  return { bucketsPerSecond: 10, startMs: 0, dbfs };
+}
+
 /** Peaks for a source without an audio stream: flat, flagged. */
 export function noAudioPeaks(durationMs: number): PeaksJson {
   const n = Math.round((durationMs / 1000) * BASE_BPS);

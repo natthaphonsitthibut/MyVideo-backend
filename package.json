@@ -25,6 +25,7 @@
     "ai:start": "uv --directory services/ai run --frozen python -m myvideo_ai",
     "ai:test": "uv --directory services/ai run --frozen pytest",
     "eval:asr": "uv --directory services/ai run --frozen python -m myvideo_ai.eval_asr --out ../../../docs/eval/asr-$(date +%F).md",
+    "eval:highlights": "pnpm --filter @myvideo/domain build && pnpm --filter @myvideo/infra build && node libs/infra/dist/cli/eval-highlights.js",
     "ai:lint": "uv --directory services/ai run --frozen ruff check . && uv --directory services/ai run --frozen ruff format --check ."
   },
   "devDependencies": {

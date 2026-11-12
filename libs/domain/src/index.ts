@@ -1,3 +1,6 @@
+export * from './highlights/eval.js';
+export * from './highlights/lexicon.js';
+export * from './highlights/scorer.js';
 export * from './jobs/job-state.js';
 export * from './jobs/retry.js';
 export * from './jobs/workflow-state.js';

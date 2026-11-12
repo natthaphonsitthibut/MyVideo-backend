@@ -1,0 +1,1437 @@
+{
+  "source": "S01 (footage/MANIFEST.md) ZXgMkBc01mI, CC BY 3.0, seller channel 'สุรป่าน Channel'",
+  "transcriptModel": "ggml-large-v3-turbo-q5_0.bin",
+  "transcriptRecipe": 2,
+  "startMs": 240000,
+  "endMs": 480000,
+  "segments": [
+    {
+      "startMs": 245110,
+      "endMs": 253280,
+      "text": "บาทค่ะ มันย้องเด็ดๆ มันเด็ดๆ มันเด็ดทุกตัวนะครับ แต่เราจะชอ",
+      "words": [
+        { "kind": "th", "text": "บาท", "endMs": 245680, "startMs": 245110 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 246060, "startMs": 245680 },
+        { "kind": "th", "text": "มัน", "endMs": 246440, "startMs": 246060 },
+        { "kind": "th", "text": "ย้อง", "endMs": 247010, "startMs": 246440 },
+        { "kind": "th", "text": "เด็ดๆ", "endMs": 247770, "startMs": 247010 },
+        { "kind": "th", "text": "มัน", "endMs": 248150, "startMs": 247770 },
+        { "kind": "th", "text": "เด็ดๆ", "endMs": 248910, "startMs": 248150 },
+        { "kind": "th", "text": "มัน", "endMs": 249290, "startMs": 248910 },
+        { "kind": "th", "text": "เด็ด", "endMs": 249860, "startMs": 249290 },
+        { "kind": "th", "text": "ทุก", "endMs": 250240, "startMs": 249860 },
+        { "kind": "th", "text": "ตัว", "endMs": 250620, "startMs": 250240 },
+        { "kind": "th", "text": "นะ", "endMs": 251000, "startMs": 250620 },
+        { "kind": "th", "text": "ครับ", "endMs": 251570, "startMs": 251000 },
+        { "kind": "th", "text": "แต่", "endMs": 251950, "startMs": 251570 },
+        { "kind": "th", "text": "เรา", "endMs": 252520, "startMs": 251950 },
+        { "kind": "th", "text": "จะ", "endMs": 252900, "startMs": 252520 },
+        { "kind": "th", "text": "ชอ", "endMs": 253280, "startMs": 252900 }
+      ]
+    },
+    {
+      "startMs": 253280,
+      "endMs": 255820,
+      "text": "บแบบไหนนะ  strategi ตัวนาการ",
+      "words": [
+        { "kind": "th", "text": "บ", "endMs": 253386, "startMs": 253280 },
+        { "kind": "th", "text": "แบบ", "endMs": 253703, "startMs": 253386 },
+        { "kind": "th", "text": "ไหน", "endMs": 254021, "startMs": 253703 },
+        { "kind": "th", "text": "นะ", "endMs": 254232, "startMs": 254021 },
+        { "kind": "latin", "text": "strategi", "endMs": 255079, "startMs": 254232 },
+        { "kind": "th", "text": "ตัว", "endMs": 255291, "startMs": 255079 },
+        { "kind": "th", "text": "นา", "endMs": 255502, "startMs": 255291 },
+        { "kind": "th", "text": "การ", "endMs": 255820, "startMs": 255502 }
+      ]
+    },
+    {
+      "startMs": 256540,
+      "endMs": 258540,
+      "text": "ตัวนี้นะ เป็นลายแล้ววะ",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 256790, "startMs": 256540 },
+        { "kind": "th", "text": "นี้", "endMs": 256915, "startMs": 256790 },
+        { "kind": "th", "text": "นะ", "endMs": 257165, "startMs": 256915 },
+        { "kind": "th", "text": "เป็น", "endMs": 257540, "startMs": 257165 },
+        { "kind": "th", "text": "ลาย", "endMs": 257915, "startMs": 257540 },
+        { "kind": "th", "text": "แล้ว", "endMs": 258290, "startMs": 257915 },
+        { "kind": "th", "text": "วะ", "endMs": 258540, "startMs": 258290 }
+      ]
+    },
+    {
+      "startMs": 258540,
+      "endMs": 262540,
+      "text": "เป็นลาย...Halloween ใช่ไหม",
+      "words": [
+        { "kind": "th", "text": "เป็น", "endMs": 259062, "startMs": 258540 },
+        { "kind": "th", "text": "ลาย...", "endMs": 260105, "startMs": 259062 },
+        { "kind": "latin", "text": "Halloween", "endMs": 261670, "startMs": 260105 },
+        { "kind": "th", "text": "ใช่ไหม", "endMs": 262540, "startMs": 261670 }
+      ]
+    },
+    {
+      "startMs": 262540,
+      "endMs": 264540,
+      "text": "ลายพืดผักสุด",
+      "words": [
+        { "kind": "th", "text": "ลาย", "endMs": 263207, "startMs": 262540 },
+        { "kind": "th", "text": "พืด", "endMs": 263651, "startMs": 263207 },
+        { "kind": "th", "text": "ผัก", "endMs": 264096, "startMs": 263651 },
+        { "kind": "th", "text": "สุด", "endMs": 264540, "startMs": 264096 }
+      ]
+    },
+    {
+      "startMs": 264540,
+      "endMs": 266540,
+      "text": "ไม่ใช่ เขาจะแพงอย่างนี้",
+      "words": [
+        { "kind": "th", "text": "ไม่", "endMs": 264775, "startMs": 264540 },
+        { "kind": "th", "text": "ใช่", "endMs": 265011, "startMs": 264775 },
+        { "kind": "th", "text": "เขา", "endMs": 265364, "startMs": 265011 },
+        { "kind": "th", "text": "จะ", "endMs": 265599, "startMs": 265364 },
+        { "kind": "th", "text": "แพง", "endMs": 265952, "startMs": 265599 },
+        { "kind": "th", "text": "อย่างนี้", "endMs": 266540, "startMs": 265952 }
+      ]
+    },
+    {
+      "startMs": 266540,
+      "endMs": 268540,
+      "text": "แค่ตัวนจะเบยดีมาก",
+      "words": [
+        { "kind": "th", "text": "แค่", "endMs": 266826, "startMs": 266540 },
+        { "kind": "th", "text": "ตัว", "endMs": 267111, "startMs": 266826 },
+        { "kind": "th", "text": "น", "endMs": 267254, "startMs": 267111 },
+        { "kind": "th", "text": "จะ", "endMs": 267540, "startMs": 267254 },
+        { "kind": "th", "text": "เบย", "endMs": 267969, "startMs": 267540 },
+        { "kind": "th", "text": "ดีมาก", "endMs": 268540, "startMs": 267969 }
+      ]
+    },
+    {
+      "startMs": 268540,
+      "endMs": 270540,
+      "text": "เกือไม่ถัง",
+      "words": [
+        { "kind": "th", "text": "เกือ", "endMs": 269397, "startMs": 268540 },
+        { "kind": "th", "text": "ไม่", "endMs": 269969, "startMs": 269397 },
+        { "kind": "th", "text": "ถัง", "endMs": 270540, "startMs": 269969 }
+      ]
+    },
+    {
+      "startMs": 270540,
+      "endMs": 272540,
+      "text": "คุณพีรับนะคะ",
+      "words": [
+        { "kind": "th", "text": "คุณ", "endMs": 270984, "startMs": 270540 },
+        { "kind": "th", "text": "พี", "endMs": 271207, "startMs": 270984 },
+        { "kind": "th", "text": "รับ", "endMs": 271651, "startMs": 271207 },
+        { "kind": "th", "text": "นะคะ", "endMs": 272540, "startMs": 271651 }
+      ]
+    },
+    {
+      "startMs": 272540,
+      "endMs": 274540,
+      "text": "คุณพีรอ",
+      "words": [
+        { "kind": "th", "text": "คุณ", "endMs": 273340, "startMs": 272540 },
+        { "kind": "th", "text": "พี", "endMs": 273740, "startMs": 273340 },
+        { "kind": "th", "text": "รอ", "endMs": 274540, "startMs": 273740 }
+      ]
+    },
+    {
+      "startMs": 274540,
+      "endMs": 276540,
+      "text": "คุณพีอินบ็อคให้หน่อยนะ",
+      "words": [
+        { "kind": "th", "text": "คุณ", "endMs": 274790, "startMs": 274540 },
+        { "kind": "th", "text": "พี", "endMs": 274915, "startMs": 274790 },
+        { "kind": "th", "text": "อิน", "endMs": 275165, "startMs": 274915 },
+        { "kind": "th", "text": "บ็อค", "endMs": 275540, "startMs": 275165 },
+        { "kind": "th", "text": "ให้", "endMs": 275790, "startMs": 275540 },
+        { "kind": "th", "text": "หน่อย", "endMs": 276290, "startMs": 275790 },
+        { "kind": "th", "text": "นะ", "endMs": 276540, "startMs": 276290 }
+      ]
+    },
+    {
+      "startMs": 276540,
+      "endMs": 278540,
+      "text": "เพราะว่าชื่อแบบนี้มันจะขึ้นยาก",
+      "words": [
+        { "kind": "th", "text": "เพราะว่า", "endMs": 277176, "startMs": 276540 },
+        { "kind": "th", "text": "ชื่อ", "endMs": 277358, "startMs": 277176 },
+        { "kind": "th", "text": "แบบนี้", "endMs": 277722, "startMs": 277358 },
+        { "kind": "th", "text": "มัน", "endMs": 277904, "startMs": 277722 },
+        { "kind": "th", "text": "จะ", "endMs": 278085, "startMs": 277904 },
+        { "kind": "th", "text": "ขึ้น", "endMs": 278267, "startMs": 278085 },
+        { "kind": "th", "text": "ยาก", "endMs": 278540, "startMs": 278267 }
+      ]
+    },
+    {
+      "startMs": 278540,
+      "endMs": 280540,
+      "text": "สำหรับคนที่แคบนะคะ",
+      "words": [
+        { "kind": "th", "text": "สำหรับ", "endMs": 279207, "startMs": 278540 },
+        { "kind": "th", "text": "คน", "endMs": 279473, "startMs": 279207 },
+        { "kind": "th", "text": "ที่", "endMs": 279607, "startMs": 279473 },
+        { "kind": "th", "text": "แคบ", "endMs": 280007, "startMs": 279607 },
+        { "kind": "th", "text": "นะคะ", "endMs": 280540, "startMs": 280007 }
+      ]
+    },
+    {
+      "startMs": 280540,
+      "endMs": 282540,
+      "text": "อินบ็อคทิ้งมาดวนๆเลยค่ะ",
+      "words": [
+        { "kind": "th", "text": "อิน", "endMs": 280762, "startMs": 280540 },
+        { "kind": "th", "text": "บ็อค", "endMs": 281096, "startMs": 280762 },
+        { "kind": "th", "text": "ทิ้ง", "endMs": 281318, "startMs": 281096 },
+        { "kind": "th", "text": "มาด", "endMs": 281651, "startMs": 281318 },
+        { "kind": "th", "text": "วนๆ", "endMs": 281984, "startMs": 281651 },
+        { "kind": "th", "text": "เลย", "endMs": 282318, "startMs": 281984 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 282540, "startMs": 282318 }
+      ]
+    },
+    {
+      "startMs": 282540,
+      "endMs": 284540,
+      "text": "อินบ็อคทิ้งมาไว้ได้เลยนะ",
+      "words": [
+        { "kind": "th", "text": "อิน", "endMs": 282762, "startMs": 282540 },
+        { "kind": "th", "text": "บ็อค", "endMs": 283096, "startMs": 282762 },
+        { "kind": "th", "text": "ทิ้ง", "endMs": 283318, "startMs": 283096 },
+        { "kind": "th", "text": "มา", "endMs": 283540, "startMs": 283318 },
+        { "kind": "th", "text": "ไว้", "endMs": 283762, "startMs": 283540 },
+        { "kind": "th", "text": "ได้", "endMs": 283984, "startMs": 283762 },
+        { "kind": "th", "text": "เลย", "endMs": 284318, "startMs": 283984 },
+        { "kind": "th", "text": "นะ", "endMs": 284540, "startMs": 284318 }
+      ]
+    },
+    {
+      "startMs": 284540,
+      "endMs": 287420,
+      "text": "ใช่เราเสิร์ถหายเองมันบางคนมันไม่ขึ้นชื่อนะคะ",
+      "words": [
+        { "kind": "th", "text": "ใช่", "endMs": 284709, "startMs": 284540 },
+        { "kind": "th", "text": "เรา", "endMs": 284964, "startMs": 284709 },
+        { "kind": "th", "text": "เสิร์ถ", "endMs": 285302, "startMs": 284964 },
+        { "kind": "th", "text": "หาย", "endMs": 285556, "startMs": 285302 },
+        { "kind": "th", "text": "เอง", "endMs": 285811, "startMs": 285556 },
+        { "kind": "th", "text": "มัน", "endMs": 285980, "startMs": 285811 },
+        { "kind": "th", "text": "บางคน", "endMs": 286404, "startMs": 285980 },
+        { "kind": "th", "text": "มัน", "endMs": 286573, "startMs": 286404 },
+        { "kind": "th", "text": "ไม่", "endMs": 286742, "startMs": 286573 },
+        { "kind": "th", "text": "ขึ้นชื่อ", "endMs": 287081, "startMs": 286742 },
+        { "kind": "th", "text": "นะคะ", "endMs": 287420, "startMs": 287081 }
+      ]
+    },
+    {
+      "startMs": 287420,
+      "endMs": 290700,
+      "text": "คุณพี่แคปแล้วบอกว่าไซ้เสียค่ะ",
+      "words": [
+        { "kind": "th", "text": "คุณ", "endMs": 287732, "startMs": 287420 },
+        { "kind": "th", "text": "พี่", "endMs": 287889, "startMs": 287732 },
+        { "kind": "th", "text": "แคป", "endMs": 288357, "startMs": 287889 },
+        { "kind": "th", "text": "แล้ว", "endMs": 288826, "startMs": 288357 },
+        { "kind": "th", "text": "บอ", "endMs": 289138, "startMs": 288826 },
+        { "kind": "th", "text": "กว่า", "endMs": 289607, "startMs": 289138 },
+        { "kind": "th", "text": "ไซ้", "endMs": 289919, "startMs": 289607 },
+        { "kind": "th", "text": "เสีย", "endMs": 290388, "startMs": 289919 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 290700, "startMs": 290388 }
+      ]
+    },
+    {
+      "startMs": 290700,
+      "endMs": 291780,
+      "text": "ไซ้เสีย",
+      "words": [
+        { "kind": "th", "text": "ไซ้", "endMs": 291132, "startMs": 290700 },
+        { "kind": "th", "text": "เสีย", "endMs": 291780, "startMs": 291132 }
+      ]
+    },
+    {
+      "startMs": 292540,
+      "endMs": 294780,
+      "text": "คุณพี่แคปแล้วบอกว่าไซ้เสียนะ",
+      "words": [
+        { "kind": "th", "text": "คุณ", "endMs": 292753, "startMs": 292540 },
+        { "kind": "th", "text": "พี่", "endMs": 292860, "startMs": 292753 },
+        { "kind": "th", "text": "แคป", "endMs": 293180, "startMs": 292860 },
+        { "kind": "th", "text": "แล้ว", "endMs": 293500, "startMs": 293180 },
+        { "kind": "th", "text": "บอ", "endMs": 293713, "startMs": 293500 },
+        { "kind": "th", "text": "กว่า", "endMs": 294033, "startMs": 293713 },
+        { "kind": "th", "text": "ไซ้", "endMs": 294247, "startMs": 294033 },
+        { "kind": "th", "text": "เสีย", "endMs": 294567, "startMs": 294247 },
+        { "kind": "th", "text": "นะ", "endMs": 294780, "startMs": 294567 }
+      ]
+    },
+    {
+      "startMs": 295180,
+      "endMs": 298420,
+      "text": "แคปเรียบร้อยแล้วเราบอกว่าไซ้เสียและโยนต์รูปมาในอินบ็อค",
+      "words": [
+        { "kind": "th", "text": "แคป", "endMs": 295401, "startMs": 295180 },
+        { "kind": "th", "text": "เรียบร้อย", "endMs": 295916, "startMs": 295401 },
+        { "kind": "th", "text": "แล้ว", "endMs": 296137, "startMs": 295916 },
+        { "kind": "th", "text": "เรา", "endMs": 296358, "startMs": 296137 },
+        { "kind": "th", "text": "บอ", "endMs": 296505, "startMs": 296358 },
+        { "kind": "th", "text": "กว่า", "endMs": 296726, "startMs": 296505 },
+        { "kind": "th", "text": "ไซ้", "endMs": 296874, "startMs": 296726 },
+        { "kind": "th", "text": "เสีย", "endMs": 297095, "startMs": 296874 },
+        { "kind": "th", "text": "และ", "endMs": 297315, "startMs": 297095 },
+        { "kind": "th", "text": "โย", "endMs": 297463, "startMs": 297315 },
+        { "kind": "th", "text": "นต์", "endMs": 297610, "startMs": 297463 },
+        { "kind": "th", "text": "รูป", "endMs": 297757, "startMs": 297610 },
+        { "kind": "th", "text": "มา", "endMs": 297905, "startMs": 297757 },
+        { "kind": "th", "text": "ใน", "endMs": 298052, "startMs": 297905 },
+        { "kind": "th", "text": "อิน", "endMs": 298199, "startMs": 298052 },
+        { "kind": "th", "text": "บ็อค", "endMs": 298420, "startMs": 298199 }
+      ]
+    },
+    {
+      "startMs": 298780,
+      "endMs": 301980,
+      "text": "อินบ็อคเพจได้เลยนะ 1.9.9 ชอบมาย้อมฮาวายนะครับ",
+      "words": [
+        { "kind": "th", "text": "อิน", "endMs": 298948, "startMs": 298780 },
+        { "kind": "th", "text": "บ็อค", "endMs": 299201, "startMs": 298948 },
+        { "kind": "th", "text": "เพจ", "endMs": 299454, "startMs": 299201 },
+        { "kind": "th", "text": "ได้", "endMs": 299622, "startMs": 299454 },
+        { "kind": "th", "text": "เลย", "endMs": 299875, "startMs": 299622 },
+        { "kind": "th", "text": "นะ", "endMs": 300043, "startMs": 299875 },
+        { "kind": "number", "text": "1.9.9", "endMs": 300464, "startMs": 300043 },
+        { "kind": "th", "text": "ชอบ", "endMs": 300717, "startMs": 300464 },
+        { "kind": "th", "text": "มา", "endMs": 300885, "startMs": 300717 },
+        { "kind": "th", "text": "ย้อม", "endMs": 301138, "startMs": 300885 },
+        { "kind": "th", "text": "ฮาวาย", "endMs": 301559, "startMs": 301138 },
+        { "kind": "th", "text": "นะ", "endMs": 301727, "startMs": 301559 },
+        { "kind": "th", "text": "ครับ", "endMs": 301980, "startMs": 301727 }
+      ]
+    },
+    {
+      "startMs": 302260,
+      "endMs": 306760,
+      "text": "200 บาทค่ะ ค่าจะส่ง 2 ตัวแรก 50 บาท ตัวตัวไปตัวละ 10 บาทนะคะ",
+      "words": [
+        { "kind": "number", "text": "200", "endMs": 302567, "startMs": 302260 },
+        { "kind": "th", "text": "บาท", "endMs": 302874, "startMs": 302567 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 303078, "startMs": 302874 },
+        { "kind": "th", "text": "ค่า", "endMs": 303283, "startMs": 303078 },
+        { "kind": "th", "text": "จะ", "endMs": 303487, "startMs": 303283 },
+        { "kind": "th", "text": "ส่ง", "endMs": 303692, "startMs": 303487 },
+        { "kind": "number", "text": "2", "endMs": 303794, "startMs": 303692 },
+        { "kind": "th", "text": "ตัว", "endMs": 303999, "startMs": 303794 },
+        { "kind": "th", "text": "แรก", "endMs": 304305, "startMs": 303999 },
+        { "kind": "number", "text": "50", "endMs": 304510, "startMs": 304305 },
+        { "kind": "th", "text": "บาท", "endMs": 304817, "startMs": 304510 },
+        { "kind": "th", "text": "ตัว", "endMs": 305021, "startMs": 304817 },
+        { "kind": "th", "text": "ตัว", "endMs": 305226, "startMs": 305021 },
+        { "kind": "th", "text": "ไป", "endMs": 305430, "startMs": 305226 },
+        { "kind": "th", "text": "ตัว", "endMs": 305635, "startMs": 305430 },
+        { "kind": "th", "text": "ละ", "endMs": 305840, "startMs": 305635 },
+        { "kind": "number", "text": "10", "endMs": 306044, "startMs": 305840 },
+        { "kind": "th", "text": "บาท", "endMs": 306351, "startMs": 306044 },
+        { "kind": "th", "text": "นะคะ", "endMs": 306760, "startMs": 306351 }
+      ]
+    },
+    {
+      "startMs": 306760,
+      "endMs": 308060,
+      "text": "ส่งของวันพุ้นหลักหัดนะ",
+      "words": [
+        { "kind": "th", "text": "ส่ง", "endMs": 306922, "startMs": 306760 },
+        { "kind": "th", "text": "ของ", "endMs": 307166, "startMs": 306922 },
+        { "kind": "th", "text": "วัน", "endMs": 307329, "startMs": 307166 },
+        { "kind": "th", "text": "พุ้น", "endMs": 307491, "startMs": 307329 },
+        { "kind": "th", "text": "หลัก", "endMs": 307735, "startMs": 307491 },
+        { "kind": "th", "text": "หัด", "endMs": 307898, "startMs": 307735 },
+        { "kind": "th", "text": "นะ", "endMs": 308060, "startMs": 307898 }
+      ]
+    },
+    {
+      "startMs": 308060,
+      "endMs": 311660,
+      "text": "ส่งของวันพุ้นหลักหัด แต่ต้องเคยยอดให้หมดภายในวันนี้ก่อนนะคะ",
+      "words": [
+        { "kind": "th", "text": "ส่ง", "endMs": 308220, "startMs": 308060 },
+        { "kind": "th", "text": "ของ", "endMs": 308460, "startMs": 308220 },
+        { "kind": "th", "text": "วัน", "endMs": 308620, "startMs": 308460 },
+        { "kind": "th", "text": "พุ้น", "endMs": 308780, "startMs": 308620 },
+        { "kind": "th", "text": "หลัก", "endMs": 309020, "startMs": 308780 },
+        { "kind": "th", "text": "หัด", "endMs": 309180, "startMs": 309020 },
+        { "kind": "th", "text": "แต่", "endMs": 309340, "startMs": 309180 },
+        { "kind": "th", "text": "ต้อง", "endMs": 309580, "startMs": 309340 },
+        { "kind": "th", "text": "เคย", "endMs": 309820, "startMs": 309580 },
+        { "kind": "th", "text": "ยอด", "endMs": 310060, "startMs": 309820 },
+        { "kind": "th", "text": "ให้", "endMs": 310220, "startMs": 310060 },
+        { "kind": "th", "text": "หมด", "endMs": 310460, "startMs": 310220 },
+        { "kind": "th", "text": "ภายใน", "endMs": 310860, "startMs": 310460 },
+        { "kind": "th", "text": "วันนี้", "endMs": 311100, "startMs": 310860 },
+        { "kind": "th", "text": "ก่อน", "endMs": 311340, "startMs": 311100 },
+        { "kind": "th", "text": "นะคะ", "endMs": 311660, "startMs": 311340 }
+      ]
+    },
+    {
+      "startMs": 311660,
+      "endMs": 313660,
+      "text": "เพราะว่าเราจะไลค์อีกทีพรุ่งนี้นะคะ",
+      "words": [
+        { "kind": "th", "text": "เพราะว่า", "endMs": 312198, "startMs": 311660 },
+        { "kind": "th", "text": "เรา", "endMs": 312429, "startMs": 312198 },
+        { "kind": "th", "text": "จะ", "endMs": 312583, "startMs": 312429 },
+        { "kind": "th", "text": "ไลค์", "endMs": 312814, "startMs": 312583 },
+        { "kind": "th", "text": "อีกที", "endMs": 313045, "startMs": 312814 },
+        { "kind": "th", "text": "พรุ่งนี้", "endMs": 313352, "startMs": 313045 },
+        { "kind": "th", "text": "นะคะ", "endMs": 313660, "startMs": 313352 }
+      ]
+    },
+    {
+      "startMs": 313660,
+      "endMs": 318060,
+      "text": "ไลค์อีก พรุ่งนี้ก็สามารถซื้อต่อได้ ปกตินะครับผม",
+      "words": [
+        { "kind": "th", "text": "ไลค์", "endMs": 314072, "startMs": 313660 },
+        { "kind": "th", "text": "อีก", "endMs": 314348, "startMs": 314072 },
+        { "kind": "th", "text": "พรุ่งนี้", "endMs": 314898, "startMs": 314348 },
+        { "kind": "th", "text": "ก็", "endMs": 315035, "startMs": 314898 },
+        { "kind": "th", "text": "สามารถ", "endMs": 315860, "startMs": 315035 },
+        { "kind": "th", "text": "ซื้อ", "endMs": 316135, "startMs": 315860 },
+        { "kind": "th", "text": "ต่อ", "endMs": 316410, "startMs": 316135 },
+        { "kind": "th", "text": "ได้", "endMs": 316685, "startMs": 316410 },
+        { "kind": "th", "text": "ปกติ", "endMs": 317098, "startMs": 316685 },
+        { "kind": "th", "text": "นะ", "endMs": 317372, "startMs": 317098 },
+        { "kind": "th", "text": "ครับผม", "endMs": 318060, "startMs": 317372 }
+      ]
+    },
+    {
+      "startMs": 318060,
+      "endMs": 321320,
+      "text": "ไว้ไลบ้...วันนี้อ่ะ? วันนี้ก็ได้มั้ง?",
+      "words": [
+        { "kind": "th", "text": "ไว้", "endMs": 318343, "startMs": 318060 },
+        { "kind": "th", "text": "ไลบ้...", "endMs": 319194, "startMs": 318343 },
+        { "kind": "th", "text": "วันนี้", "endMs": 319619, "startMs": 319194 },
+        { "kind": "th", "text": "อ่ะ?", "endMs": 320044, "startMs": 319619 },
+        { "kind": "th", "text": "วันนี้", "endMs": 320470, "startMs": 320044 },
+        { "kind": "th", "text": "ก็ได้", "endMs": 320895, "startMs": 320470 },
+        { "kind": "th", "text": "มั้ง?", "endMs": 321320, "startMs": 320895 }
+      ]
+    },
+    {
+      "startMs": 321320,
+      "endMs": 324640,
+      "text": "มันจะคือคือ ใช่ ๆ โอเคเนาะ? มา",
+      "words": [
+        { "kind": "th", "text": "มัน", "endMs": 321622, "startMs": 321320 },
+        { "kind": "th", "text": "จะ", "endMs": 321924, "startMs": 321622 },
+        { "kind": "th", "text": "คือ", "endMs": 322225, "startMs": 321924 },
+        { "kind": "th", "text": "คือ", "endMs": 322527, "startMs": 322225 },
+        { "kind": "th", "text": "ใช่ๆ", "endMs": 322980, "startMs": 322527 },
+        { "kind": "th", "text": "โอเค", "endMs": 323584, "startMs": 322980 },
+        { "kind": "th", "text": "เนาะ?", "endMs": 324338, "startMs": 323584 },
+        { "kind": "th", "text": "มา", "endMs": 324640, "startMs": 324338 }
+      ]
+    },
+    {
+      "startMs": 325340,
+      "endMs": 328380,
+      "text": "แล้วแต่ แล้วแต่ แล้วแต่ ไว้ แคปยางๆ แคปแล้วบอกว่า...",
+      "words": [
+        { "kind": "th", "text": "แล้วแต่", "endMs": 325740, "startMs": 325340 },
+        { "kind": "th", "text": "แล้วแต่", "endMs": 326140, "startMs": 325740 },
+        { "kind": "th", "text": "แล้วแต่", "endMs": 326540, "startMs": 326140 },
+        { "kind": "th", "text": "ไว้", "endMs": 326700, "startMs": 326540 },
+        { "kind": "th", "text": "แคป", "endMs": 326940, "startMs": 326700 },
+        { "kind": "th", "text": "ยางๆ", "endMs": 327260, "startMs": 326940 },
+        { "kind": "th", "text": "แคป", "endMs": 327500, "startMs": 327260 },
+        { "kind": "th", "text": "แล้ว", "endMs": 327740, "startMs": 327500 },
+        { "kind": "th", "text": "บอ", "endMs": 327900, "startMs": 327740 },
+        { "kind": "th", "text": "กว่า...", "endMs": 328380, "startMs": 327900 }
+      ]
+    },
+    {
+      "startMs": 329120,
+      "endMs": 333740,
+      "text": "ใสเซียค่ะ ใสเซียๆ ใสเซียๆ ใสเซียๆ ใสเซียสุดแล้ว",
+      "words": [
+        { "kind": "th", "text": "ใส", "endMs": 329384, "startMs": 329120 },
+        { "kind": "th", "text": "เซีย", "endMs": 329780, "startMs": 329384 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 330044, "startMs": 329780 },
+        { "kind": "th", "text": "ใส", "endMs": 330308, "startMs": 330044 },
+        { "kind": "th", "text": "เซียๆ", "endMs": 330836, "startMs": 330308 },
+        { "kind": "th", "text": "ใส", "endMs": 331100, "startMs": 330836 },
+        { "kind": "th", "text": "เซียๆ", "endMs": 331628, "startMs": 331100 },
+        { "kind": "th", "text": "ใส", "endMs": 331892, "startMs": 331628 },
+        { "kind": "th", "text": "เซียๆ", "endMs": 332420, "startMs": 331892 },
+        { "kind": "th", "text": "ใส", "endMs": 332684, "startMs": 332420 },
+        { "kind": "th", "text": "เซีย", "endMs": 333080, "startMs": 332684 },
+        { "kind": "th", "text": "สุด", "endMs": 333344, "startMs": 333080 },
+        { "kind": "th", "text": "แล้ว", "endMs": 333740, "startMs": 333344 }
+      ]
+    },
+    {
+      "startMs": 334380,
+      "endMs": 337240,
+      "text": "เพราะว่ามีออกยิปเจ็จแล้ว มีออกยิปเจ็จแล้ว ใสเซียครับ โอเคค่ะ",
+      "words": [
+        { "kind": "th", "text": "เพราะว่า", "endMs": 334825, "startMs": 334380 },
+        { "kind": "th", "text": "มี", "endMs": 334888, "startMs": 334825 },
+        { "kind": "th", "text": "ออก", "endMs": 335079, "startMs": 334888 },
+        { "kind": "th", "text": "ยิปเจ็จ", "endMs": 335397, "startMs": 335079 },
+        { "kind": "th", "text": "แล้ว", "endMs": 335588, "startMs": 335397 },
+        { "kind": "th", "text": "มี", "endMs": 335651, "startMs": 335588 },
+        { "kind": "th", "text": "ออก", "endMs": 335842, "startMs": 335651 },
+        { "kind": "th", "text": "ยิปเจ็จ", "endMs": 336160, "startMs": 335842 },
+        { "kind": "th", "text": "แล้ว", "endMs": 336350, "startMs": 336160 },
+        { "kind": "th", "text": "ใส", "endMs": 336477, "startMs": 336350 },
+        { "kind": "th", "text": "เซีย", "endMs": 336668, "startMs": 336477 },
+        { "kind": "th", "text": "ครับ", "endMs": 336859, "startMs": 336668 },
+        { "kind": "th", "text": "โอเค", "endMs": 337113, "startMs": 336859 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 337240, "startMs": 337113 }
+      ]
+    },
+    {
+      "startMs": 339700,
+      "endMs": 343580,
+      "text": "โอเคนะครับผมอ่ะ 1,500 บาท Liquid Bull อ่ะให้ดูไปก่ะ",
+      "words": [
+        { "kind": "th", "text": "โอเค", "endMs": 340088, "startMs": 339700 },
+        { "kind": "th", "text": "นะ", "endMs": 340282, "startMs": 340088 },
+        { "kind": "th", "text": "ครับผม", "endMs": 340767, "startMs": 340282 },
+        { "kind": "th", "text": "อ่ะ", "endMs": 340961, "startMs": 340767 },
+        { "kind": "number", "text": "1,500", "endMs": 341446, "startMs": 340961 },
+        { "kind": "th", "text": "บาท", "endMs": 341737, "startMs": 341446 },
+        { "kind": "latin", "text": "Liquid", "endMs": 342319, "startMs": 341737 },
+        { "kind": "latin", "text": "Bull", "endMs": 342707, "startMs": 342319 },
+        { "kind": "th", "text": "อ่ะ", "endMs": 342901, "startMs": 342707 },
+        { "kind": "th", "text": "ให้", "endMs": 343095, "startMs": 342901 },
+        { "kind": "th", "text": "ดู", "endMs": 343192, "startMs": 343095 },
+        { "kind": "th", "text": "ไป", "endMs": 343386, "startMs": 343192 },
+        { "kind": "th", "text": "ก่ะ", "endMs": 343580, "startMs": 343386 }
+      ]
+    },
+    {
+      "startMs": 344140,
+      "endMs": 345140,
+      "text": "ผ่านแล้วค่ะ",
+      "words": [
+        { "kind": "th", "text": "ผ่าน", "endMs": 344515, "startMs": 344140 },
+        { "kind": "th", "text": "แล้ว", "endMs": 344890, "startMs": 344515 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 345140, "startMs": 344890 }
+      ]
+    },
+    {
+      "startMs": 345140,
+      "endMs": 346140,
+      "text": "อ๋อผ่านแล้วใช่ไหม",
+      "words": [
+        { "kind": "th", "text": "อ๋อ", "endMs": 345294, "startMs": 345140 },
+        { "kind": "th", "text": "ผ่าน", "endMs": 345525, "startMs": 345294 },
+        { "kind": "th", "text": "แล้ว", "endMs": 345755, "startMs": 345525 },
+        { "kind": "th", "text": "ใช่ไหม", "endMs": 346140, "startMs": 345755 }
+      ]
+    },
+    {
+      "startMs": 348740,
+      "endMs": 350140,
+      "text": "ต่อเดิน",
+      "words": [
+        { "kind": "th", "text": "ต่อ", "endMs": 349300, "startMs": 348740 },
+        { "kind": "th", "text": "เดิน", "endMs": 350140, "startMs": 349300 }
+      ]
+    },
+    {
+      "startMs": 351180,
+      "endMs": 353820,
+      "text": "ตัวนี้ออก 20 ยาว 25 ไซต์ M",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 351491, "startMs": 351180 },
+        { "kind": "th", "text": "นี้", "endMs": 351646, "startMs": 351491 },
+        { "kind": "th", "text": "ออก", "endMs": 352112, "startMs": 351646 },
+        { "kind": "number", "text": "20", "endMs": 352422, "startMs": 352112 },
+        { "kind": "th", "text": "ยาว", "endMs": 352888, "startMs": 352422 },
+        { "kind": "number", "text": "25", "endMs": 353199, "startMs": 352888 },
+        { "kind": "th", "text": "ไซต์", "endMs": 353665, "startMs": 353199 },
+        { "kind": "latin", "text": "M", "endMs": 353820, "startMs": 353665 }
+      ]
+    },
+    {
+      "startMs": 354140,
+      "endMs": 356620,
+      "text": "ออก 20 ยาว 25 ไซต์ M กระเป๋าหน้านะ",
+      "words": [
+        { "kind": "th", "text": "ออก", "endMs": 354438, "startMs": 354140 },
+        { "kind": "number", "text": "20", "endMs": 354636, "startMs": 354438 },
+        { "kind": "th", "text": "ยาว", "endMs": 354934, "startMs": 354636 },
+        { "kind": "number", "text": "25", "endMs": 355132, "startMs": 354934 },
+        { "kind": "th", "text": "ไซต์", "endMs": 355430, "startMs": 355132 },
+        { "kind": "latin", "text": "M", "endMs": 355529, "startMs": 355430 },
+        { "kind": "th", "text": "กระเป๋า", "endMs": 356124, "startMs": 355529 },
+        { "kind": "th", "text": "หน้า", "endMs": 356422, "startMs": 356124 },
+        { "kind": "th", "text": "นะ", "endMs": 356620, "startMs": 356422 }
+      ]
+    },
+    {
+      "startMs": 356620,
+      "endMs": 358940,
+      "text": "กระเป๋าหน้าออก 20 ยาว 25 ไซต์ M",
+      "words": [
+        { "kind": "th", "text": "กระเป๋า", "endMs": 357225, "startMs": 356620 },
+        { "kind": "th", "text": "หน้า", "endMs": 357528, "startMs": 357225 },
+        { "kind": "th", "text": "ออก", "endMs": 357830, "startMs": 357528 },
+        { "kind": "number", "text": "20", "endMs": 358032, "startMs": 357830 },
+        { "kind": "th", "text": "ยาว", "endMs": 358335, "startMs": 358032 },
+        { "kind": "number", "text": "25", "endMs": 358537, "startMs": 358335 },
+        { "kind": "th", "text": "ไซต์", "endMs": 358839, "startMs": 358537 },
+        { "kind": "latin", "text": "M", "endMs": 358940, "startMs": 358839 }
+      ]
+    },
+    {
+      "startMs": 362180,
+      "endMs": 364260,
+      "text": "ผ่าจะออกหนาหน่าหน่อยนะ ผ่าจะออกแบบว่า",
+      "words": [
+        { "kind": "th", "text": "ผ่า", "endMs": 362314, "startMs": 362180 },
+        { "kind": "th", "text": "จะ", "endMs": 362448, "startMs": 362314 },
+        { "kind": "th", "text": "ออก", "endMs": 362650, "startMs": 362448 },
+        { "kind": "th", "text": "หนา", "endMs": 362851, "startMs": 362650 },
+        { "kind": "th", "text": "ห", "endMs": 362918, "startMs": 362851 },
+        { "kind": "th", "text": "น่า", "endMs": 363052, "startMs": 362918 },
+        { "kind": "th", "text": "หน่อย", "endMs": 363321, "startMs": 363052 },
+        { "kind": "th", "text": "นะ", "endMs": 363455, "startMs": 363321 },
+        { "kind": "th", "text": "ผ่า", "endMs": 363589, "startMs": 363455 },
+        { "kind": "th", "text": "จะ", "endMs": 363723, "startMs": 363589 },
+        { "kind": "th", "text": "ออกแบบ", "endMs": 364126, "startMs": 363723 },
+        { "kind": "th", "text": "ว่า", "endMs": 364260, "startMs": 364126 }
+      ]
+    },
+    {
+      "startMs": 364820,
+      "endMs": 367260,
+      "text": "เป็นแบบนี้นะ ผ่าจะออกหนาหน่าหน่อยสำหรับกั้นหนาเลยนะ",
+      "words": [
+        { "kind": "th", "text": "เป็น", "endMs": 364999, "startMs": 364820 },
+        { "kind": "th", "text": "แบบนี้", "endMs": 365237, "startMs": 364999 },
+        { "kind": "th", "text": "นะ", "endMs": 365356, "startMs": 365237 },
+        { "kind": "th", "text": "ผ่า", "endMs": 365475, "startMs": 365356 },
+        { "kind": "th", "text": "จะ", "endMs": 365594, "startMs": 365475 },
+        { "kind": "th", "text": "ออก", "endMs": 365772, "startMs": 365594 },
+        { "kind": "th", "text": "หนา", "endMs": 365951, "startMs": 365772 },
+        { "kind": "th", "text": "ห", "endMs": 366010, "startMs": 365951 },
+        { "kind": "th", "text": "น่า", "endMs": 366129, "startMs": 366010 },
+        { "kind": "th", "text": "หน่อย", "endMs": 366367, "startMs": 366129 },
+        { "kind": "th", "text": "สำหรับ", "endMs": 366665, "startMs": 366367 },
+        { "kind": "th", "text": "กั้น", "endMs": 366784, "startMs": 366665 },
+        { "kind": "th", "text": "หนา", "endMs": 366962, "startMs": 366784 },
+        { "kind": "th", "text": "เลย", "endMs": 367141, "startMs": 366962 },
+        { "kind": "th", "text": "นะ", "endMs": 367260, "startMs": 367141 }
+      ]
+    },
+    {
+      "startMs": 367260,
+      "endMs": 367980,
+      "text": "รายชื่ออะไร",
+      "words": [
+        { "kind": "th", "text": "รายชื่อ", "endMs": 367660, "startMs": 367260 },
+        { "kind": "th", "text": "อะไร", "endMs": 367980, "startMs": 367660 }
+      ]
+    },
+    {
+      "startMs": 368340,
+      "endMs": 370340,
+      "text": "ชื่อตัวนี้หรอ?",
+      "words": [
+        { "kind": "th", "text": "ชื่อตัว", "endMs": 369229, "startMs": 368340 },
+        { "kind": "th", "text": "นี้", "endMs": 369451, "startMs": 369229 },
+        { "kind": "th", "text": "หรอ?", "endMs": 370340, "startMs": 369451 }
+      ]
+    },
+    {
+      "startMs": 370340,
+      "endMs": 372340,
+      "text": "ชื่อตัวนี้หรอ?",
+      "words": [
+        { "kind": "th", "text": "ชื่อตัว", "endMs": 371229, "startMs": 370340 },
+        { "kind": "th", "text": "นี้", "endMs": 371451, "startMs": 371229 },
+        { "kind": "th", "text": "หรอ?", "endMs": 372340, "startMs": 371451 }
+      ]
+    },
+    {
+      "startMs": 372340,
+      "endMs": 374340,
+      "text": "พี่หนึ่ง ดึกๆแล้วสมอมก็จะตื่บอ่ะ",
+      "words": [
+        { "kind": "th", "text": "พี่", "endMs": 372435, "startMs": 372340 },
+        { "kind": "th", "text": "หนึ่ง", "endMs": 372721, "startMs": 372435 },
+        { "kind": "th", "text": "ดึกๆ", "endMs": 373007, "startMs": 372721 },
+        { "kind": "th", "text": "แล้ว", "endMs": 373292, "startMs": 373007 },
+        { "kind": "th", "text": "สม", "endMs": 373483, "startMs": 373292 },
+        { "kind": "th", "text": "อม", "endMs": 373673, "startMs": 373483 },
+        { "kind": "th", "text": "ก็", "endMs": 373769, "startMs": 373673 },
+        { "kind": "th", "text": "จะ", "endMs": 373959, "startMs": 373769 },
+        { "kind": "th", "text": "ตื่บ", "endMs": 374150, "startMs": 373959 },
+        { "kind": "th", "text": "อ่ะ", "endMs": 374340, "startMs": 374150 }
+      ]
+    },
+    {
+      "startMs": 374340,
+      "endMs": 376340,
+      "text": "OPPA",
+      "words": [{ "kind": "latin", "text": "OPPA", "endMs": 376340, "startMs": 374340 }]
+    },
+    {
+      "startMs": 376340,
+      "endMs": 378340,
+      "text": "เป็นออกเที่ยวกาหลีนะ",
+      "words": [
+        { "kind": "th", "text": "เป็น", "endMs": 376715, "startMs": 376340 },
+        { "kind": "th", "text": "ออก", "endMs": 377090, "startMs": 376715 },
+        { "kind": "th", "text": "เที่ยว", "endMs": 377590, "startMs": 377090 },
+        { "kind": "th", "text": "กา", "endMs": 377840, "startMs": 377590 },
+        { "kind": "th", "text": "หลี", "endMs": 378090, "startMs": 377840 },
+        { "kind": "th", "text": "นะ", "endMs": 378340, "startMs": 378090 }
+      ]
+    },
+    {
+      "startMs": 378340,
+      "endMs": 380340,
+      "text": "เป็นเสื้อนาหนามาย้อมนาหนานะ",
+      "words": [
+        { "kind": "th", "text": "เป็น", "endMs": 378601, "startMs": 378340 },
+        { "kind": "th", "text": "เสื้อ", "endMs": 378862, "startMs": 378601 },
+        { "kind": "th", "text": "นา", "endMs": 379036, "startMs": 378862 },
+        { "kind": "th", "text": "หนา", "endMs": 379297, "startMs": 379036 },
+        { "kind": "th", "text": "มา", "endMs": 379470, "startMs": 379297 },
+        { "kind": "th", "text": "ย้อม", "endMs": 379731, "startMs": 379470 },
+        { "kind": "th", "text": "นา", "endMs": 379905, "startMs": 379731 },
+        { "kind": "th", "text": "หนา", "endMs": 380166, "startMs": 379905 },
+        { "kind": "th", "text": "นะ", "endMs": 380340, "startMs": 380166 }
+      ]
+    },
+    {
+      "startMs": 380340,
+      "endMs": 382340,
+      "text": "ตัวนี้จะเป็นงานญี่ปุ่นนะ",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 380590, "startMs": 380340 },
+        { "kind": "th", "text": "นี้", "endMs": 380715, "startMs": 380590 },
+        { "kind": "th", "text": "จะ", "endMs": 380965, "startMs": 380715 },
+        { "kind": "th", "text": "เป็นงาน", "endMs": 381715, "startMs": 380965 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 382090, "startMs": 381715 },
+        { "kind": "th", "text": "นะ", "endMs": 382340, "startMs": 382090 }
+      ]
+    },
+    {
+      "startMs": 382340,
+      "endMs": 384340,
+      "text": "ตัวนี้จะเป็นงานญี่ปุ่นนะ",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 382590, "startMs": 382340 },
+        { "kind": "th", "text": "นี้", "endMs": 382715, "startMs": 382590 },
+        { "kind": "th", "text": "จะ", "endMs": 382965, "startMs": 382715 },
+        { "kind": "th", "text": "เป็นงาน", "endMs": 383715, "startMs": 382965 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 384090, "startMs": 383715 },
+        { "kind": "th", "text": "นะ", "endMs": 384340, "startMs": 384090 }
+      ]
+    },
+    {
+      "startMs": 384340,
+      "endMs": 386340,
+      "text": "นี่นะครับผม",
+      "words": [
+        { "kind": "th", "text": "นี่", "endMs": 384590, "startMs": 384340 },
+        { "kind": "th", "text": "นะ", "endMs": 385090, "startMs": 384590 },
+        { "kind": "th", "text": "ครับผม", "endMs": 386340, "startMs": 385090 }
+      ]
+    },
+    {
+      "startMs": 386340,
+      "endMs": 388340,
+      "text": "จะเป็นงานญี่ปุ่นนะ",
+      "words": [
+        { "kind": "th", "text": "จะ", "endMs": 386648, "startMs": 386340 },
+        { "kind": "th", "text": "เป็นงาน", "endMs": 387571, "startMs": 386648 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 388032, "startMs": 387571 },
+        { "kind": "th", "text": "นะ", "endMs": 388340, "startMs": 388032 }
+      ]
+    },
+    {
+      "startMs": 388340,
+      "endMs": 390340,
+      "text": "เป็นงานญี่ปุ่นนะ",
+      "words": [
+        { "kind": "th", "text": "เป็นงาน", "endMs": 389431, "startMs": 388340 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 389976, "startMs": 389431 },
+        { "kind": "th", "text": "นะ", "endMs": 390340, "startMs": 389976 }
+      ]
+    },
+    {
+      "startMs": 390340,
+      "endMs": 392340,
+      "text": "มีข้างนะ เป็นข้างเดิมนะ",
+      "words": [
+        { "kind": "th", "text": "มี", "endMs": 390458, "startMs": 390340 },
+        { "kind": "th", "text": "ข้าง", "endMs": 390811, "startMs": 390458 },
+        { "kind": "th", "text": "นะ", "endMs": 391046, "startMs": 390811 },
+        { "kind": "th", "text": "เป็น", "endMs": 391399, "startMs": 391046 },
+        { "kind": "th", "text": "ข้าง", "endMs": 391752, "startMs": 391399 },
+        { "kind": "th", "text": "เดิม", "endMs": 392105, "startMs": 391752 },
+        { "kind": "th", "text": "นะ", "endMs": 392340, "startMs": 392105 }
+      ]
+    },
+    {
+      "startMs": 392340,
+      "endMs": 394340,
+      "text": "อบ 20 ยาว 25 ไซส์ M",
+      "words": [
+        { "kind": "th", "text": "อบ", "endMs": 392648, "startMs": 392340 },
+        { "kind": "number", "text": "20", "endMs": 392955, "startMs": 392648 },
+        { "kind": "th", "text": "ยาว", "endMs": 393417, "startMs": 392955 },
+        { "kind": "number", "text": "25", "endMs": 393725, "startMs": 393417 },
+        { "kind": "th", "text": "ไซส์", "endMs": 394186, "startMs": 393725 },
+        { "kind": "latin", "text": "M", "endMs": 394340, "startMs": 394186 }
+      ]
+    },
+    {
+      "startMs": 394340,
+      "endMs": 396340,
+      "text": "กับงานกระเป๋าหน้า",
+      "words": [
+        { "kind": "th", "text": "กับ", "endMs": 394626, "startMs": 394340 },
+        { "kind": "th", "text": "งาน", "endMs": 395054, "startMs": 394626 },
+        { "kind": "th", "text": "กระเป๋า", "endMs": 395911, "startMs": 395054 },
+        { "kind": "th", "text": "หน้า", "endMs": 396340, "startMs": 395911 }
+      ]
+    },
+    {
+      "startMs": 396340,
+      "endMs": 399340,
+      "text": "ราย OPPAR รับพิมรับมา 100 บาท",
+      "words": [
+        { "kind": "th", "text": "ราย", "endMs": 396749, "startMs": 396340 },
+        { "kind": "latin", "text": "OPPAR", "endMs": 397431, "startMs": 396749 },
+        { "kind": "th", "text": "รับ", "endMs": 397704, "startMs": 397431 },
+        { "kind": "th", "text": "พิม", "endMs": 397976, "startMs": 397704 },
+        { "kind": "th", "text": "รับ", "endMs": 398249, "startMs": 397976 },
+        { "kind": "th", "text": "มา", "endMs": 398522, "startMs": 398249 },
+        { "kind": "number", "text": "100", "endMs": 398931, "startMs": 398522 },
+        { "kind": "th", "text": "บาท", "endMs": 399340, "startMs": 398931 }
+      ]
+    },
+    {
+      "startMs": 399340,
+      "endMs": 400340,
+      "text": "100 บาทค่ะ",
+      "words": [
+        { "kind": "number", "text": "100", "endMs": 399715, "startMs": 399340 },
+        { "kind": "th", "text": "บาท", "endMs": 400090, "startMs": 399715 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 400340, "startMs": 400090 }
+      ]
+    },
+    {
+      "startMs": 400340,
+      "endMs": 402340,
+      "text": "ตอนนี้รับมา 100 บาทนะ",
+      "words": [
+        { "kind": "th", "text": "ตอนนี้", "endMs": 400840, "startMs": 400340 },
+        { "kind": "th", "text": "รับ", "endMs": 401090, "startMs": 400840 },
+        { "kind": "th", "text": "มา", "endMs": 401340, "startMs": 401090 },
+        { "kind": "number", "text": "100", "endMs": 401715, "startMs": 401340 },
+        { "kind": "th", "text": "บาท", "endMs": 402090, "startMs": 401715 },
+        { "kind": "th", "text": "นะ", "endMs": 402340, "startMs": 402090 }
+      ]
+    },
+    {
+      "startMs": 402340,
+      "endMs": 403340,
+      "text": "OPAR",
+      "words": [{ "kind": "latin", "text": "OPAR", "endMs": 403340, "startMs": 402340 }]
+    },
+    {
+      "startMs": 403340,
+      "endMs": 404340,
+      "text": "OPAR",
+      "words": [{ "kind": "latin", "text": "OPAR", "endMs": 404340, "startMs": 403340 }]
+    },
+    {
+      "startMs": 404340,
+      "endMs": 405340,
+      "text": "ตกใจนะ",
+      "words": [
+        { "kind": "th", "text": "ตกใจ", "endMs": 405007, "startMs": 404340 },
+        { "kind": "th", "text": "นะ", "endMs": 405340, "startMs": 405007 }
+      ]
+    },
+    {
+      "startMs": 405340,
+      "endMs": 406340,
+      "text": "ไซ่ M นะโห",
+      "words": [
+        { "kind": "th", "text": "ไซ่", "endMs": 405626, "startMs": 405340 },
+        { "kind": "latin", "text": "M", "endMs": 405769, "startMs": 405626 },
+        { "kind": "th", "text": "นะ", "endMs": 406054, "startMs": 405769 },
+        { "kind": "th", "text": "โห", "endMs": 406340, "startMs": 406054 }
+      ]
+    },
+    {
+      "startMs": 406340,
+      "endMs": 408340,
+      "text": "ไซ่ M 100 บาทค่ะ",
+      "words": [
+        { "kind": "th", "text": "ไซ่", "endMs": 406704, "startMs": 406340 },
+        { "kind": "latin", "text": "M", "endMs": 406885, "startMs": 406704 },
+        { "kind": "number", "text": "100", "endMs": 407431, "startMs": 406885 },
+        { "kind": "th", "text": "บาท", "endMs": 407976, "startMs": 407431 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 408340, "startMs": 407976 }
+      ]
+    },
+    {
+      "startMs": 408340,
+      "endMs": 409340,
+      "text": "เป็นงาน One Pocket นะ",
+      "words": [
+        { "kind": "th", "text": "เป็นงาน", "endMs": 408693, "startMs": 408340 },
+        { "kind": "latin", "text": "One", "endMs": 408869, "startMs": 408693 },
+        { "kind": "latin", "text": "Pocket", "endMs": 409222, "startMs": 408869 },
+        { "kind": "th", "text": "นะ", "endMs": 409340, "startMs": 409222 }
+      ]
+    },
+    {
+      "startMs": 409340,
+      "endMs": 410340,
+      "text": "จังอม",
+      "words": [
+        { "kind": "th", "text": "จัง", "endMs": 409840, "startMs": 409340 },
+        { "kind": "th", "text": "อม", "endMs": 410340, "startMs": 409840 }
+      ]
+    },
+    {
+      "startMs": 410340,
+      "endMs": 412340,
+      "text": "ให้ดูว่าไม่เห็นว่ามีกระเป๋า",
+      "words": [
+        { "kind": "th", "text": "ให้", "endMs": 410551, "startMs": 410340 },
+        { "kind": "th", "text": "ดู", "endMs": 410656, "startMs": 410551 },
+        { "kind": "th", "text": "ว่า", "endMs": 410866, "startMs": 410656 },
+        { "kind": "th", "text": "ไม่", "endMs": 411077, "startMs": 410866 },
+        { "kind": "th", "text": "เห็น", "endMs": 411393, "startMs": 411077 },
+        { "kind": "th", "text": "ว่า", "endMs": 411603, "startMs": 411393 },
+        { "kind": "th", "text": "มี", "endMs": 411708, "startMs": 411603 },
+        { "kind": "th", "text": "กระเป๋า", "endMs": 412340, "startMs": 411708 }
+      ]
+    },
+    {
+      "startMs": 412340,
+      "endMs": 414340,
+      "text": "ปิดปิดอันนี้ก่อน",
+      "words": [
+        { "kind": "th", "text": "ปิด", "endMs": 412740, "startMs": 412340 },
+        { "kind": "th", "text": "ปิด", "endMs": 413140, "startMs": 412740 },
+        { "kind": "th", "text": "อันนี้", "endMs": 413740, "startMs": 413140 },
+        { "kind": "th", "text": "ก่อน", "endMs": 414340, "startMs": 413740 }
+      ]
+    },
+    {
+      "startMs": 414340,
+      "endMs": 416340,
+      "text": "I'm sorry",
+      "words": [
+        { "kind": "latin", "text": "I'm", "endMs": 415090, "startMs": 414340 },
+        { "kind": "latin", "text": "sorry", "endMs": 416340, "startMs": 415090 }
+      ]
+    },
+    {
+      "startMs": 416340,
+      "endMs": 418340,
+      "text": "อันนี้ประกาของ",
+      "words": [
+        { "kind": "th", "text": "อันนี้", "endMs": 416885, "startMs": 416340 },
+        { "kind": "th", "text": "ประ", "endMs": 417431, "startMs": 416885 },
+        { "kind": "th", "text": "กา", "endMs": 417795, "startMs": 417431 },
+        { "kind": "th", "text": "ของ", "endMs": 418340, "startMs": 417795 }
+      ]
+    },
+    {
+      "startMs": 418340,
+      "endMs": 420340,
+      "text": "อันนี้นะ Starbuck",
+      "words": [
+        { "kind": "th", "text": "อันนี้", "endMs": 418802, "startMs": 418340 },
+        { "kind": "th", "text": "นะ", "endMs": 419109, "startMs": 418802 },
+        { "kind": "latin", "text": "Starbuck", "endMs": 420340, "startMs": 419109 }
+      ]
+    },
+    {
+      "startMs": 420340,
+      "endMs": 422340,
+      "text": "Starbuck",
+      "words": [{ "kind": "latin", "text": "Starbuck", "endMs": 422340, "startMs": 420340 }]
+    },
+    {
+      "startMs": 422340,
+      "endMs": 425840,
+      "text": "ก็ค่ะ ออก 20 ยาว 25 พาจะออกหนาหน่อยนะคะ",
+      "words": [
+        { "kind": "th", "text": "ก็", "endMs": 422453, "startMs": 422340 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 422679, "startMs": 422453 },
+        { "kind": "th", "text": "ออก", "endMs": 423017, "startMs": 422679 },
+        { "kind": "number", "text": "20", "endMs": 423243, "startMs": 423017 },
+        { "kind": "th", "text": "ยาว", "endMs": 423582, "startMs": 423243 },
+        { "kind": "number", "text": "25", "endMs": 423808, "startMs": 423582 },
+        { "kind": "th", "text": "พา", "endMs": 424034, "startMs": 423808 },
+        { "kind": "th", "text": "จะ", "endMs": 424259, "startMs": 424034 },
+        { "kind": "th", "text": "ออก", "endMs": 424598, "startMs": 424259 },
+        { "kind": "th", "text": "หนา", "endMs": 424937, "startMs": 424598 },
+        { "kind": "th", "text": "หน่อย", "endMs": 425388, "startMs": 424937 },
+        { "kind": "th", "text": "นะคะ", "endMs": 425840, "startMs": 425388 }
+      ]
+    },
+    {
+      "startMs": 425840,
+      "endMs": 426340,
+      "text": "อ่า...",
+      "words": [{ "kind": "th", "text": "อ่า...", "endMs": 426340, "startMs": 425840 }]
+    },
+    {
+      "startMs": 426340,
+      "endMs": 428340,
+      "text": "100 บาทค่ะ เป็นงานของญี่ปุ่นนะ",
+      "words": [
+        { "kind": "number", "text": "100", "endMs": 426613, "startMs": 426340 },
+        { "kind": "th", "text": "บาท", "endMs": 426885, "startMs": 426613 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 427067, "startMs": 426885 },
+        { "kind": "th", "text": "เป็นงาน", "endMs": 427613, "startMs": 427067 },
+        { "kind": "th", "text": "ของ", "endMs": 427885, "startMs": 427613 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 428158, "startMs": 427885 },
+        { "kind": "th", "text": "นะ", "endMs": 428340, "startMs": 428158 }
+      ]
+    },
+    {
+      "startMs": 428340,
+      "endMs": 430340,
+      "text": "ตัวนี้เป็นงานของญี่ปุ่นเลย",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 428562, "startMs": 428340 },
+        { "kind": "th", "text": "นี้", "endMs": 428673, "startMs": 428562 },
+        { "kind": "th", "text": "เป็นงาน", "endMs": 429340, "startMs": 428673 },
+        { "kind": "th", "text": "ของ", "endMs": 429673, "startMs": 429340 },
+        { "kind": "th", "text": "ญี่ปุ่น", "endMs": 430007, "startMs": 429673 },
+        { "kind": "th", "text": "เลย", "endMs": 430340, "startMs": 430007 }
+      ]
+    },
+    {
+      "startMs": 430340,
+      "endMs": 432340,
+      "text": "รับพิมรับมา 100 บาทนะ",
+      "words": [
+        { "kind": "th", "text": "รับ", "endMs": 430590, "startMs": 430340 },
+        { "kind": "th", "text": "พิม", "endMs": 430840, "startMs": 430590 },
+        { "kind": "th", "text": "รับ", "endMs": 431090, "startMs": 430840 },
+        { "kind": "th", "text": "มา", "endMs": 431340, "startMs": 431090 },
+        { "kind": "number", "text": "100", "endMs": 431715, "startMs": 431340 },
+        { "kind": "th", "text": "บาท", "endMs": 432090, "startMs": 431715 },
+        { "kind": "th", "text": "นะ", "endMs": 432340, "startMs": 432090 }
+      ]
+    },
+    {
+      "startMs": 432340,
+      "endMs": 434340,
+      "text": "ไซต์ M นะคะ",
+      "words": [
+        { "kind": "th", "text": "ไซต์", "endMs": 433090, "startMs": 432340 },
+        { "kind": "latin", "text": "M", "endMs": 433340, "startMs": 433090 },
+        { "kind": "th", "text": "นะคะ", "endMs": 434340, "startMs": 433340 }
+      ]
+    },
+    {
+      "startMs": 434340,
+      "endMs": 436340,
+      "text": "เห็น ชะเจนนะก็เป๋า",
+      "words": [
+        { "kind": "th", "text": "เห็น", "endMs": 434769, "startMs": 434340 },
+        { "kind": "th", "text": "ชะ", "endMs": 435054, "startMs": 434769 },
+        { "kind": "th", "text": "เจน", "endMs": 435483, "startMs": 435054 },
+        { "kind": "th", "text": "นะ", "endMs": 435769, "startMs": 435483 },
+        { "kind": "th", "text": "ก็", "endMs": 435911, "startMs": 435769 },
+        { "kind": "th", "text": "เป๋า", "endMs": 436340, "startMs": 435911 }
+      ]
+    },
+    {
+      "startMs": 436340,
+      "endMs": 438340,
+      "text": "ครับผม ไปต่อนะ ไปต่อนะ ไปต่อนะ",
+      "words": [
+        { "kind": "th", "text": "ครับผม", "endMs": 436775, "startMs": 436340 },
+        { "kind": "th", "text": "ไป", "endMs": 436949, "startMs": 436775 },
+        { "kind": "th", "text": "ต่อ", "endMs": 437123, "startMs": 436949 },
+        { "kind": "th", "text": "นะ", "endMs": 437297, "startMs": 437123 },
+        { "kind": "th", "text": "ไป", "endMs": 437470, "startMs": 437297 },
+        { "kind": "th", "text": "ต่อ", "endMs": 437644, "startMs": 437470 },
+        { "kind": "th", "text": "นะ", "endMs": 437818, "startMs": 437644 },
+        { "kind": "th", "text": "ไป", "endMs": 437992, "startMs": 437818 },
+        { "kind": "th", "text": "ต่อ", "endMs": 438166, "startMs": 437992 },
+        { "kind": "th", "text": "นะ", "endMs": 438340, "startMs": 438166 }
+      ]
+    },
+    {
+      "startMs": 438340,
+      "endMs": 440340,
+      "text": "เรื่อยๆ นะคะผม",
+      "words": [
+        { "kind": "th", "text": "เรื่อยๆ", "endMs": 439249, "startMs": 438340 },
+        { "kind": "th", "text": "นะคะ", "endMs": 439976, "startMs": 439249 },
+        { "kind": "th", "text": "ผม", "endMs": 440340, "startMs": 439976 }
+      ]
+    },
+    {
+      "startMs": 440340,
+      "endMs": 445340,
+      "text": "คอ V คอ กม คอเฉียง แขนกุด แขนสั่ง แขนยาว V นะ",
+      "words": [
+        { "kind": "th", "text": "คอ", "endMs": 440652, "startMs": 440340 },
+        { "kind": "latin", "text": "V", "endMs": 440809, "startMs": 440652 },
+        { "kind": "th", "text": "คอ", "endMs": 441121, "startMs": 440809 },
+        { "kind": "th", "text": "กม", "endMs": 441434, "startMs": 441121 },
+        { "kind": "th", "text": "คอ", "endMs": 441746, "startMs": 441434 },
+        { "kind": "th", "text": "เฉียง", "endMs": 442371, "startMs": 441746 },
+        { "kind": "th", "text": "แขน", "endMs": 442840, "startMs": 442371 },
+        { "kind": "th", "text": "กุด", "endMs": 443152, "startMs": 442840 },
+        { "kind": "th", "text": "แขน", "endMs": 443621, "startMs": 443152 },
+        { "kind": "th", "text": "สั่ง", "endMs": 443934, "startMs": 443621 },
+        { "kind": "th", "text": "แขน", "endMs": 444402, "startMs": 443934 },
+        { "kind": "th", "text": "ยาว", "endMs": 444871, "startMs": 444402 },
+        { "kind": "latin", "text": "V", "endMs": 445028, "startMs": 444871 },
+        { "kind": "th", "text": "นะ", "endMs": 445340, "startMs": 445028 }
+      ]
+    },
+    {
+      "startMs": 445340,
+      "endMs": 450020,
+      "text": "ตัวนี้ 68.5 ยาว 25 นะ เป็น Core V 68.5 ยาว 25 เป็น Core V",
+      "words": [
+        { "kind": "th", "text": "ตัว", "endMs": 445580, "startMs": 445340 },
+        { "kind": "th", "text": "นี้", "endMs": 445700, "startMs": 445580 },
+        { "kind": "number", "text": "68.5", "endMs": 446180, "startMs": 445700 },
+        { "kind": "th", "text": "ยาว", "endMs": 446540, "startMs": 446180 },
+        { "kind": "number", "text": "25", "endMs": 446780, "startMs": 446540 },
+        { "kind": "th", "text": "นะ", "endMs": 447020, "startMs": 446780 },
+        { "kind": "th", "text": "เป็น", "endMs": 447380, "startMs": 447020 },
+        { "kind": "latin", "text": "Core", "endMs": 447860, "startMs": 447380 },
+        { "kind": "latin", "text": "V", "endMs": 447980, "startMs": 447860 },
+        { "kind": "number", "text": "68.5", "endMs": 448460, "startMs": 447980 },
+        { "kind": "th", "text": "ยาว", "endMs": 448820, "startMs": 448460 },
+        { "kind": "number", "text": "25", "endMs": 449060, "startMs": 448820 },
+        { "kind": "th", "text": "เป็น", "endMs": 449420, "startMs": 449060 },
+        { "kind": "latin", "text": "Core", "endMs": 449900, "startMs": 449420 },
+        { "kind": "latin", "text": "V", "endMs": 450020, "startMs": 449900 }
+      ]
+    },
+    {
+      "startMs": 450020,
+      "endMs": 451280,
+      "text": "Side S ค่ะ",
+      "words": [
+        { "kind": "latin", "text": "Side", "endMs": 450740, "startMs": 450020 },
+        { "kind": "latin", "text": "S", "endMs": 450920, "startMs": 450740 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 451280, "startMs": 450920 }
+      ]
+    },
+    {
+      "startMs": 451280,
+      "endMs": 453500,
+      "text": "อ่ะ ลายนี้นะครับผมลายนี้",
+      "words": [
+        { "kind": "th", "text": "อ่ะ", "endMs": 451541, "startMs": 451280 },
+        { "kind": "th", "text": "ลาย", "endMs": 451933, "startMs": 451541 },
+        { "kind": "th", "text": "นี้", "endMs": 452064, "startMs": 451933 },
+        { "kind": "th", "text": "นะ", "endMs": 452325, "startMs": 452064 },
+        { "kind": "th", "text": "ครับผม", "endMs": 452978, "startMs": 452325 },
+        { "kind": "th", "text": "ลาย", "endMs": 453369, "startMs": 452978 },
+        { "kind": "th", "text": "นี้", "endMs": 453500, "startMs": 453369 }
+      ]
+    },
+    {
+      "startMs": 454500,
+      "endMs": 457380,
+      "text": "รับพิมลับมา 80 บาท 80 บาทค่ะตัวนี้",
+      "words": [
+        { "kind": "th", "text": "รับ", "endMs": 454750, "startMs": 454500 },
+        { "kind": "th", "text": "พิม", "endMs": 455001, "startMs": 454750 },
+        { "kind": "th", "text": "ลับ", "endMs": 455251, "startMs": 455001 },
+        { "kind": "th", "text": "มา", "endMs": 455502, "startMs": 455251 },
+        { "kind": "number", "text": "80", "endMs": 455752, "startMs": 455502 },
+        { "kind": "th", "text": "บาท", "endMs": 456128, "startMs": 455752 },
+        { "kind": "number", "text": "80", "endMs": 456378, "startMs": 456128 },
+        { "kind": "th", "text": "บาท", "endMs": 456754, "startMs": 456378 },
+        { "kind": "th", "text": "ค่ะ", "endMs": 457004, "startMs": 456754 },
+        { "kind": "th", "text": "ตัว", "endMs": 457255, "startMs": 457004 },
+        { "kind": "th", "text": "นี้", "endMs": 457380, "startMs": 457255 }
+      ]
+    },
+    {
+      "startMs": 457380,
+      "endMs": 459960,
+      "text": "Side S รับพิมลับมา 80 บาทนะ สีสดสดสีสด",
+      "words": [
+        { "kind": "latin", "text": "Side", "endMs": 457749, "startMs": 457380 },
+        { "kind": "latin", "text": "S", "endMs": 457841, "startMs": 457749 },
+        { "kind": "th", "text": "รับ", "endMs": 458025, "startMs": 457841 },
+        { "kind": "th", "text": "พิม", "endMs": 458209, "startMs": 458025 },
+        { "kind": "th", "text": "ลับ", "endMs": 458394, "startMs": 458209 },
+        { "kind": "th", "text": "มา", "endMs": 458578, "startMs": 458394 },
+        { "kind": "number", "text": "80", "endMs": 458762, "startMs": 458578 },
+        { "kind": "th", "text": "บาท", "endMs": 459039, "startMs": 458762 },
+        { "kind": "th", "text": "นะ", "endMs": 459223, "startMs": 459039 },
+        { "kind": "th", "text": "สีสด", "endMs": 459499, "startMs": 459223 },
+        { "kind": "th", "text": "สด", "endMs": 459684, "startMs": 459499 },
+        { "kind": "th", "text": "สีสด", "endMs": 459960, "startMs": 459684 }
+      ]
+    },
+    {
+      "startMs": 459960,
+      "endMs": 461980,
+      "text": "ดูไปเรื่อยๆนะคะ มีทุกไซต์",
+      "words": [
+        { "kind": "th", "text": "ดู", "endMs": 460072, "startMs": 459960 },
+        { "kind": "th", "text": "ไป", "endMs": 460297, "startMs": 460072 },
+        { "kind": "th", "text": "เรื่อยๆ", "endMs": 460858, "startMs": 460297 },
+        { "kind": "th", "text": "นะคะ", "endMs": 461307, "startMs": 460858 },
+        { "kind": "th", "text": "มี", "endMs": 461419, "startMs": 461307 },
+        { "kind": "th", "text": "ทุก", "endMs": 461643, "startMs": 461419 },
+        { "kind": "th", "text": "ไซต์", "endMs": 461980, "startMs": 461643 }
+      ]
+    },
+    {
+      "startMs": 461980,
+      "endMs": 463300,
+      "text": "มีทุกไซต์นะคะ",
+      "words": [
+        { "kind": "th", "text": "มี", "endMs": 462112, "startMs": 461980 },
+        { "kind": "th", "text": "ทุก", "endMs": 462376, "startMs": 462112 },
+        { "kind": "th", "text": "ไซต์", "endMs": 462772, "startMs": 462376 },
+        { "kind": "th", "text": "นะคะ", "endMs": 463300, "startMs": 462772 }
+      ]
+    },
+    {
+      "startMs": 463300,
+      "endMs": 464460,
+      "text": "ML XL มีหมด",
+      "words": [
+        { "kind": "latin", "text": "ML", "endMs": 463590, "startMs": 463300 },
+        { "kind": "latin", "text": "XL", "endMs": 463880, "startMs": 463590 },
+        { "kind": "th", "text": "มี", "endMs": 464025, "startMs": 463880 },
+        { "kind": "th", "text": "หมด", "endMs": 464460, "startMs": 464025 }
+      ]
+    },
+    {
+      "startMs": 465240,
+      "endMs": 467660,
+      "text": "มีแฟงขับ มีคนกดหัวล้อพี่หนึ่งนะ",
+      "words": [
+        { "kind": "th", "text": "มี", "endMs": 465355, "startMs": 465240 },
+        { "kind": "th", "text": "แฟง", "endMs": 465701, "startMs": 465355 },
+        { "kind": "th", "text": "ขับ", "endMs": 465931, "startMs": 465701 },
+        { "kind": "th", "text": "มี", "endMs": 466047, "startMs": 465931 },
+        { "kind": "th", "text": "คน", "endMs": 466277, "startMs": 466047 },
+        { "kind": "th", "text": "กดหัว", "endMs": 466738, "startMs": 466277 },
+        { "kind": "th", "text": "ล้อ", "endMs": 466969, "startMs": 466738 },
+        { "kind": "th", "text": "พี่", "endMs": 467084, "startMs": 466969 },
+        { "kind": "th", "text": "หนึ่ง", "endMs": 467430, "startMs": 467084 },
+        { "kind": "th", "text": "นะ", "endMs": 467660, "startMs": 467430 }
+      ]
+    },
+    {
+      "startMs": 467880,
+      "endMs": 469880,
+      "text": "โอ้โห ทำไมเขาไม่เห็นเลยอ่ะ",
+      "words": [
+        { "kind": "th", "text": "โอ้โห", "endMs": 468261, "startMs": 467880 },
+        { "kind": "th", "text": "ทำไม", "endMs": 468642, "startMs": 468261 },
+        { "kind": "th", "text": "เขา", "endMs": 468928, "startMs": 468642 },
+        { "kind": "th", "text": "ไม่", "endMs": 469118, "startMs": 468928 },
+        { "kind": "th", "text": "เห็น", "endMs": 469404, "startMs": 469118 },
+        { "kind": "th", "text": "เลย", "endMs": 469690, "startMs": 469404 },
+        { "kind": "th", "text": "อ่ะ", "endMs": 469880, "startMs": 469690 }
+      ]
+    },
+    {
+      "startMs": 475340,
+      "endMs": 478100,
+      "text": "ต้องใช้เต็ดตายาแนว",
+      "words": [
+        { "kind": "th", "text": "ต้อง", "endMs": 475892, "startMs": 475340 },
+        { "kind": "th", "text": "ใช้", "endMs": 476260, "startMs": 475892 },
+        { "kind": "th", "text": "เต็ด", "endMs": 476812, "startMs": 476260 },
+        { "kind": "th", "text": "ตา", "endMs": 477180, "startMs": 476812 },
+        { "kind": "th", "text": "ยา", "endMs": 477548, "startMs": 477180 },
+        { "kind": "th", "text": "แนว", "endMs": 478100, "startMs": 477548 }
+      ]
+    }
+  ],
+  "loudness": {
+    "bucketsPerSecond": 10,
+    "startMs": 240000,
+    "dbfs": [
+      -36.1, -36.1, -36.1, -36.1, -36.1, -28.1, -26.5, -25.2, -19.2, -25.2, -24.0, -22.1, -25.2, -22.1, -24.0,
+      -21.2, -22.1, -22.1, -24.0, -20.5, -24.0, -25.2, -24.0, -22.1, -16.1, -13.8, -32.5, -24.0, -19.2, -19.8,
+      -17.0, -11.2, -17.0, -20.5, -24.0, -16.5, -13.4, -14.5, -16.5, -10.7, -12.0, -16.1, -16.1, -23.0, -25.2,
+      -18.6, -28.1, -19.8, -19.8, -23.0, -13.4, -19.2, -12.0, -13.4, -20.5, -13.1, -20.5, -24.0, -25.2, -22.1,
+      -9.8, -11.4, -10.7, -28.1, -12.0, -24.0, -12.5, -15.2, -16.5, -13.8, -22.1, -11.4, -12.5, -32.5, -16.1,
+      -17.0, -32.5, -19.2, -21.2, -20.5, -12.2, -17.5, -15.2, -15.2, -12.5, -10.3, -7.1, -6.2, -18.0, -22.1,
+      -15.2, -16.5, -30.0, -36.1, -36.1, -36.1, -36.1, -32.5, -42.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1,
+      -36.1, -42.1, -36.1, -28.1, -26.5, -24.0, -25.2, -22.1, -19.2, -20.5, -22.1, -21.2, -17.0, -17.0, -20.5,
+      -20.5, -20.5, -23.0, -25.2, -18.0, -11.4, -10.3, -12.0, -17.0, -13.1, -11.7, -8.3, -9.4, -7.9, -7.1,
+      -7.1, -12.2, -11.4, -13.8, -28.1, -32.5, -13.1, -11.2, -9.4, -14.1, -19.8, -15.2, -12.8, -16.1, -22.1,
+      -22.1, -32.5, -42.1, -36.1, -42.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -42.1, -36.1,
+      -36.1, -42.1, -26.5, -25.2, -32.5, -36.1, -36.1, -26.5, -24.0, -21.2, -18.6, -18.0, -26.5, -19.8, -17.5,
+      -14.1, -17.0, -21.2, -19.2, -28.1, -23.0, -23.0, -30.0, -42.1, -36.1, -36.1, -36.1, -36.1, -32.5, -36.1,
+      -11.7, -7.0, -7.1, -7.8, -6.8, -8.6, -12.2, -15.6, -15.2, -18.0, -20.5, -36.1, -24.0, -9.8, -7.4, -13.8,
+      -12.5, -10.7, -10.0, -20.5, -36.1, -32.5, -36.1, -36.1, -36.1, -42.1, -12.0, -11.7, -12.2, -16.1, -36.1,
+      -36.1, -36.1, -12.5, -11.7, -9.4, -15.6, -17.5, -9.2, -10.0, -15.6, -16.1, -19.2, -16.1, -17.0, -21.2,
+      -19.2, -28.1, -30.0, -36.1, -21.2, -16.1, -13.8, -32.5, -25.2, -19.8, -11.2, -11.2, -8.6, -11.7, -8.8,
+      -12.0, -13.8, -14.1, -16.5, -17.5, -19.2, -22.1, -20.5, -19.2, -22.1, -20.5, -22.1, -28.1, -36.1, -42.1,
+      -36.1, -25.2, -25.2, -23.0, -24.0, -28.1, -30.0, -26.5, -30.0, -28.1, -25.2, -25.2, -30.0, -36.1, -42.1,
+      -36.1, -12.0, -16.5, -36.1, -25.2, -42.1, -36.1, -36.1, -32.5, -21.2, -22.1, -22.1, -36.1, -19.8, -9.6,
+      -25.2, -22.1, -30.0, -26.5, -25.2, -26.5, -9.0, -10.5, -13.1, -19.2, -12.0, -13.4, -14.1, -19.8, -17.0,
+      -19.8, -21.2, -19.8, -19.2, -18.0, -19.2, -32.5, -16.1, -23.0, -18.0, -13.1, -12.2, -12.2, -13.8, -30.0,
+      -36.1, -36.1, -42.1, -36.1, -30.0, -42.1, -36.1, -36.1, -17.5, -24.0, -23.0, -18.0, -7.4, -7.3, -24.0,
+      -15.6, -14.1, -15.2, -16.5, -16.1, -18.0, -15.6, -11.7, -16.5, -19.8, -20.5, -14.8, -17.0, -15.6, -17.0,
+      -19.8, -15.6, -17.0, -28.1, -19.2, -23.0, -14.1, -12.5, -12.0, -22.1, -19.2, -17.0, -23.0, -22.1, -18.0,
+      -18.6, -18.0, -18.6, -22.1, -19.8, -20.5, -19.8, -18.0, -9.4, -12.8, -10.5, -26.5, -12.8, -14.1, -24.0,
+      -24.0, -15.6, -14.8, -17.0, -20.5, -9.0, -12.8, -25.2, -22.1, -8.8, -9.4, -30.0, -26.5, -15.6, -13.1,
+      -25.2, -36.1, -36.1, -26.5, -20.5, -16.5, -17.5, -12.8, -18.6, -21.2, -18.6, -26.5, -17.5, -16.1, -26.5,
+      -22.1, -19.8, -13.4, -19.2, -22.1, -23.0, -24.0, -21.2, -19.2, -23.0, -36.1, -36.1, -36.1, -36.1, -36.1,
+      -36.1, -28.1, -28.1, -32.5, -36.1, -42.1, -25.2, -18.0, -9.4, -16.5, -18.6, -12.0, -18.6, -17.0, -16.5,
+      -14.5, -13.1, -26.5, -25.2, -26.5, -18.6, -25.2, -13.1, -32.5, -17.0, -22.1, -24.0, -30.0, -24.0, -26.5,
+      -28.1, -22.1, -19.2, -21.2, -13.8, -14.8, -32.5, -36.1, -30.0, -17.0, -18.0, -18.6, -24.0, -24.0, -18.6,
+      -11.4, -16.1, -13.1, -8.6, -10.3, -28.1, -8.8, -8.8, -12.2, -30.0, -36.1, -36.1, -36.1, -36.1, -36.1,
+      -13.4, -8.8, -25.2, -36.1, -25.2, -18.6, -12.5, -23.0, -14.5, -15.2, -24.0, -17.0, -20.5, -22.1, -22.1,
+      -21.2, -18.6, -19.2, -19.8, -32.5, -36.1, -30.0, -42.1, -42.1, -36.1, -32.5, -32.5, -30.0, -36.1, -20.5,
+      -20.5, -22.1, -21.2, -21.2, -19.2, -18.0, -18.6, -14.8, -15.2, -22.1, -18.0, -21.2, -32.5, -22.1, -17.0,
+      -21.2, -19.8, -20.5, -18.0, -32.5, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -13.4, -19.2, -19.2, -15.2,
+      -14.5, -15.2, -14.8, -16.5, -14.1, -13.1, -16.1, -14.8, -17.0, -28.1, -19.8, -18.6, -17.0, -19.8, -15.2,
+      -13.8, -22.1, -16.5, -16.5, -15.6, -18.0, -18.6, -24.0, -18.6, -18.0, -32.5, -36.1, -42.1, -42.1, -42.1,
+      -36.1, -36.1, -23.0, -26.5, -16.1, -23.0, -16.5, -18.0, -20.5, -18.0, -16.5, -18.6, -17.5, -22.1, -15.6,
+      -17.0, -18.6, -21.2, -16.5, -20.5, -17.5, -22.1, -21.2, -17.5, -20.5, -21.2, -21.2, -19.2, -20.5, -25.2,
+      -19.8, -19.8, -32.5, -36.1, -36.1, -42.1, -36.1, -16.1, -18.0, -23.0, -15.6, -18.6, -14.5, -14.5, -26.5,
+      -16.5, -15.2, -26.5, -11.0, -15.6, -19.8, -20.5, -13.4, -22.1, -12.8, -12.2, -24.0, -13.8, -14.8, -12.5,
+      -16.5, -15.6, -25.2, -12.8, -12.0, -20.5, -21.2, -15.2, -19.2, -15.6, -22.1, -14.5, -14.8, -20.5, -25.2,
+      -30.0, -14.1, -17.0, -28.1, -23.0, -13.8, -14.8, -18.6, -25.2, -15.6, -19.8, -18.0, -20.5, -19.8, -17.0,
+      -28.1, -23.0, -21.2, -20.5, -36.1, -18.6, -17.5, -28.1, -14.5, -14.1, -17.0, -15.2, -21.2, -18.6, -13.1,
+      -36.1, -13.8, -19.2, -13.1, -25.2, -26.5, -23.0, -21.2, -11.4, -12.5, -25.2, -19.2, -18.0, -30.0, -19.8,
+      -24.0, -25.2, -24.0, -30.0, -24.0, -16.1, -16.1, -19.8, -21.2, -14.5, -16.5, -20.5, -10.5, -11.0, -11.0,
+      -13.8, -14.1, -11.0, -22.1, -30.0, -26.5, -26.5, -24.0, -26.5, -25.2, -24.0, -16.5, -14.8, -13.1, -18.0,
+      -28.1, -25.2, -26.5, -23.0, -26.5, -24.0, -22.1, -21.2, -20.5, -15.2, -15.2, -12.8, -21.2, -16.5, -17.0,
+      -19.8, -20.5, -19.2, -16.1, -18.0, -12.8, -11.0, -13.4, -18.6, -32.5, -18.6, -19.8, -18.6, -19.2, -24.0,
+      -30.0, -42.1, -42.1, -42.1, -42.1, -36.1, -36.1, -26.5, -20.5, -21.2, -23.0, -22.1, -32.5, -36.1, -42.1,
+      -36.1, -22.1, -23.0, -30.0, -12.2, -17.0, -32.5, -30.0, -30.0, -23.0, -36.1, -42.1, -42.1, -36.1, -26.5,
+      -30.0, -32.5, -42.1, -42.1, -25.2, -26.5, -28.1, -30.0, -26.5, -32.5, -26.5, -25.2, -25.2, -28.1, -25.2,
+      -26.5, -30.0, -42.1, -21.2, -18.6, -20.5, -18.6, -17.0, -15.6, -18.6, -15.6, -15.6, -14.1, -15.6, -19.2,
+      -25.2, -21.2, -30.0, -24.0, -24.0, -26.5, -22.1, -24.0, -32.5, -32.5, -28.1, -28.1, -26.5, -30.0, -42.1,
+      -36.1, -42.1, -30.0, -25.2, -26.5, -42.1, -42.1, -42.1, -42.1, -42.1, -42.1, -36.1, -36.1, -24.0, -20.5,
+      -18.6, -20.5, -32.5, -25.2, -22.1, -17.5, -22.1, -22.1, -36.1, -42.1, -36.1, -18.6, -16.5, -14.8, -21.2,
+      -23.0, -18.0, -13.4, -18.0, -24.0, -18.6, -15.2, -16.1, -17.5, -11.7, -13.4, -17.0, -28.1, -36.1, -42.1,
+      -36.1, -36.1, -36.1, -36.1, -36.1, -42.1, -18.0, -19.8, -26.5, -14.1, -15.2, -15.6, -19.8, -21.2, -19.2,
+      -21.2, -21.2, -20.5, -26.5, -23.0, -23.0, -21.2, -30.0, -42.1, -30.0, -36.1, -42.1, -36.1, -42.1, -42.1,
+      -42.1, -42.1, -42.1, -42.1, -42.1, -36.1, -19.8, -19.8, -22.1, -25.2, -21.2, -20.5, -36.1, -42.1, -42.1,
+      -36.1, -26.5, -25.2, -25.2, -25.2, -26.5, -36.1, -42.1, -42.1, -42.1, -36.1, -42.1, -22.1, -19.2, -14.8,
+      -15.6, -16.5, -16.5, -25.2, -22.1, -26.5, -18.0, -19.8, -17.0, -19.2, -25.2, -21.2, -25.2, -21.2, -20.5,
+      -22.1, -17.0, -19.8, -21.2, -32.5, -30.0, -32.5, -32.5, -30.0, -32.5, -30.0, -30.0, -32.5, -42.1, -42.1,
+      -36.1, -42.1, -36.1, -42.1, -36.1, -36.1, -42.1, -36.1, -42.1, -42.1, -42.1, -42.1, -42.1, -24.0, -23.0,
+      -42.1, -36.1, -42.1, -42.1, -42.1, -42.1, -26.5, -25.2, -22.1, -20.5, -20.5, -16.1, -17.0, -18.6, -17.0,
+      -18.0, -21.2, -12.8, -13.1, -16.5, -17.0, -20.5, -17.0, -18.0, -12.8, -12.2, -8.1, -9.4, -13.1, -36.1,
+      -25.2, -19.8, -22.1, -20.5, -19.8, -19.8, -21.2, -23.0, -28.1, -28.1, -19.2, -22.1, -26.5, -26.5, -36.1,
+      -36.1, -30.0, -32.5, -42.1, -42.1, -42.1, -18.6, -18.6, -14.5, -12.8, -17.0, -19.8, -24.0, -32.5, -36.1,
+      -36.1, -19.8, -18.6, -18.6, -19.8, -21.2, -25.2, -26.5, -26.5, -42.1, -36.1, -42.1, -42.1, -42.1, -36.1,
+      -36.1, -30.0, -36.1, -36.1, -42.1, -42.1, -36.1, -42.1, -42.1, -36.1, -42.1, -42.1, -42.1, -42.1, -42.1,
+      -42.1, -42.1, -36.1, -42.1, -36.1, -42.1, -32.5, -24.0, -25.2, -30.0, -24.0, -26.5, -23.0, -22.1, -22.1,
+      -24.0, -26.5, -32.5, -36.1, -25.2, -21.2, -36.1, -36.1, -42.1, -36.1, -42.1, -42.1, -36.1, -42.1, -42.1,
+      -42.1, -25.2, -24.0, -22.1, -15.6, -23.0, -22.1, -22.1, -22.1, -26.5, -18.0, -17.5, -23.0, -22.1, -16.5,
+      -14.8, -15.6, -24.0, -32.5, -19.2, -17.5, -24.0, -18.6, -19.2, -23.0, -28.1, -42.1, -36.1, -42.1, -42.1,
+      -30.0, -15.2, -18.6, -17.5, -17.5, -18.6, -25.2, -11.4, -12.0, -19.2, -12.8, -12.2, -13.4, -16.1, -13.8,
+      -14.1, -15.2, -14.5, -17.5, -14.8, -15.2, -15.6, -15.6, -16.5, -18.0, -16.5, -17.0, -17.5, -17.0, -14.1,
+      -14.8, -25.2, -22.1, -21.2, -26.5, -19.2, -18.0, -26.5, -28.1, -20.5, -19.2, -23.0, -22.1, -22.1, -19.2,
+      -25.2, -30.0, -42.1, -42.1, -36.1, -42.1, -42.1, -36.1, -36.1, -42.1, -42.1, -42.1, -36.1, -42.1, -36.1,
+      -42.1, -36.1, -42.1, -36.1, -42.1, -42.1, -36.1, -42.1, -36.1, -42.1, -42.1, -36.1, -42.1, -36.1, -42.1,
+      -36.1, -42.1, -42.1, -42.1, -36.1, -36.1, -14.5, -13.8, -18.0, -15.2, -17.0, -17.5, -20.5, -17.5, -16.5,
+      -18.6, -16.5, -19.2, -13.4, -14.1, -16.1, -17.5, -14.1, -12.0, -12.8, -24.0, -36.1, -42.1, -36.1, -36.1,
+      -42.1, -42.1, -24.0, -19.2, -12.2, -16.5, -14.8, -14.1, -15.6, -30.0, -13.8, -13.1, -15.2, -14.5, -15.2,
+      -16.5, -16.1, -17.5, -20.5, -15.6, -15.2, -19.8, -18.0, -17.0, -18.6, -6.5, -10.0, -16.5, -15.2, -12.5,
+      -11.2, -17.0, -30.0, -42.1, -42.1, -36.1, -36.1, -36.1, -15.2, -13.8, -14.8, -14.5, -13.1, -15.2, -24.0,
+      -32.5, -36.1, -36.1, -36.1, -36.1, -42.1, -36.1, -36.1, -36.1, -32.5, -32.5, -36.1, -36.1, -32.5, -36.1,
+      -36.1, -36.1, -21.2, -19.2, -17.0, -17.0, -14.1, -17.0, -16.1, -32.5, -36.1, -36.1, -18.0, -15.2, -14.1,
+      -19.2, -25.2, -32.5, -12.0, -17.0, -21.2, -23.0, -12.8, -15.6, -15.6, -11.7, -13.8, -22.1, -19.8, -15.6,
+      -25.2, -21.2, -24.0, -26.5, -14.1, -15.2, -26.5, -14.1, -25.2, -12.5, -12.0, -13.8, -18.0, -32.5, -36.1,
+      -28.1, -42.1, -36.1, -18.0, -20.5, -7.0, -7.8, -12.2, -10.5, -14.5, -21.2, -13.8, -13.1, -14.1, -14.8,
+      -22.1, -32.5, -36.1, -36.1, -36.1, -16.5, -11.4, -12.0, -13.4, -12.8, -19.8, -16.1, -16.5, -13.1, -13.4,
+      -23.0, -23.0, -17.0, -16.5, -16.5, -18.6, -16.5, -15.6, -36.1, -16.1, -16.5, -15.2, -20.5, -19.8, -23.0,
+      -19.2, -16.1, -17.0, -18.0, -18.0, -19.8, -16.5, -17.0, -16.1, -18.0, -17.5, -20.5, -23.0, -22.1, -19.8,
+      -16.5, -19.2, -14.8, -15.6, -15.6, -19.8, -22.1, -17.5, -12.5, -20.5, -16.5, -14.5, -26.5, -36.1, -36.1,
+      -42.1, -42.1, -36.1, -17.5, -11.2, -16.5, -14.1, -10.5, -11.4, -17.5, -15.6, -10.5, -16.5, -12.8, -14.1,
+      -25.2, -36.1, -42.1, -42.1, -36.1, -36.1, -36.1, -36.1, -36.1, -26.5, -22.1, -22.1, -25.2, -36.1, -42.1,
+      -36.1, -42.1, -42.1, -36.1, -36.1, -42.1, -42.1, -36.1, -36.1, -42.1, -19.2, -13.1, -13.1, -11.4, -14.5,
+      -17.5, -22.1, -28.1, -36.1, -42.1, -36.1, -42.1, -20.5, -17.0, -14.1, -12.8, -10.7, -16.1, -13.4, -19.8,
+      -12.5, -10.7, -14.5, -15.2, -15.2, -16.5, -20.5, -19.8, -16.1, -19.8, -17.5, -19.8, -26.5, -11.2, -10.7,
+      -18.0, -14.8, -18.0, -25.2, -20.5, -18.6, -22.1, -18.6, -22.1, -19.2, -19.2, -25.2, -36.1, -36.1, -42.1,
+      -36.1, -36.1, -36.1, -22.1, -12.2, -11.2, -28.1, -24.0, -22.1, -23.0, -24.0, -36.1, -36.1, -25.2, -8.5,
+      -9.6, -14.5, -26.5, -28.1, -23.0, -14.5, -15.2, -16.5, -12.8, -14.8, -30.0, -28.1, -23.0, -16.1, -17.0,
+      -12.8, -11.2, -36.1, -17.0, -26.5, -25.2, -17.0, -19.2, -18.0, -11.2, -22.1, -16.1, -15.2, -18.0, -23.0,
+      -42.1, -36.1, -36.1, -15.2, -14.8, -18.6, -17.5, -14.5, -12.0, -12.0, -16.1, -20.5, -15.2, -23.0, -20.5,
+      -15.6, -12.8, -13.8, -9.6, -13.8, -24.0, -36.1, -36.1, -36.1, -18.6, -18.0, -11.0, -13.8, -12.0, -14.8,
+      -30.0, -36.1, -22.1, -19.8, -23.0, -8.6, -9.4, -10.7, -9.6, -15.6, -32.5, -16.5, -20.5, -36.1, -42.1,
+      -36.1, -42.1, -22.1, -21.2, -18.0, -14.5, -22.1, -14.8, -14.5, -16.5, -17.0, -12.8, -17.0, -16.1, -14.1,
+      -19.2, -11.0, -10.0, -11.7, -13.8, -24.0, -36.1, -36.1, -36.1, -36.1, -42.1, -36.1, -36.1, -25.2, -24.0,
+      -26.5, -13.4, -12.0, -15.2, -17.0, -17.0, -15.6, -15.2, -20.5, -21.2, -21.2, -23.0, -22.1, -19.8, -26.5,
+      -26.5, -26.5, -18.0, -19.8, -18.6, -17.5, -15.6, -17.0, -14.8, -18.0, -19.8, -30.0, -15.2, -14.8, -17.5,
+      -12.8, -20.5, -18.0, -30.0, -30.0, -30.0, -20.5, -21.2, -23.0, -12.0, -9.2, -10.3, -8.8, -11.2, -11.7,
+      -8.5, -20.5, -18.6, -16.1, -13.1, -14.5, -11.7, -17.5, -18.6, -30.0, -18.6, -23.0, -14.5, -15.2, -18.0,
+      -19.8, -21.2, -23.0, -26.5, -32.5, -36.1, -36.1, -30.0, -36.1, -36.1, -36.1, -23.0, -23.0, -25.2, -24.0,
+      -17.0, -17.5, -24.0, -19.2, -18.6, -25.2, -19.8, -21.2, -17.0, -17.5, -24.0, -26.5, -20.5, -26.5, -23.0,
+      -32.5, -17.5, -14.1, -21.2, -17.0, -19.2, -18.6, -16.5, -24.0, -30.0, -30.0, -30.0, -36.1, -36.1, -42.1,
+      -42.1, -21.2, -32.5, -36.1, -42.1, -42.1, -36.1, -36.1, -42.1, -22.1, -30.0, -20.5, -21.2, -30.0, -32.5,
+      -36.1, -36.1, -36.1, -36.1, -30.0, -24.0, -22.1, -21.2, -22.1, -22.1, -32.5, -36.1, -36.1, -32.5, -18.6,
+      -12.8, -13.4, -13.1, -11.0, -10.5, -13.1, -12.5, -14.1, -17.0, -18.6, -18.6, -36.1, -36.1, -36.1, -28.1,
+      -18.0, -14.1, -12.0, -13.1, -14.5, -13.4, -10.5, -10.0, -9.4, -17.5, -36.1, -32.5, -36.1, -36.1, -36.1,
+      -36.1, -42.1, -36.1, -36.1, -36.1, -36.1, -36.1, -42.1, -42.1, -42.1, -32.5, -10.3, -9.4, -13.1, -25.2,
+      -36.1, -42.1, -42.1, -42.1, -30.0, -30.0, -21.2, -23.0, -19.8, -19.8, -36.1, -36.1, -36.1, -36.1, -25.2,
+      -18.0, -30.0, -28.1, -23.0, -30.0, -12.8, -12.2, -28.1, -30.0, -17.5, -13.8, -14.5, -14.5, -13.1, -24.0,
+      -15.6, -16.5, -21.2, -16.5, -18.6, -18.0, -17.5, -28.1, -19.8, -20.5, -13.8, -15.6, -22.1, -22.1, -24.0,
+      -28.1, -36.1, -26.5, -19.8, -23.0, -13.8, -11.2, -15.6, -12.0, -9.6, -23.0, -10.3, -23.0, -20.5, -17.0,
+      -17.0, -22.1, -26.5, -28.1, -20.5, -15.2, -22.1, -17.5, -28.1, -36.1, -20.5, -15.2, -18.0, -18.0, -16.5,
+      -24.0, -26.5, -36.1, -17.0, -25.2, -18.6, -15.6, -15.2, -23.0, -28.1, -32.5, -36.1, -36.1, -36.1, -36.1,
+      -16.5, -12.2, -17.5, -9.4, -10.5, -12.5, -13.1, -12.8, -10.7, -13.8, -11.7, -14.8, -17.0, -13.1, -20.5,
+      -36.1, -36.1, -36.1, -36.1, -36.1, -42.1, -36.1, -36.1, -36.1, -42.1, -36.1, -18.6, -21.2, -26.5, -22.1,
+      -26.5, -14.8, -14.8, -13.8, -15.6, -32.5, -42.1, -25.2, -24.0, -28.1, -30.0, -25.2, -30.0, -18.0, -22.1,
+      -17.0, -18.0, -19.8, -18.6, -19.8, -25.2, -25.2, -25.2, -36.1, -42.1, -36.1, -36.1, -30.0, -18.6, -16.1,
+      -17.0, -16.5, -18.6, -13.1, -13.8, -16.1, -19.8, -17.0, -16.1, -17.5, -18.6, -17.5, -17.5, -18.6, -21.2,
+      -22.1, -25.2, -36.1, -36.1, -36.1, -36.1, -36.1, -42.1, -36.1, -42.1, -36.1, -36.1, -36.1, -36.1, -42.1,
+      -28.1, -30.0, -24.0, -20.5, -19.2, -21.2, -20.5, -21.2, -22.1, -25.2, -30.0, -36.1, -42.1, -36.1, -36.1,
+      -36.1, -36.1, -42.1, -20.5, -17.5, -20.5, -23.0, -24.0, -16.1, -14.5, -19.2, -18.6, -18.6, -23.0, -17.0,
+      -12.2, -14.5, -25.2, -20.5, -17.5, -24.0, -23.0, -21.2, -26.5, -18.6, -18.6, -21.2, -21.2, -28.1, -13.1,
+      -13.4, -23.0, -23.0, -22.1, -17.0, -15.6, -19.2, -23.0, -16.1, -14.1, -17.0, -36.1, -36.1, -36.1, -21.2,
+      -14.8, -14.1, -12.2, -13.4, -14.5, -36.1, -9.6, -15.2, -16.5, -24.0, -13.1, -13.4, -17.0, -12.8, -12.0,
+      -18.6, -23.0, -13.4, -12.8, -13.1, -17.0, -21.2, -13.8, -15.6, -19.2, -19.8, -20.5, -18.0, -24.0, -19.2,
+      -21.2, -24.0, -18.6, -18.6, -22.1, -24.0, -15.6, -14.8, -22.1, -19.2, -18.6, -21.2, -23.0, -20.5, -32.5,
+      -12.2, -12.8, -24.0, -24.0, -20.5, -32.5, -32.5, -17.0, -16.1, -22.1, -32.5, -32.5, -30.0, -30.0, -28.1,
+      -26.5, -32.5, -36.1, -36.1, -36.1, -36.1, -25.2, -21.2, -24.0, -24.0, -22.1, -22.1, -26.5, -25.2, -28.1,
+      -28.1, -26.5, -36.1, -36.1, -42.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1, -36.1,
+      -36.1, -17.5, -14.8, -21.2, -16.1, -15.2, -16.5, -14.8, -13.8, -25.2, -25.2, -16.1, -12.5, -18.0, -32.5,
+      -11.7, -13.1, -22.1, -26.5, -11.4, -18.0, -20.5, -23.0, -28.1, -30.0, -30.0, -32.5, -42.1, -21.2, -22.1,
+      -17.5, -14.8, -12.5, -19.8, -14.8, -12.5, -13.8, -12.2, -18.6, -21.2, -14.1, -14.1, -18.6, -17.5, -24.0,
+      -21.2, -25.2, -16.1, -17.0, -28.1, -30.0, -18.6, -19.8, -36.1, -28.1, -19.8, -21.2, -12.5, -17.0, -16.5,
+      -16.5, -16.1, -30.0, -9.4, -9.8, -24.0, -24.0, -30.0, -26.5, -32.5, -13.4, -12.5, -22.1, -26.5, -36.1,
+      -36.1, -23.0, -25.2, -19.8, -26.5, -13.1, -15.6, -19.2, -18.0, -15.6, -18.0, -28.1, -23.0, -19.8, -18.6,
+      -22.1, -25.2, -20.5, -21.2, -19.2, -19.2, -32.5, -36.1, -42.1, -36.1, -36.1, -36.1, -36.1, -42.1, -32.5,
+      -32.5, -36.1, -36.1, -18.6, -19.8, -14.1, -18.6, -13.4, -14.8, -17.5, -20.5, -24.0, -23.0, -20.5, -14.5,
+      -16.5, -16.1, -26.5, -18.6, -18.6, -22.1, -22.1, -22.1, -25.2, -25.2, -42.1, -36.1, -36.1, -36.1, -22.1,
+      -18.0, -19.2, -32.5, -36.1, -36.1, -28.1, -14.5, -12.0, -21.2, -13.4, -18.6, -24.0, -20.5, -20.5, -18.0,
+      -19.2, -23.0, -17.5, -15.2, -17.5, -19.8, -20.5, -20.5, -20.5, -21.2, -18.0, -17.0, -21.2, -19.2, -18.6,
+      -22.1, -32.5, -36.1, -24.0, -24.0, -36.1, -36.1, -36.1, -36.1, -36.1, -21.2, -19.8, -17.0, -17.5, -20.5,
+      -18.6, -19.2, -16.1, -19.8, -30.0, -16.1, -16.5, -19.2, -24.0, -19.8, -16.5, -16.1, -18.6, -19.8, -21.2,
+      -32.5, -28.1, -25.2, -19.8, -26.5, -26.5, -25.2, -25.2, -28.1, -30.0, -25.2, -36.1, -26.5, -25.2, -30.0,
+      -24.0, -24.0, -18.6, -19.2, -22.1, -30.0, -32.5, -36.1, -36.1, -36.1, -36.1, -23.0, -23.0, -18.6, -18.6,
+      -21.2, -32.5, -19.2, -19.8, -20.5, -22.1, -24.0, -21.2, -21.2, -23.0, -13.1, -19.2, -14.5, -14.1, -13.8,
+      -15.2, -21.2, -22.1, -23.0, -16.5, -15.6, -17.5, -16.1, -13.8, -17.0, -19.8, -20.5, -19.8, -23.0
+    ]
+  }
+}
