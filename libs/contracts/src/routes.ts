@@ -14,6 +14,7 @@ import { getLibrarySound } from './http/library.js';
 import {
   createProject,
   getProject,
+  getProjectVersion,
   listProjects,
   listProjectVersions,
   restoreProjectVersion,
@@ -74,6 +75,7 @@ export const routes: RouteContract[] = [
   saveProject,
   listProjectVersions,
   restoreProjectVersion,
+  getProjectVersion,
   requestRender,
   listProjectRenders,
   listRenders,

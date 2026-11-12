@@ -117,6 +117,25 @@ export const listProjectVersions = defineRoute({
   },
 });
 
+export const ProjectVersionDoc = named(
+  'ProjectVersionDoc',
+  z.object({ version: z.number().int().min(1), createdAt: z.iso.datetime({ offset: true }), doc: Project }),
+);
+
+export const getProjectVersion = defineRoute({
+  operationId: 'getProjectVersion',
+  method: 'get',
+  path: '/projects/{id}/versions/{version}',
+  summary: 'One saved version of a project (to preview it before restoring)',
+  tags: ['projects'],
+  auth: true,
+  request: { params: RestoreParams },
+  responses: {
+    200: { description: 'The version', schema: ProjectVersionDoc },
+    404: { description: 'No such project or version', schema: ApiErrorBody },
+  },
+});
+
 export const restoreProjectVersion = defineRoute({
   operationId: 'restoreProjectVersion',
   method: 'post',

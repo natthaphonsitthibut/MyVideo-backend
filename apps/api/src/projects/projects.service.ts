@@ -204,6 +204,19 @@ export class ProjectsService {
     };
   }
 
+  /** One saved version (merchant-scoped) — the editor previews it before a restore. */
+  async version(
+    merchantId: string,
+    id: string,
+    version: number,
+  ): Promise<{ version: number; createdAt: string; doc: ProjectRecord['doc'] }> {
+    const row = await this.ds
+      .getRepository(ProjectVersionEntity)
+      .findOneBy({ projectId: id, merchantId, version });
+    if (!row) throw new NotFoundException('Version not found');
+    return { version: row.version, createdAt: row.createdAt.toISOString(), doc: row.doc as ProjectRecord['doc'] };
+  }
+
   /** Copies an old version's doc into a NEW version (history is never rewritten). */
   async restore(
     merchantId: string,

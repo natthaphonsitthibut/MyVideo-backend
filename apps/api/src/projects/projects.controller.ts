@@ -4,6 +4,7 @@ import {
   ProjectIdParams,
   type ProjectList,
   type ProjectRecord,
+  type ProjectVersionDoc,
   type ProjectVersionList,
   RestoreBody,
   RestoreParams,
@@ -56,6 +57,14 @@ export class ProjectsController {
     @Param(new ZodPipe(ProjectIdParams)) p: { id: string },
   ): Promise<z.infer<typeof ProjectVersionList>> {
     return this.projects.versions(merchantId, p.id);
+  }
+
+  @Get(':id/versions/:version')
+  version(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(RestoreParams)) p: { id: string; version: number },
+  ): Promise<z.infer<typeof ProjectVersionDoc>> {
+    return this.projects.version(merchantId, p.id, p.version);
   }
 
   @Post(':id/versions/:version/restore')
