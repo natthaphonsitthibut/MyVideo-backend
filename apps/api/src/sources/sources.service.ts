@@ -38,8 +38,8 @@ export class SourcesService {
     if (sources.length === 0) return [];
     const ids = sources.map((s) => s.id);
     const merchantId = sources[0]?.merchantId ?? '';
-    const runs: { id: string; subject_id: string }[] = await this.ds.query(
-      `SELECT DISTINCT ON (subject_id) id, subject_id FROM workflow_runs
+    const runs: { id: string; subject_id: string; status: string }[] = await this.ds.query(
+      `SELECT DISTINCT ON (subject_id) id, subject_id, status FROM workflow_runs
         WHERE merchant_id = $1 AND kind = 'ingest' AND subject_type = 'source' AND subject_id = ANY($2::uuid[])
         ORDER BY subject_id, created_at DESC`,
       [merchantId, ids],
@@ -51,6 +51,17 @@ export class SourcesService {
     return sources.map((source) => {
       const mine = assets.filter((a) => a.sourceId === source.id);
       const sprites = mine.find((a) => a.kind === 'sprites');
+      const run = runs.find((r) => r.subject_id === source.id);
+      // The run is the live truth while ingest is not finished: a dead step (even one without a handler) shows
+      // as failed, and a retried run shows as processing again.
+      const status: SourceSummary['status'] =
+        source.status === 'ready'
+          ? 'ready'
+          : run?.status === 'pending' || run?.status === 'running'
+            ? 'processing'
+            : run?.status === 'failed' || run?.status === 'cancelled'
+              ? 'failed'
+              : source.status;
       const probe = source.probe as {
         durationMs?: number;
         video?: { width?: number; height?: number };
@@ -60,10 +71,11 @@ export class SourcesService {
         id: source.id,
         title: source.title,
         originalFilename: source.originalFilename,
-        status: source.status,
+        status,
         sizeBytes: Number(source.sizeBytes),
-        failureReason: source.failureReason,
-        ingestRunId: runs.find((r) => r.subject_id === source.id)?.id ?? null,
+        failureReason:
+          status === 'failed' ? (source.failureReason ?? 'ประมวลผลวิดีโอไม่สำเร็จ ลองใหม่ได้ที่หน้านี้') : null,
+        ingestRunId: run?.id ?? null,
         createdAt: source.createdAt.toISOString(),
         durationMs: probe?.durationMs ?? null,
         width: probe?.video?.width ?? null,

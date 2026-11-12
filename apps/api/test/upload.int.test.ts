@@ -191,6 +191,28 @@ describe(`resumable upload → source + ingest run (${CLIP ? 'real footage' : 'p
     expect(theirs.items).toHaveLength(0);
   });
 
+  it('derives the shown status from the ingest run (dead step → failed, retried → processing)', async () => {
+    const list = (await (
+      await fetch(`${base}/sources?limit=1`, { headers: { cookie: cookieA } })
+    ).json()) as { items: { id: string; ingestRunId: string }[] };
+    const src = list.items[0];
+    await ds.query(`UPDATE jobs SET status = 'dead' WHERE workflow_run_id = $1`, [src?.ingestRunId]);
+    await ds.query(`UPDATE workflow_runs SET status = 'failed' WHERE id = $1`, [src?.ingestRunId]);
+    const failed = (await (
+      await fetch(`${base}/sources/${src?.id}`, { headers: { cookie: cookieA } })
+    ).json()) as { status: string; failureReason: string };
+    expect(failed).toMatchObject({ status: 'failed' });
+    expect(failed.failureReason).toMatch(/ไม่สำเร็จ/);
+    await ds.query(`UPDATE workflow_runs SET status = 'running' WHERE id = $1`, [src?.ingestRunId]);
+    expect(
+      (
+        (await (await fetch(`${base}/sources/${src?.id}`, { headers: { cookie: cookieA } })).json()) as {
+          status: string;
+        }
+      ).status,
+    ).toBe('processing');
+  });
+
   it('tells the UI the limits', async () => {
     const cfg = (await (
       await fetch(`${base}/sources/upload-config`, { headers: { cookie: cookieA } })
