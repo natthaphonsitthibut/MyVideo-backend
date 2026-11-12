@@ -122,6 +122,20 @@ describe('rerankCandidates on a real recorded answer', () => {
     expect(chosen).toEqual([first]);
   });
 
+  it('when the model drops every window, the best-scored one is still kept (never zero clips)', async () => {
+    // the real recorded answer with every keep flipped to false (derived; mirrors a live v3 run on a 55-s live clip
+    // that scored its only window 38 and returned nothing)
+    const allDropped = structuredClone(recording.responses);
+    for (const r of allDropped[0]?.structured_output.results ?? []) r.keep = false;
+    const r = replay(allDropped);
+    const llm = new StructuredLlm(new ClaudeCliAdapter({ exec: r.exec }), new MemoryLlmCallStore(), {
+      maxCallsPerRun: 5,
+    });
+    const out = await rerankCandidates(llm, segments, candidates, { merchantId: 'm1' }, { batchSize: 4 });
+    expect(out.clips.filter((c) => c.keep)).toHaveLength(1);
+    expect(out.clips[0]).toMatchObject({ keep: true, score: 72 });
+  });
+
   it('rules mode makes no call and keeps the rule order', async () => {
     const out = await rerankCandidates(new RulesOnlyLlm(), segments, candidates, { merchantId: 'm1' });
     expect(out.calls).toBe(0);

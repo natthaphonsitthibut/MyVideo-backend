@@ -7,14 +7,14 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * window, keep/drop, a type, refined word bounds, a score and a reason with a quote. Every index and quote is
  * checked against the real transcript — an answer that cites words that are not there is rejected (one repair).
  */
-export const RERANK_PROMPT_VERSION = 'rerank-highlights-v3';
+export const RERANK_PROMPT_VERSION = 'rerank-highlights-v4';
 
 export const CLIP_TYPES = ['product-intro', 'demo', 'price-promo', 'faq', 'testimonial', 'other'] as const;
 export type ClipType = (typeof CLIP_TYPES)[number];
 
 /**
- * v3 (2026-11-13): explicit scoring rubric, start/end rules and duplicate-pitch handling so a cheap model ranks
- * the way an editor would. Same output schema as v2 (the validator and the clip builder are unchanged).
+ * v3/v4 (2026-11-13): explicit scoring rubric, start/end rules and duplicate-pitch handling so a cheap model ranks
+ * the way an editor would; v4 keeps at 50 and the best window always survives. Same output schema as v2 (the validator and the clip builder are unchanged).
  */
 export const RERANK_SYSTEM = [
   'You are a short-form video editor reviewing candidate moments from the transcript of a Thai selling video',
@@ -32,7 +32,7 @@ export const RERANK_SYSTEM = [
   '- energy (20): the seller sounds engaged, excited or convincing; repeated stumbles lower it.',
   '- value (15): a concrete fact a buyer cares about - price, size, material, how to use, result, stock.',
   '- payoff (10): ends on a complete thought - the price, the call to order, the result - not mid-sentence.',
-  'keep=true only when the score is 60 or more.',
+  'keep=true only when the score is 50 or more.',
   'Hosts often repeat the same pitch many times in one stream. When two candidates pitch the same product with',
   'the same offer, keep only the cleanest, most complete take and set keep=false on the others with the reason',
   'that it repeats a better take.',
@@ -287,5 +287,9 @@ export async function rerankCandidates(
     }
   }
   clips.sort((a, b) => Number(b.keep) - Number(a.keep) || b.score - a.score || b.rulesScore - a.rulesScore);
+  // a merchant who uploads footage always gets at least one editable clip: when the model drops every window
+  // (seen live: a 55-s clip whose only window scored 38), the best-scored one is kept with the model's own reason
+  const first = clips[0];
+  if (first && !first.keep) clips[0] = { ...first, keep: true };
   return { clips, inputChars, transcriptChars, calls, cachedCalls, usage };
 }
