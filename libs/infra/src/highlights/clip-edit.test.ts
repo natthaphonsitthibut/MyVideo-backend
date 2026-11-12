@@ -206,6 +206,21 @@ describe('style-pack edit of a clip', () => {
     expect(build('simple').project.tracks.filter((t) => t.kind === 'overlay')).toHaveLength(0);
   });
 
+  it('a piece shorter than a second keeps the framing before it (a re-frame that short reads as a glitch)', () => {
+    const style = stylePack('sale-fast');
+    const seg = (startFrame: number, durationFrames: number, words: string[] = []) => ({
+      sourceInFrame: startFrame,
+      startFrame,
+      durationFrames,
+      words,
+    });
+    // real case (S01a sale-fast): a 0.2-s piece between two removals
+    const scales = segmentScales(style, [seg(0, 84), seg(84, 6), seg(90, 120), seg(210, 90, ['80', 'บาท'])]);
+    expect(scales[1]).toBe(scales[0]);
+    expect(scales[2]).not.toBe(scales[1]);
+    expect(scales[3]).toBe(style.zoom.punchIn);
+  });
+
   it('simple has no sound effects; premium only its quiet title / end-card sounds', () => {
     const simple = build('simple').project;
     expect(simple.tracks.some((t) => t.kind === 'audio')).toBe(false);
@@ -217,14 +232,14 @@ describe('style-pack edit of a clip', () => {
     expect(ids).toEqual(['sting-minimal-short']);
   });
 
-  it('segmentScales: never punches in on two shots in a row', () => {
-    const shot = (words: string[]) => ({ sourceInFrame: 0, startFrame: 0, durationFrames: 10, words });
+  it('segmentScales: punch-ins at most once per punchGap shots; other shots alternate the framing', () => {
+    const shot = (words: string[]) => ({ sourceInFrame: 0, startFrame: 0, durationFrames: 60, words });
     const price = ['80', 'บาท'];
-    const style = stylePack('sale-fast');
+    const style = stylePack('sale-fast'); // punchGap 3
     expect(segmentScales(style, [shot(price), shot(price), shot(['สวย']), shot(price)])).toEqual([
       style.zoom.punchIn,
-      style.zoom.cycle[1],
       style.zoom.cycle[0],
+      style.zoom.cycle[1],
       style.zoom.punchIn,
     ]);
   });

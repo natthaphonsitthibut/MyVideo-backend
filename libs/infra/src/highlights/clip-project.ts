@@ -37,6 +37,8 @@ const ZOOM_KEEP_TOP = 0.7;
 /** Centred mid-frame, where platforms put their button column on the right 15 %: lines stay within 162–918 px. */
 const END_CARD_STYLE = { fontWeight: 800, fontSizes: [80, 68, 56], maxWidth: 680, maxLines: 2 };
 const PRICE_TAG_STYLE = { fontWeight: 900, fontSizes: [96, 84, 72], maxWidth: 560, maxLines: 1 };
+/** End card centre (canvas px above the middle) when a CTA pill follows it below (pack `graphics.cta.y`). */
+const END_CARD_LIFT = -150;
 const CTA_STYLE = { fontWeight: 800, fontSizes: [72, 64, 56], maxWidth: 620, maxLines: 1 };
 const PRODUCT_NAME_STYLE = { fontWeight: 700, fontSizes: [56, 48, 40], maxWidth: 620, maxLines: 1 };
 
@@ -154,27 +156,41 @@ export function editFrames(source: ClipSourceInfo, plan: ClipPlan, cut: JumpCutP
  * Scale per shot: the style's cycle, or its punch-in where a price / call to action is spoken — never on two shots
  * in a row (a punch-in that never lets go stops meaning "this matters").
  */
-export function segmentScales(style: StylePack, segments: readonly EditSegmentFrames[]): number[] {
-  return segmentShots(style, segments).map((s) => s.scale);
+export function segmentScales(
+  style: StylePack,
+  segments: readonly EditSegmentFrames[],
+  minFrames = 30,
+): number[] {
+  return segmentShots(style, segments, minFrames).map((s) => s.scale);
 }
 
 /** Scale per shot plus which key moment (price / call to action) a punch-in shot marks. */
 export function segmentShots(
   style: StylePack,
   segments: readonly EditSegmentFrames[],
+  /** Shorter pieces keep the previous framing (≈ 1 s). */
+  minFrames = 30,
 ): { scale: number; punch: 'price' | 'cta' | null }[] {
   const cycle = style.zoom.cycle.length > 0 ? style.zoom.cycle : [1];
   // shots since the last punch-in: a punch-in only means "this matters" when it is rare
   let since = Number.POSITIVE_INFINITY;
-  return segments.map((s, i) => {
+  let framing = 0;
+  let previous: { scale: number; punch: 'price' | 'cta' | null } | undefined;
+  return segments.map((s) => {
+    // a piece under a second keeps the framing before it: a re-frame that short reads as a glitch
+    if (previous && s.durationFrames < minFrames) {
+      since++;
+      return { scale: previous.scale, punch: null };
+    }
     const kind =
       style.zoom.punchIn !== null && since >= Math.max(1, style.zoom.punchGap)
         ? keyMomentKind(s.words)
         : null;
     since = kind !== null ? 1 : since + 1;
-    return kind
+    previous = kind
       ? { scale: style.zoom.punchIn as number, punch: kind }
-      : { scale: cycle[i % cycle.length] ?? 1, punch: null };
+      : { scale: cycle[framing++ % cycle.length] ?? 1, punch: null };
+    return previous;
   });
 }
 
@@ -209,7 +225,7 @@ export function buildClipProject(input: {
     { sourceInFrame: plain.sourceInFrame, startFrame: 0, durationFrames, words: [] },
   ];
   const shots = edit
-    ? segmentShots(edit.style, segments)
+    ? segmentShots(edit.style, segments, Math.round(source.fps.num / source.fps.den))
     : segments.map(() => ({ scale: 1, punch: null as 'price' | 'cta' | null }));
   const scales = shots.map((s) => s.scale);
   const assetId = newId();
@@ -341,7 +357,8 @@ export function buildClipProject(input: {
           background: end.background,
           align: 'center',
         },
-        transform: transform(0),
+        // a call-to-action pill sits under the card: lift the card so the two never overlap
+        transform: transform(edit?.style.graphics.cta && input.graphics?.cta ? END_CARD_LIFT : 0),
         animationIn: { presetId: end.animationIn, durationFrames: Math.min(12, durationFrames - startFrame) },
       };
       overlayIds.push(id);
