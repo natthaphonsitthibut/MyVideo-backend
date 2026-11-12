@@ -265,12 +265,21 @@ export async function correctCaptions(
  * and a glossary of names inferred from the whole transcript. Glossary terms are approved spellings and may repair
  * a name split over tokens, exactly like merchant terms. Returns validated slots per segment (null = keep heard).
  */
-export const TRANSCRIPT_SPELLING_PROMPT_VERSION = 'caption-spelling-v4';
+export const TRANSCRIPT_SPELLING_PROMPT_VERSION = 'caption-spelling-v5';
+// v5 (user labels on S01a, 2026-11-12): the clip pass's "ลับ/กลับ in รับ พิม ลับ มา" example was wrong — the seller
+// says "รับพิมพ์รับมา" — and pushed the model into changing a real word; it is not used here.
 const TRANSCRIPT_SPELLING_SYSTEM = [
-  CAPTION_FIX_SYSTEM,
-  'This is the transcript of ONE whole video. "topic" says what it is about; "merchantTerms" here is a glossary of',
-  'names found across the whole video (brand, product, material, size word, colour, pattern) with their correct',
-  'spelling: use them as approved spellings and to understand what a garbled word most likely is.',
+  ...CAPTION_FIX_SYSTEM.split('\n').map((line) =>
+    line.startsWith('Typical Thai live-selling ASR patterns')
+      ? 'Typical Thai live-selling ASR patterns to inspect: tone marks คะ/ค่ะ and นะคะ/นะค่ะ; missing การันต์ พิม/พิมพ์; ไซต์/ไซซ์ when discussing clothing size; final consonants สุนัก/สุนัข; ตำหนี/ตำหนิ.'
+      : line,
+  ),
+  'This is the transcript of ONE whole video. "topic" says what it is about; "merchantTerms" here is a glossary',
+  'found across the whole video — names, pattern names, measurement words and phrases the seller repeats — with',
+  'their correct spelling: use them as approved spellings and to understand what a garbled token most likely is.',
+  'When tokens sound like a glossary entry (one of its heard variants), write that entry. Do not replace a word that',
+  'is already a real Thai word with another real word unless the sentence clearly needs it; sellers repeat set',
+  'phrases, so keep a repeated phrase consistent with the glossary instead of guessing a different word.',
 ].join('\n');
 
 export async function correctTranscriptSlots(

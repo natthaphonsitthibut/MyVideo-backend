@@ -10,6 +10,8 @@ it('declares AI provenance separately from merchant corrections', () => {
     original: null,
     aiFixed: true,
     heard: 'พิม',
+    mergedInto: null,
+    needsReview: true,
   };
   expect(TranscriptWord.parse(word)).toEqual(word);
   expect(TranscriptWord.safeParse({ ...word, aiFixed: undefined }).success).toBe(false);
