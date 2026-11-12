@@ -25,13 +25,11 @@ describe('whole transcript correction persistence', () => {
     mode: 'local-agent',
     async generateStructured(request) {
       calls++;
-      const input = JSON.parse(request.prompt) as { segments: { id: string; tokens: string[] }[] };
-      const value = {
-        segments: input.segments.map((s) => ({
-          id: s.id,
-          tokens: s.tokens.map((text) => text.replace('ไลฟ์', 'ไลฟ')),
-        })),
-      };
+      // two calls per pass: the whole-video context (no glossary here), then the sentence rewrite per batch
+      const input = JSON.parse(request.prompt) as { lines?: { id: string; heard: string }[] };
+      const value = input.lines
+        ? { lines: input.lines.map((l) => ({ id: l.id, text: l.heard.replace('ไลฟ์', 'ไลฟ') })) }
+        : { topic: '', terms: [] };
       const parsed = request.schema.parse(value);
       if (!parsed.ok) throw new Error(parsed.error);
       return {

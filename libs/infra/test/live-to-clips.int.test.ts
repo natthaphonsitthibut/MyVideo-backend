@@ -15,6 +15,7 @@ import { ClipSuggestionEntity } from '../src/db/entities/clip-suggestion.entity.
 import { ProjectVersionEntity } from '../src/db/entities/project.entity.js';
 import { seedMerchant } from '../src/db/seed.js';
 import { parseClipBuildInput } from '../src/highlights/clip-build-input.js';
+import { TAIL_MS } from '../src/highlights/clip-ending.js';
 import {
   LiveToClipsUnavailableError,
   liveToClipsHandlers,
@@ -42,6 +43,24 @@ function captionText(p: Project): string {
     .sort((a, b) => a.at - b.at)
     .map((x) => x.text)
     .join('');
+}
+
+/** The pieces of `full` missing from `part`, when `part` is `full` with whole chunks taken out; null otherwise. */
+function missingChunks(part: string, full: string): string[] | null {
+  const a = [...part];
+  const b = [...full];
+  const chunks: string[] = [];
+  let i = 0;
+  let open = '';
+  for (const ch of b) {
+    if (i < a.length && a[i] === ch) {
+      if (open) chunks.push(open);
+      open = '';
+      i++;
+    } else open += ch;
+  }
+  if (open) chunks.push(open);
+  return i === a.length ? chunks : null;
 }
 const has = !!footageClip(CLIP);
 
@@ -211,7 +230,9 @@ describe.skipIf(!has)(
       const stored = parseClipBuildInput(clip.buildInput);
       expect(stored).not.toBeNull();
       expect(stored?.startMs).toBe(clip.startMs);
-      expect(stored?.endMs).toBe(clip.endMs);
+      // the build keeps a short breath after the last word (clipEndWithTail), never more than TAIL_MS
+      expect(stored?.endMs).toBeGreaterThanOrEqual(clip.endMs);
+      expect(stored?.endMs).toBeLessThanOrEqual(clip.endMs + TAIL_MS);
       expect(stored?.words.length).toBeGreaterThan(0);
       expect(stored?.title).toBe(clip.title);
 
@@ -244,8 +265,18 @@ describe.skipIf(!has)(
       expect(validateProject(v2).ok).toBe(true);
       expect(v2.meta).toMatchObject({ createdBy: 'ai', styleId: 'premium' });
       expect((v1.doc as Project).meta.styleId).not.toBe('premium');
-      // same words on screen (only the look and cuts change)
-      expect(captionText(v2)).toBe(captionText(v1.doc as Project));
+      // same words on screen (only the look and cuts change); the one allowed difference: sale-fast shows a spoken
+      // price as a price tag and drops the caption page under it, premium has no tag so that page stays a caption
+      const missing = missingChunks(captionText(v1.doc as Project), captionText(v2));
+      expect(missing).not.toBeNull();
+      const tagDigits = Object.values((v1.doc as Project).elements).flatMap((e) =>
+        e.type === 'text' ? [e.content.replace(/[^\d]/g, '')] : [],
+      );
+      for (const chunk of missing ?? []) {
+        const digits = chunk.replace(/[^\d]/g, '');
+        expect(digits.length).toBeGreaterThan(0);
+        expect(tagDigits.some((d) => d.length > 0 && digits.includes(d))).toBe(true);
+      }
       expect(captionText(v2).length).toBeGreaterThan(0);
       // same seed → same project and ids as a fresh build of that style would give
       expect(v2.id).toBe(projectId);
