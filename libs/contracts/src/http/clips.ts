@@ -56,6 +56,8 @@ export const GenerateClipsBody = named(
       .optional(),
     /** Start a new run even if a finished one exists (regenerate). */
     fresh: z.boolean().optional(),
+    /** Edit style pack (`STYLE_PACKS` id) for the built clips; unknown/absent = the default pack. */
+    styleId: z.string().min(1).max(64).optional(),
   }),
 );
 

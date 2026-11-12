@@ -21,7 +21,7 @@ type StageLib = {
   ): LaidOutCaptionPage[];
   canvasMeasure(font: string): (t: string) => number;
   captionFont(styleRef: string): string;
-  captionMaxWidth(canvasWidth: number): number;
+  captionMaxWidth(canvasWidth: number, styleRef?: string): number;
   loadCaptionFont(font: string): Promise<void>;
   STAGE_FONT: string;
 };
@@ -68,7 +68,8 @@ export class StageTextLayout {
         await s.loadCaptionFont(font);
         return s.buildCaptions(w, {
           measure: s.canvasMeasure(font),
-          maxWidth: s.captionMaxWidth(o.canvasWidth),
+          // the style matters: a boxed caption loses its padding from the line width
+          maxWidth: s.captionMaxWidth(o.canvasWidth, o.styleRef),
           maxLines: o.maxLines ?? 2,
           pauseFrames: o.pauseFrames ?? 15,
         });

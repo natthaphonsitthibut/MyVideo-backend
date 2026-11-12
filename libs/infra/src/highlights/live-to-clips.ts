@@ -54,6 +54,8 @@ export async function requestLiveToClips(
     sourceId: string;
     product?: ProductInfo;
     fresh?: boolean;
+    /** Edit style pack for the built clips (default pack when absent). */
+    styleId?: string;
     maxUnfinishedRuns?: number;
   },
 ): Promise<{ runId: string; created: boolean }> {
@@ -89,7 +91,7 @@ export async function requestLiveToClips(
       kind: 'live_to_clips',
       subjectType: 'source',
       subjectId: input.sourceId,
-      input: { product: input.product ?? {} },
+      input: { product: input.product ?? {}, ...(input.styleId ? { styleId: input.styleId } : {}) },
     });
     await enqueueInTransaction(em, {
       merchantId: input.merchantId,
@@ -97,7 +99,12 @@ export async function requestLiveToClips(
       type: 'shots.detect',
       queue: 'ai',
       idempotencyKey: `${run.id}:shots.detect`,
-      payload: { sourceId: input.sourceId, nextStep: 'clips.plan', product: input.product ?? {} },
+      payload: {
+        sourceId: input.sourceId,
+        nextStep: 'clips.plan',
+        product: input.product ?? {},
+        ...(input.styleId ? { styleId: input.styleId } : {}),
+      },
       timeoutMs: 60 * 60_000,
     });
     return { runId: run.id, created: true };
@@ -149,11 +156,18 @@ export type LiveToClipsDeps = {
   maxClips?: number;
 };
 
-const buildStep = (sourceId: string, rank: number, product: unknown): NextStep => ({
+/** `speech`: VAD speech spans inside the clip (source ms) — the build step's jump cuts need the real pauses. */
+const buildStep = (
+  sourceId: string,
+  rank: number,
+  product: unknown,
+  speech: SpanMs[],
+  styleId: unknown,
+): NextStep => ({
   type: 'clips.build',
   queue: 'ai',
   key: String(rank),
-  payload: { sourceId, rank, product },
+  payload: { sourceId, rank, product, speech, ...(typeof styleId === 'string' ? { styleId } : {}) },
   maxAttempts: 3,
   timeoutMs: 10 * 60_000,
 });
@@ -302,11 +316,31 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
           .orIgnore()
           .execute();
       }
-      return { clips: final.length, ranks: final.map((c) => c.rank), shotCuts: shotCutsMs.length };
+      const speechByRank: Record<string, SpanMs[]> = {};
+      for (const c of final) {
+        speechByRank[String(c.rank)] = speech
+          .filter((s) => s.endMs > c.startMs && s.startMs < c.endMs)
+          .map((s) => ({ startMs: s.startMs, endMs: s.endMs }));
+      }
+      return {
+        clips: final.length,
+        ranks: final.map((c) => c.rank),
+        shotCuts: shotCutsMs.length,
+        speechByRank,
+      };
     },
     next(job, result) {
       const ranks = (result.ranks as number[]) ?? [];
-      return ranks.map((r) => buildStep(String(job.payload.sourceId), r, job.payload.product ?? {}));
+      const speech = (result.speechByRank ?? {}) as Record<string, SpanMs[]>;
+      return ranks.map((r) =>
+        buildStep(
+          String(job.payload.sourceId),
+          r,
+          job.payload.product ?? {},
+          speech[String(r)] ?? [],
+          job.payload.styleId,
+        ),
+      );
     },
   };
 }
@@ -383,6 +417,11 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
             hook: hook ? { text: hook.text, origin: hook.origin } : undefined,
           },
           seed: `${job.workflowRunId}:${rank}`,
+          // older queued jobs have no speech spans: then only filler words are cut
+          style: {
+            ...(typeof job.payload.styleId === 'string' ? { styleId: job.payload.styleId } : {}),
+            speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
+          },
         });
       } finally {
         await layout.close();

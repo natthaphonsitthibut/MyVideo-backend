@@ -68,7 +68,7 @@ export class ClipsService {
   async generate(
     merchantId: string,
     sourceId: string,
-    body: { productName?: string; fresh?: boolean },
+    body: { productName?: string; fresh?: boolean; styleId?: string },
   ): Promise<ClipsState> {
     try {
       await requestLiveToClips(this.ds, {
@@ -76,6 +76,7 @@ export class ClipsService {
         sourceId,
         product: body.productName ? { name: body.productName } : {},
         fresh: body.fresh,
+        ...(body.styleId ? { styleId: body.styleId } : {}),
         maxUnfinishedRuns: this.env.MERCHANT_MAX_ACTIVE_RUNS,
       });
     } catch (err) {

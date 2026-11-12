@@ -116,7 +116,11 @@ export function shotsHandler({ ds, storage, ai, partMs }: ShotsDeps): JobHandler
         {
           type: 'clips.plan',
           queue: 'ai',
-          payload: { sourceId: job.payload.sourceId, product: job.payload.product ?? {} },
+          payload: {
+            sourceId: job.payload.sourceId,
+            product: job.payload.product ?? {},
+            ...(typeof job.payload.styleId === 'string' ? { styleId: job.payload.styleId } : {}),
+          },
           maxAttempts: 3,
           timeoutMs: 30 * 60_000,
         },

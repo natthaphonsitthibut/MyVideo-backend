@@ -8,6 +8,20 @@ import { named } from '../registry.js';
  */
 export const PROJECT_SCHEMA_VERSION = 1;
 
+/**
+ * Caption looks the stage can draw (`frontend/packages/stage` captions). Adding an id is backwards compatible;
+ * removing one needs a migration.
+ */
+export const CAPTION_STYLE_IDS = [
+  'clean',
+  'bold-highlight',
+  'pop-word',
+  'boxed',
+  'outline-bold',
+  'minimal',
+] as const;
+export type CaptionStyleId = (typeof CAPTION_STYLE_IDS)[number];
+
 const frame = z.number().int().min(0);
 const frames = z.number().int().min(1);
 const id = z.uuid();
@@ -127,7 +141,7 @@ export const CaptionElement = z.object({
   words: z.array(CaptionWord).min(1),
   /** Stored line breaks: each line lists word indexes in order (the browser never wraps captions). */
   lines: z.array(z.array(z.number().int().min(0)).min(1)).min(1),
-  styleRef: z.enum(['clean', 'bold-highlight']),
+  styleRef: z.enum(CAPTION_STYLE_IDS),
   transform: Transform,
 });
 
@@ -205,6 +219,8 @@ export const Project = named(
       createdBy: z.enum(['ai', 'user']),
       workflowRunId: id.optional(),
       title: z.string().max(200).optional(),
+      /** Edit style pack the project was built with (`STYLE_PACKS`); switching style rebuilds from it. */
+      styleId: z.string().min(1).max(64).optional(),
     }),
   }),
 );

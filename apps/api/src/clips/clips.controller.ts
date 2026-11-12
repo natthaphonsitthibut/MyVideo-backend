@@ -27,7 +27,7 @@ export class ClipsController {
   generate(
     @CurrentMerchant() merchantId: string,
     @Param(new ZodPipe(SourceIdParams)) p: { id: string },
-    @Body(new ZodPipe(GenerateClipsBody)) body: { productName?: string; fresh?: boolean },
+    @Body(new ZodPipe(GenerateClipsBody)) body: { productName?: string; fresh?: boolean; styleId?: string },
   ): Promise<ClipsState> {
     return this.clips.generate(merchantId, p.id, body);
   }
