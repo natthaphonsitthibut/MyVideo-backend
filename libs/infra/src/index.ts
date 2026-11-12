@@ -160,6 +160,7 @@ export {
   type RenderRequestInput,
   requestRender,
 } from './render/request-render.js';
+export { soundLibraryFile } from './render/sound-library.js';
 export {
   defaultStageBundleRoot,
   loadStageBundle,

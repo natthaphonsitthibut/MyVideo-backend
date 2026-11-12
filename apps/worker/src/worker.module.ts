@@ -147,6 +147,8 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     openLayout: () => StageTextLayout.open(bundle),
   });
   for (const h of clips) registry.register(h);
-  registry.register(renderHandler({ ds, storage: createStorage(env), renderer }));
+  registry.register(
+    renderHandler({ ds, storage: createStorage(env), renderer, soundLibraryDir: env.SOUND_LIBRARY_DIR }),
+  );
   return registry;
 }

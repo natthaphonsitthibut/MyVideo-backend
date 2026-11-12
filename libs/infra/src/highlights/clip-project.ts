@@ -1,7 +1,15 @@
 import { createHash } from 'node:crypto';
-import { type Project, type StylePack, stylePack, validateProject } from '@myvideo/contracts';
+import {
+  type LibrarySound,
+  librarySound,
+  type Project,
+  type StylePack,
+  stylePack,
+  validateProject,
+} from '@myvideo/contracts';
 import type { LaidOutCaptionPage, LaidOutText, LayoutWord, StageTextLayout } from '../render/text-layout.js';
-import { isKeyMoment, type JumpCutPlan, planJumpCuts, type SpanMs, splitLongShots } from './jump-cuts.js';
+import { type JumpCutPlan, keyMomentKind, planJumpCuts, type SpanMs, splitLongShots } from './jump-cuts.js';
+import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.js';
 
 /**
  * Clip plan → Project JSON (E07-F07): deterministic. One 9:16 `cover` video element (centre crop; the reframe
@@ -141,12 +149,22 @@ export function editFrames(source: ClipSourceInfo, plan: ClipPlan, cut: JumpCutP
  * in a row (a punch-in that never lets go stops meaning "this matters").
  */
 export function segmentScales(style: StylePack, segments: readonly EditSegmentFrames[]): number[] {
+  return segmentShots(style, segments).map((s) => s.scale);
+}
+
+/** Scale per shot plus which key moment (price / call to action) a punch-in shot marks. */
+export function segmentShots(
+  style: StylePack,
+  segments: readonly EditSegmentFrames[],
+): { scale: number; punch: 'price' | 'cta' | null }[] {
   const cycle = style.zoom.cycle.length > 0 ? style.zoom.cycle : [1];
   let previousPunch = false;
   return segments.map((s, i) => {
-    const punch = style.zoom.punchIn !== null && !previousPunch && isKeyMoment(s.words);
-    previousPunch = punch;
-    return punch ? (style.zoom.punchIn as number) : (cycle[i % cycle.length] ?? 1);
+    const kind = style.zoom.punchIn !== null && !previousPunch ? keyMomentKind(s.words) : null;
+    previousPunch = kind !== null;
+    return kind
+      ? { scale: style.zoom.punchIn as number, punch: kind }
+      : { scale: cycle[i % cycle.length] ?? 1, punch: null };
   });
 }
 
@@ -173,7 +191,10 @@ export function buildClipProject(input: {
   const segments = frames?.segments ?? [
     { sourceInFrame: plain.sourceInFrame, startFrame: 0, durationFrames, words: [] },
   ];
-  const scales = edit ? segmentScales(edit.style, segments) : segments.map(() => 1);
+  const shots = edit
+    ? segmentShots(edit.style, segments)
+    : segments.map(() => ({ scale: 1, punch: null as 'price' | 'cta' | null }));
+  const scales = shots.map((s) => s.scale);
   const assetId = newId();
   const videoTrack = newId();
   const captionTrack = newId();
@@ -281,11 +302,13 @@ export function buildClipProject(input: {
     overlayIds.push(id);
   }
   const end = edit?.style.endCard;
+  let endCardStart: number | undefined;
   if (end && input.endCard) {
     // closing card over the last seconds of the picture, never over the opening title
     const cardFrames = Math.round(end.seconds * fps);
     const startFrame = Math.max(hookEnd, durationFrames - cardFrames);
     if (durationFrames - startFrame >= Math.round(fps)) {
+      endCardStart = startFrame;
       const id = newId();
       elements[id] = {
         type: 'text',
@@ -309,6 +332,68 @@ export function buildClipProject(input: {
       overlayIds.push(id);
     }
   }
+
+  // sound effects (D-026): created last so the ids above stay what they were before sounds existed
+  const assets: Project['assets'] = {
+    [assetId]: {
+      sourceId: source.sourceId,
+      kind: 'video',
+      durationFrames: source.durationFrames,
+      hasAudio: source.hasAudio,
+    },
+  };
+  const audioTracks: Project['tracks'] = [];
+  if (edit?.style.sfx) {
+    const moments: SfxMoment[] = [];
+    if (hookEnd > 0) moments.push({ frame: 0, kind: 'hook' });
+    // no shot-change sound in the half second before / during the closing card: the card has its own
+    const cutsUntil = endCardStart === undefined ? durationFrames : endCardStart - Math.round(fps / 2);
+    segments.forEach((seg, i) => {
+      const punch = shots[i]?.punch ?? null;
+      if (punch) moments.push({ frame: seg.startFrame, kind: punch });
+      else if (i > 0 && seg.startFrame < cutsUntil) moments.push({ frame: seg.startFrame, kind: 'cut' });
+    });
+    if (endCardStart !== undefined) moments.push({ frame: endCardStart, kind: 'endCard' });
+    const placed = placeSoundEffects(edit.style.sfx, moments, { fps: source.fps, durationFrames });
+    const soundAssets = new Map<string, string>();
+    const trackIds: string[] = [];
+    const trackElements: string[][] = [];
+    for (const s of placed) {
+      let soundAsset = soundAssets.get(s.soundId);
+      if (!soundAsset) {
+        soundAsset = newId();
+        soundAssets.set(s.soundId, soundAsset);
+        const sound = librarySound(s.soundId) as LibrarySound;
+        assets[soundAsset] = {
+          libraryId: s.soundId,
+          kind: 'audio',
+          durationFrames: soundFrames(sound.durationSec, source.fps),
+          hasAudio: true,
+        };
+      }
+      if (!trackIds[s.track]) {
+        trackIds[s.track] = newId();
+        trackElements[s.track] = [];
+      }
+      const id = newId();
+      elements[id] = {
+        type: 'audio',
+        id,
+        trackId: trackIds[s.track] as string,
+        startFrame: s.startFrame,
+        durationFrames: s.durationFrames,
+        origin: 'ai',
+        assetId: soundAsset,
+        sourceInFrame: s.sourceInFrame,
+        playbackRate: 1,
+        volume: s.volume,
+      };
+      trackElements[s.track]?.push(id);
+    }
+    trackIds.forEach((tid, i) => {
+      if (tid) audioTracks.push({ id: tid, kind: 'audio', elementIds: trackElements[i] ?? [] });
+    });
+  }
   return {
     schemaVersion: 1,
     id: input.projectId,
@@ -317,20 +402,14 @@ export function buildClipProject(input: {
     width: CLIP_WIDTH,
     height: CLIP_HEIGHT,
     durationFrames,
-    assets: {
-      [assetId]: {
-        sourceId: source.sourceId,
-        kind: 'video',
-        durationFrames: source.durationFrames,
-        hasAudio: source.hasAudio,
-      },
-    },
+    assets,
     tracks: [
       { id: videoTrack, kind: 'video', elementIds: videoIds },
       { id: captionTrack, kind: 'caption', elementIds: captionIds },
       ...(overlayIds.length > 0
         ? [{ id: overlayTrack, kind: 'overlay' as const, elementIds: overlayIds }]
         : []),
+      ...audioTracks,
     ],
     elements,
     meta: {

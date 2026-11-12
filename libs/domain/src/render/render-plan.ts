@@ -13,7 +13,13 @@ export type RenderProject = {
   durationFrames: number;
   assets: Record<
     string,
-    { sourceId: string; kind: 'video' | 'audio' | 'image'; durationFrames: number; hasAudio: boolean }
+    {
+      sourceId?: string;
+      libraryId?: string;
+      kind: 'video' | 'audio' | 'image';
+      durationFrames: number;
+      hasAudio: boolean;
+    }
   >;
   elements: Record<string, RenderElement>;
   [k: string]: unknown;

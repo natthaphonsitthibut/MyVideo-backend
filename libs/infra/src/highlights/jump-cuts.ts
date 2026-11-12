@@ -29,13 +29,18 @@ export const isFiller = (text: string) => FILLERS.has(text.trim().replace(/[.…
 
 const CTA = ['ตะกร้า', 'cf', 'ซีเอฟ', 'สั่งซื้อ', 'สั่งเลย', 'กดสั่ง', 'ทักแชท', 'inbox', 'อินบ็อกซ์', 'ลิงก์', 'กดลิงค์'];
 
-/** A price ("80 บาท", "฿39", "50%") or a call to action ("กดตะกร้า", "CF") in these words. */
-export function isKeyMoment(tokens: readonly string[]): boolean {
+/** Which key moment these words hold: a price ("80 บาท", "฿39", "50%"), a call to action ("กดตะกร้า", "CF"), or none. */
+export function keyMomentKind(tokens: readonly string[]): 'price' | 'cta' | null {
   const t = tokens.map((x) => x.trim().toLowerCase());
   const joined = t.join('');
-  if (/฿\s*\d|\d\s*%|\d+(?:[.,]\d+)?บาท/u.test(joined)) return true;
-  if (t.some((x, i) => /^\d/.test(x) && (t[i + 1] ?? '').startsWith('บาท'))) return true;
-  return CTA.some((c) => joined.includes(c));
+  if (/฿\s*\d|\d\s*%|\d+(?:[.,]\d+)?บาท/u.test(joined)) return 'price';
+  if (t.some((x, i) => /^\d/.test(x) && (t[i + 1] ?? '').startsWith('บาท'))) return 'price';
+  return CTA.some((c) => joined.includes(c)) ? 'cta' : null;
+}
+
+/** A price or a call to action in these words. */
+export function isKeyMoment(tokens: readonly string[]): boolean {
+  return keyMomentKind(tokens) !== null;
 }
 
 /** A shot shorter than this after a split would feel like a glitch. */

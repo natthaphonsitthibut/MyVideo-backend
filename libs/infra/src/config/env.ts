@@ -19,6 +19,7 @@ export const envSchema = z
     SESSION_SECRET: z.string().min(8),
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     STORAGE_LOCAL_DIR: z.string().default('.data/storage'),
+    SOUND_LIBRARY_DIR: z.string().default('.data/library/sounds'),
     /** Where resumable uploads are assembled before they move into storage. */
     UPLOAD_TMP_DIR: z.string().default('.data/uploads'),
     /** Proxy encoder: libx264 (portable) or h264_videotoolbox (Mac hardware, frees CPU). */

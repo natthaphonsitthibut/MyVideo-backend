@@ -119,6 +119,34 @@ describe('validateProject', () => {
 
   const cases: [string, Mut, { code: string; path: string; message: RegExp }][] = [
     [
+      'asset with neither sourceId nor libraryId',
+      (p) => {
+        delete p.assets[ASSET]!.sourceId;
+      },
+      { code: 'asset_ref', path: `assets.${ASSET}`, message: /exactly one of sourceId or libraryId/ },
+    ],
+    [
+      'asset with both sourceId and libraryId',
+      (p) => {
+        p.assets[ASSET]!.libraryId = 'pop-small-in';
+      },
+      { code: 'asset_ref', path: `assets.${ASSET}`, message: /exactly one/ },
+    ],
+    [
+      'unknown library sound',
+      (p) => {
+        p.assets[U(902)] = { libraryId: 'laser-gun', kind: 'audio', durationFrames: 10, hasAudio: true };
+      },
+      { code: 'library_asset', path: `assets.${U(902)}.libraryId`, message: /laser-gun does not exist/ },
+    ],
+    [
+      'library asset that is not audio',
+      (p) => {
+        p.assets[U(902)] = { libraryId: 'pop-small-in', kind: 'image', durationFrames: 10, hasAudio: false };
+      },
+      { code: 'library_asset', path: `assets.${U(902)}.kind`, message: /must be audio/ },
+    ],
+    [
       'schema: fractional frame',
       (p) => {
         el(p, V1).durationFrames = 1.5;
@@ -314,6 +342,28 @@ describe('validateProject', () => {
     expect(captions.flatMap((c) => (c.type === 'caption' ? c.words.map((w) => w.text) : []))).toContain(
       '21.5',
     );
+  });
+
+  it('accepts a library sound on an audio track (no sourceId)', () => {
+    const p = base();
+    const sound = U(903);
+    const track = U(4);
+    p.assets[sound] = { libraryId: 'whoosh-fast-soft', kind: 'audio', durationFrames: 7, hasAudio: true };
+    p.tracks.push({ id: track, kind: 'audio', elementIds: [U(41)] });
+    p.elements[U(41)] = {
+      type: 'audio',
+      id: U(41),
+      trackId: track,
+      startFrame: 27,
+      durationFrames: 7,
+      origin: 'ai',
+      assetId: sound,
+      sourceInFrame: 0,
+      playbackRate: 1,
+      volume: 0.79,
+    };
+    const r = validateProject(p);
+    if (!r.ok) throw new Error(JSON.stringify(r.errors));
   });
 
   it('frame maths stay exact at 29.97 fps over 2 hours', () => {

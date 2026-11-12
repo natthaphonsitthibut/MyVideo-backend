@@ -1,4 +1,4 @@
-import { STYLE_PACKS, stylePack, validateProject } from '@myvideo/contracts';
+import { librarySound, STYLE_PACKS, stylePack, validateProject } from '@myvideo/contracts';
 import { describe, expect, it } from 'vitest';
 import { buildClipProject, editFrames, segmentScales } from './clip-project.js';
 import { planJumpCuts } from './jump-cuts.js';
@@ -138,6 +138,39 @@ describe('style-pack edit of a clip', () => {
 
   it('every style pack builds a valid project from the same plan', () => {
     for (const p of STYLE_PACKS) expect(validateProject(build(p.id).project).ok, p.id).toBe(true);
+  });
+
+  it('sale-fast: sound effects from the library land their sync point on the cut / card frame', () => {
+    const { project } = build('sale-fast');
+    const audioTracks = project.tracks.filter((t) => t.kind === 'audio');
+    expect(audioTracks.length).toBeGreaterThan(0);
+    const sounds = audioTracks.flatMap((t) => t.elementIds.map((id) => project.elements[id]!));
+    const placed = sounds.map((e) => {
+      if (e.type !== 'audio') throw new Error('not audio');
+      const asset = project.assets[e.assetId]!;
+      expect(asset).toMatchObject({ kind: 'audio', hasAudio: true });
+      expect(asset.sourceId).toBeUndefined();
+      const sound = librarySound(asset.libraryId!)!;
+      expect(e.volume).toBeLessThan(1);
+      return { id: sound.id, sync: e.startFrame - e.sourceInFrame + Math.round(sound.syncAtSec * 30) };
+    });
+    // the second shot ("80 บาท") is a punch-in on a price → the price sound on its first frame (61), not a whoosh;
+    // the end card appears at frame 46 → the closing sting meets it
+    expect(placed).toContainEqual({ id: 'money-register', sync: 61 });
+    expect(placed).toContainEqual({ id: 'sting-bold-short', sync: 46 });
+    expect(placed.some((p) => p.id.startsWith('whoosh') && p.sync === 61)).toBe(false);
+    expect(validateProject(project).ok).toBe(true);
+  });
+
+  it('simple has no sound effects; premium only its quiet title / end-card sounds', () => {
+    const simple = build('simple').project;
+    expect(simple.tracks.some((t) => t.kind === 'audio')).toBe(false);
+    expect(Object.values(simple.assets).some((a) => a.libraryId)).toBe(false);
+    const premium = build('premium').project;
+    const ids = Object.values(premium.assets)
+      .map((a) => a.libraryId)
+      .filter(Boolean);
+    expect(ids).toEqual(['sting-minimal-short']);
   });
 
   it('segmentScales: never punches in on two shots in a row', () => {

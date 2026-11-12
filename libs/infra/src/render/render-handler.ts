@@ -17,15 +17,27 @@ import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { probeFile } from '../media/probe.js';
 import { withTempDir } from '../process/run-process.js';
 import { probeRendered } from './probe-rendered.js';
+import { soundLibraryFile } from './sound-library.js';
 
-export type RenderDeps = { ds: DataSource; storage: StoragePort; renderer: VideoRenderer };
+export type RenderDeps = {
+  ds: DataSource;
+  storage: StoragePort;
+  renderer: VideoRenderer;
+  /** Where the product sound library lives (`SOUND_LIBRARY_DIR`, D-026). */
+  soundLibraryDir?: string;
+};
 
 /**
  * `render.video` on the `render` queue: renders the pinned project version of a `renders` row with the
  * synced stage bundle, validates the MP4, stores it and writes the output columns once (compare-and-set on
  * the pinned version and `output_key IS NULL` — an old or duplicate attempt can never overwrite a result).
  */
-export function renderHandler({ ds, storage, renderer }: RenderDeps): JobHandler {
+export function renderHandler({
+  ds,
+  storage,
+  renderer,
+  soundLibraryDir = '.data/library/sounds',
+}: RenderDeps): JobHandler {
   return {
     type: 'render.video',
     queue: 'render',
@@ -54,6 +66,17 @@ export function renderHandler({ ds, storage, renderer }: RenderDeps): JobHandler
       const media: Record<string, string> = {};
       try {
         for (const [assetId, asset] of Object.entries(project.assets)) {
+          if (asset.libraryId) {
+            const path = soundLibraryFile(soundLibraryDir, asset.libraryId);
+            if (!(await stat(path).catch(() => null)))
+              throw new FatalJobError(
+                `library sound ${asset.libraryId} is not installed (run pnpm library:fetch)`,
+              );
+            media[assetId] = path;
+            continue;
+          }
+          // never query with an undefined column: TypeORM would match any row
+          if (!asset.sourceId) throw new FatalJobError(`asset ${assetId} has no source`);
           const original = await ds
             .getRepository(MediaAssetEntity)
             .findOneBy({ sourceId: asset.sourceId, merchantId: job.merchantId, kind: 'original' });

@@ -37,6 +37,21 @@ export type StylePack = {
    * segment — going wider again only happens at a cut.
    */
   zoom: { cycle: number[]; punchIn: number | null; drift: number };
+  /**
+   * Sound effects from `SOUND_LIBRARY` (D-026); each starts at (moment − its sync point) so the hit lands on the
+   * moment. `cut`: cycled at shot changes, at most one per `minGapMs`; `price` / `cta`: on the shot where a price /
+   * call to action is spoken (instead of the cut sound); `hook` / `endCard`: when the opening title / closing card
+   * appears. `gainDb` is added to each sound's own under-speech gain. Null = no sound effects.
+   */
+  sfx: {
+    cut: string[];
+    minGapMs: number;
+    price: string | null;
+    cta: string | null;
+    hook: string | null;
+    endCard: string | null;
+    gainDb: number;
+  } | null;
 };
 
 export const STYLE_PACKS: readonly StylePack[] = [
@@ -56,6 +71,15 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: { seconds: 2, color: '#111111', background: '#facc15', animationIn: 'pop' },
     cuts: { maxPauseMs: 250, keepPauseMs: 80, removeFillers: true, maxShotMs: 3000 },
     zoom: { cycle: [1, 1.12], punchIn: 1.28, drift: 0.045 },
+    sfx: {
+      cut: ['whoosh-fast-soft', 'swish-soft'],
+      minGapMs: 2500,
+      price: 'money-register',
+      cta: 'pop-medium-in',
+      hook: 'pop-medium-in',
+      endCard: 'sting-bold-short',
+      gainDb: 0,
+    },
   },
   {
     id: 'friendly',
@@ -73,6 +97,15 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: { seconds: 2, color: '#ffffff', background: '#000000cc', animationIn: 'slide-up' },
     cuts: { maxPauseMs: 400, keepPauseMs: 150, removeFillers: true, maxShotMs: 4500 },
     zoom: { cycle: [1, 1.06], punchIn: 1.15, drift: 0.027 },
+    sfx: {
+      cut: ['whoosh-fast-soft'],
+      minGapMs: 4000,
+      price: 'shimmer-short-bright',
+      cta: 'notification-attention-soft',
+      hook: 'pop-small-in',
+      endCard: 'sting-warm-short',
+      gainDb: -3,
+    },
   },
   {
     id: 'premium',
@@ -83,6 +116,15 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: { seconds: 2.5, color: '#f5f0e6', background: '#1c1917', animationIn: 'fade' },
     cuts: { maxPauseMs: 600, keepPauseMs: 250, removeFillers: true, maxShotMs: 7000 },
     zoom: { cycle: [1], punchIn: null, drift: 0.008 },
+    sfx: {
+      cut: [],
+      minGapMs: 0,
+      price: null,
+      cta: null,
+      hook: 'shimmer-short-soft',
+      endCard: 'sting-minimal-short',
+      gainDb: -6,
+    },
   },
   {
     id: 'fun',
@@ -100,6 +142,15 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: { seconds: 2, color: '#ffffff', background: '#7c3aed', animationIn: 'bounce' },
     cuts: { maxPauseMs: 200, keepPauseMs: 60, removeFillers: true, maxShotMs: 2500 },
     zoom: { cycle: [1, 1.15, 1.05], punchIn: 1.35, drift: 0.045 },
+    sfx: {
+      cut: ['swish-medium', 'whoosh-fast-soft', 'pop-medium-bubble'],
+      minGapMs: 1800,
+      price: 'money-coin-drop',
+      cta: 'pop-large-bubble',
+      hook: 'pop-large-bubble',
+      endCard: 'sting-playful-short',
+      gainDb: 0,
+    },
   },
   {
     id: 'simple',
@@ -117,6 +168,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: null,
     cuts: { maxPauseMs: 800, keepPauseMs: 300, removeFillers: false, maxShotMs: null },
     zoom: { cycle: [1], punchIn: null, drift: 0 },
+    sfx: null,
   },
 ];
 

@@ -1,4 +1,5 @@
 import { type ElementType, Project, type ProjectElement, type Track } from './schema.js';
+import { librarySound } from './sound-library.js';
 
 export type ProjectIssue = {
   /** Machine-readable rule id, e.g. `overlap`, `missing_asset`. */
@@ -55,6 +56,17 @@ export function validateProject(input: unknown): ProjectValidation {
       else listedIn.set(eid, t.id);
     });
   });
+
+  for (const [key, a] of Object.entries(p.assets)) {
+    const at = `assets.${key}`;
+    if ((a.sourceId === undefined) === (a.libraryId === undefined))
+      add('asset_ref', at, `asset ${key} needs exactly one of sourceId or libraryId`);
+    if (a.libraryId !== undefined) {
+      const sound = librarySound(a.libraryId);
+      if (!sound) add('library_asset', `${at}.libraryId`, `library sound ${a.libraryId} does not exist`);
+      if (a.kind !== 'audio') add('library_asset', `${at}.kind`, `library asset ${key} must be audio`);
+    }
+  }
 
   const byTrack = new Map<string, ProjectElement[]>();
   for (const [key, e] of Object.entries(p.elements)) {

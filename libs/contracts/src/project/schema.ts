@@ -187,7 +187,13 @@ export type Track = z.infer<typeof Track>;
 export const ProjectAsset = named(
   'ProjectAsset',
   z.object({
-    sourceId: id,
+    /** A merchant source. Exactly one of `sourceId` / `libraryId` is set (validator). */
+    sourceId: id.optional(),
+    /** A product library sound (`SOUND_LIBRARY`, D-026): the same for every merchant, never merchant data. */
+    libraryId: z
+      .string()
+      .regex(/^[a-z0-9-]{1,64}$/)
+      .optional(),
     kind: z.enum(['video', 'audio', 'image']),
     /** Length in project frames. */
     durationFrames: frames,

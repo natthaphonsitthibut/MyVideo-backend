@@ -10,6 +10,7 @@ import { EnvModule } from './config/env.module.js';
 import { DatabaseModule } from './db/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { LibraryModule } from './library/library.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { RendersModule } from './renders/renders.module.js';
 import { RunsModule } from './runs/runs.module.js';
@@ -57,6 +58,7 @@ export class AppModule {
         ClipsModule,
         ProjectsModule,
         RendersModule,
+        LibraryModule,
       ],
     };
   }

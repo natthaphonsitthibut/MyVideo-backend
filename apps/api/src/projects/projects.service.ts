@@ -47,14 +47,19 @@ export class ProjectsService {
         issues: r.errors.map((e) => ({ path: e.path, message: `${e.code}: ${e.message}` })),
       });
     }
-    const sourceIds = [...new Set(Object.values(r.project.assets).map((a) => a.sourceId))];
+    // library sounds (D-026) are product assets, not merchant data: only sources are checked for ownership
+    const sourceIds = [
+      ...new Set(Object.values(r.project.assets).flatMap((a) => (a.sourceId ? [a.sourceId] : []))),
+    ];
     if (sourceIds.length) {
       const own: { id: string }[] = await this.ds.query(
         `SELECT id FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[])`,
         [merchantId, sourceIds],
       );
       const mine = new Set(own.map((x) => x.id));
-      const missing = Object.entries(r.project.assets).filter(([, a]) => !mine.has(a.sourceId));
+      const missing = Object.entries(r.project.assets).filter(
+        ([, a]) => a.sourceId !== undefined && !mine.has(a.sourceId),
+      );
       if (missing.length) {
         throw new BadRequestException({
           error: 'invalid_project',

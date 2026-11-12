@@ -1,5 +1,9 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ApiErrorBody, ProjectRecord } from '@myvideo/contracts';
+import { SOUND_LIBRARY } from '@myvideo/contracts';
 import { seedMerchant } from '@myvideo/infra';
 import type { INestApplication } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
@@ -43,6 +47,7 @@ describe('project API with optimistic locking (real Postgres)', () => {
   let base: string;
   let cookieA: string;
   let cookieB: string;
+  let soundsDir: string;
 
   beforeAll(async () => {
     ds = await freshTestDb();
@@ -54,7 +59,8 @@ describe('project API with optimistic locking (real Postgres)', () => {
        VALUES ($1, $2, 'up-s01', 'S01', 's01.mp4', 1, 'x', 'ready')`,
       [sourceId, a],
     );
-    app = await createApp(testEnv());
+    soundsDir = await mkdtemp(join(tmpdir(), 'library-api-'));
+    app = await createApp(testEnv({ SOUND_LIBRARY_DIR: soundsDir }));
     await app.listen(0, '127.0.0.1');
     base = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
     cookieA = await loginCookie(app, A.email, A.password);
@@ -63,6 +69,7 @@ describe('project API with optimistic locking (real Postgres)', () => {
   afterAll(async () => {
     await app.close();
     await ds.destroy();
+    await rm(soundsDir, { recursive: true, force: true });
   });
 
   const call = (method: string, path: string, cookie: string, body?: unknown) =>
@@ -77,6 +84,60 @@ describe('project API with optimistic locking (real Postgres)', () => {
     expect(res.status).toBe(201);
     return (await res.json()) as ProjectRecord;
   }
+
+  it('streams authenticated library bytes and byte ranges, with normal missing-file errors', async () => {
+    const path = `/library/sounds/${SOUND_LIBRARY[0]!.id}`;
+    expect((await call('GET', path, '')).status).toBe(401);
+    const unknown = await call('GET', '/library/sounds/unknown', cookieA);
+    expect(unknown.status).toBe(404);
+    expect((await unknown.json()) as ApiErrorBody).toHaveProperty('error');
+    expect((await call('GET', path, cookieA)).status).toBe(404);
+    const bytes = Buffer.from([0, 1, 2, 3, 4, 5]); // Streaming plumbing only.
+    await writeFile(join(soundsDir, `${SOUND_LIBRARY[0]!.id}.wav`), bytes);
+    const full = await call('GET', path, cookieA);
+    expect(full.status).toBe(200);
+    expect(full.headers.get('content-type')).toBe('audio/wav');
+    expect(full.headers.get('cache-control')).toBe('private, max-age=31536000, immutable');
+    expect(full.headers.get('accept-ranges')).toBe('bytes');
+    expect(Buffer.from(await full.arrayBuffer())).toEqual(bytes);
+    const part = await fetch(`${base}${path}`, { headers: { cookie: cookieA, range: 'bytes=1-3' } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get('content-range')).toBe('bytes 1-3/6');
+    expect(part.headers.get('content-length')).toBe('3');
+    expect(Buffer.from(await part.arrayBuffer())).toEqual(Buffer.from([1, 2, 3]));
+    const outside = await fetch(`${base}${path}`, { headers: { cookie: cookieA, range: 'bytes=10-' } });
+    expect(outside.status).toBe(416);
+  });
+
+  it('saves library audio alongside owned sources and rejects an unknown library id', async () => {
+    const p = await create();
+    const d = draft();
+    const assetId = '01a1cd80-0000-7000-8000-000000000011';
+    const trackId = '01a1cd80-0000-7000-8000-000000000012';
+    const elementId = '01a1cd80-0000-7000-8000-000000000013';
+    const asset = { libraryId: SOUND_LIBRARY[0]!.id, kind: 'audio', durationFrames: 8, hasAudio: true };
+    (d.assets as Record<string, unknown>)[assetId] = asset;
+    (d.tracks as unknown[]).push({ id: trackId, kind: 'audio', elementIds: [elementId] });
+    d.elements[elementId] = {
+      id: elementId,
+      trackId,
+      type: 'audio',
+      assetId,
+      startFrame: 0,
+      durationFrames: 6,
+      sourceInFrame: 0,
+      playbackRate: 1,
+      volume: 0.5,
+      origin: 'user',
+    };
+    const saved = await call('PUT', `/projects/${p.id}`, cookieA, { baseVersion: 1, doc: d });
+    expect(saved.status).toBe(200);
+    expect(((await saved.json()) as ProjectRecord).doc.assets[assetId]).toEqual(asset);
+    asset.libraryId = 'unknown';
+    const rejected = await call('PUT', `/projects/${p.id}`, cookieA, { baseVersion: 2, doc: d });
+    expect(rejected.status).toBe(400);
+    expect(((await rejected.json()) as ApiErrorBody).error).toBe('invalid_project');
+  });
 
   it('create → get: version 1, server-owned id/merchantId, doc round-trips', async () => {
     const p = await create();

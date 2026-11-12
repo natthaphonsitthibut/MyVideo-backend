@@ -2,6 +2,7 @@ import { getMe, login, logout } from './http/auth.js';
 import { discardClip, generateClips, getClips } from './http/clips.js';
 import { getHealth } from './http/health.js';
 import { cancelJob, retryJob } from './http/jobs.js';
+import { getLibrarySound } from './http/library.js';
 import {
   createProject,
   getProject,
@@ -66,4 +67,5 @@ export const routes: RouteContract[] = [
   getClips,
   generateClips,
   discardClip,
+  getLibrarySound,
 ];
