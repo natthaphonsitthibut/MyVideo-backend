@@ -3,10 +3,12 @@
 import platform
 import sys
 
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
 from . import __version__
+from .settings import PathNotAllowed, Settings, checked_path
+from .vad import VadOptions, run_vad
 
 
 class Health(BaseModel):
@@ -16,7 +18,27 @@ class Health(BaseModel):
     python: str
 
 
-def create_app() -> FastAPI:
+class VadRequest(BaseModel):
+    path: str = Field(description="Local path of an audio file (16 kHz mono FLAC/WAV recommended)")
+    threshold: float = Field(0.5, ge=0.05, le=0.95)
+    min_silence_ms: int = Field(300, ge=50, le=5000)
+    min_speech_ms: int = Field(250, ge=50, le=5000)
+    speech_pad_ms: int = Field(100, ge=0, le=1000)
+
+
+class Segment(BaseModel):
+    start_ms: int
+    end_ms: int
+
+
+class VadResponse(BaseModel):
+    segments: list[Segment]
+    speech_ms: int
+    model: str
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    cfg = settings or Settings()
     app = FastAPI(title="MyVideo AI", version=__version__, docs_url=None, redoc_url=None)
 
     @app.get("/health")
@@ -26,6 +48,23 @@ def create_app() -> FastAPI:
             service="myvideo-ai",
             version=__version__,
             python=f"{platform.python_version()} ({sys.platform})",
+        )
+
+    @app.post("/vad")
+    def vad(req: VadRequest) -> VadResponse:
+        try:
+            audio = checked_path(cfg, req.path)
+        except PathNotAllowed as err:
+            raise HTTPException(status_code=400, detail=str(err)) from err
+        opts = VadOptions(req.threshold, req.min_speech_ms, req.min_silence_ms, req.speech_pad_ms)
+        try:
+            segs = run_vad(cfg, audio, opts)
+        except (RuntimeError, FileNotFoundError) as err:
+            raise HTTPException(status_code=500, detail=str(err)) from err
+        return VadResponse(
+            segments=[Segment(start_ms=s, end_ms=e) for s, e in segs],
+            speech_ms=sum(e - s for s, e in segs),
+            model=cfg.vad_model,
         )
 
     return app

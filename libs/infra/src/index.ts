@@ -4,6 +4,7 @@ export {
   type AiServiceClientOptions,
   AiServiceError,
   AiServiceUnavailableError,
+  VadResult,
 } from './ai/ai-service.client.js';
 export { hashPassword, verifyPassword } from './auth/password.js';
 export { type Env, EnvError, envSchema, loadEnv } from './config/env.js';

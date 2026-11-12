@@ -29,6 +29,13 @@ export const AiHealth = z.object({
 });
 export type AiHealth = z.infer<typeof AiHealth>;
 
+export const VadResult = z.object({
+  segments: z.array(z.object({ start_ms: z.number().int(), end_ms: z.number().int() })),
+  speech_ms: z.number().int(),
+  model: z.string(),
+});
+export type VadResult = z.infer<typeof VadResult>;
+
 export type AiServiceClientOptions = { baseUrl: string; timeoutMs?: number };
 
 /** Typed HTTP client for `services/ai`. Every call has a timeout; errors map to the two classes above. */
@@ -86,6 +93,16 @@ export class AiServiceClient {
       );
     }
     return parsed.data;
+  }
+
+  /** Speech segments (ms) of a local audio file (Silero VAD). */
+  vad(path: string, opts: { minSilenceMs?: number; signal?: AbortSignal } = {}): Promise<VadResult> {
+    return this.request('/vad', VadResult, {
+      method: 'POST',
+      body: { path, min_silence_ms: opts.minSilenceMs ?? 300 },
+      timeoutMs: 10 * 60_000,
+      signal: opts.signal,
+    });
   }
 
   health(timeoutMs = 2000): Promise<AiHealth> {
