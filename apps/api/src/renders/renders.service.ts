@@ -1,12 +1,6 @@
 import type { RenderSummary } from '@myvideo/contracts';
 import type { RenderPreset, StoragePort } from '@myvideo/domain';
-import {
-  type Env,
-  RenderEntity,
-  RenderRequestError,
-  requestRender,
-  type StageBundle,
-} from '@myvideo/infra';
+import { type Env, RenderEntity, RenderRequestError, requestRender, type StageBundle } from '@myvideo/infra';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ENV } from '../config/env.module.js';
@@ -101,7 +95,9 @@ export class RendersService {
       return this.get(merchantId, renderId);
     } catch (err) {
       if (err instanceof RenderRequestError)
-        throw new NotFoundException(err.reason === 'project_not_found' ? 'Project not found' : 'Version not found');
+        throw new NotFoundException(
+          err.reason === 'project_not_found' ? 'Project not found' : 'Version not found',
+        );
       throw err;
     }
   }
@@ -114,10 +110,10 @@ export class RendersService {
 
   async list(merchantId: string, projectId?: string): Promise<{ items: RenderSummary[] }> {
     if (projectId) {
-      const own: unknown[] = await this.ds.query(`SELECT 1 FROM projects WHERE id = $1 AND merchant_id = $2`, [
-        projectId,
-        merchantId,
-      ]);
+      const own: unknown[] = await this.ds.query(
+        `SELECT 1 FROM projects WHERE id = $1 AND merchant_id = $2`,
+        [projectId, merchantId],
+      );
       if (own.length === 0) throw new NotFoundException('Project not found');
     }
     const rows: Row[] = projectId

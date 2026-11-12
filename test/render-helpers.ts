@@ -220,6 +220,21 @@ export async function loudness(path: string): Promise<{ i: number; tp: number }>
   return { i: Number(j.input_i), tp: Number(j.input_tp) };
 }
 
+/** Per-frame MD5 of the decoded video ('v') or audio ('a') stream (`ffmpeg -f framemd5`). */
+export async function frameMd5(path: string, stream: 'v' | 'a'): Promise<string[]> {
+  const { stdout } = await exec(
+    'ffmpeg',
+    ['-v', 'error', '-i', path, '-map', `0:${stream}`, '-f', 'framemd5', '-'],
+    {
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  return stdout
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => l.split(',').pop()?.trim() ?? '');
+}
+
 export const isAlive = (pid: number) => {
   try {
     process.kill(pid, 0);

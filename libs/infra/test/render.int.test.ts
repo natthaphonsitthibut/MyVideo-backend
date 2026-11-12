@@ -14,6 +14,7 @@ import { createRunInTransaction, enqueueInTransaction } from '../src/jobs/job-st
 import { JobRunner } from '../src/jobs/runner.js';
 import { ChromiumRenderer } from '../src/render/chromium-renderer.js';
 import { renderHandler } from '../src/render/render-handler.js';
+import { requestRender as requestRenderRow } from '../src/render/request-render.js';
 import { loadStageBundle } from '../src/render/stage-bundle.js';
 import { LocalStorage } from '../src/storage/local-storage.js';
 
@@ -149,5 +150,76 @@ describe.skipIf(!S01_PATH)('render.video job on a real project', { timeout: 600_
     expect(isAlive(Number(pids.encoder))).toBe(false);
     const row = await ds.getRepository(RenderEntity).findOneByOrFail({ id: req.renderId });
     expect(row.outputKey).toBeNull();
+  });
+
+  it('an edit while a render is in flight: the render stays on its version, the new version gets its own', async () => {
+    const { renderer, runner: r } = await runner();
+    const req = await requestRender(60, renderer.stageVersion);
+    const before = await ds.getRepository(RenderEntity).findOneByOrFail({ id: req.renderId });
+    // the user saves version 2 (30 frames) before the worker picks the render up
+    const v2doc = s01Project(30);
+    v2doc.merchantId = merchantId;
+    v2doc.id = before.projectId;
+    for (const a of Object.values<any>(v2doc.assets)) a.sourceId = s.sourceId;
+    const [v2] = await ds.query(
+      `INSERT INTO project_versions (merchant_id, project_id, version, doc, reason) VALUES ($1, $2, 2, $3, 'save') RETURNING id`,
+      [merchantId, before.projectId, JSON.stringify(v2doc)],
+    );
+    await ds.query(`UPDATE projects SET current_version = 2 WHERE id = $1`, [before.projectId]);
+
+    expect(await r.run(req.jobId)).toBe('succeeded');
+    const done = await ds.getRepository(RenderEntity).findOneByOrFail({ id: req.renderId });
+    expect(done).toMatchObject({ projectVersionId: before.projectVersionId, projectVersion: 1 });
+    expect(done.meta).toMatchObject({ frames: 60 }); // version 1's length, not version 2's
+    const file = await storage.localPath(done.outputKey as string);
+    expect((await probeOutput(file.path)).video.frames).toBe(60);
+    await file.release();
+
+    // asking for the project now renders version 2 as a NEW render; version 1's stays cached
+    const next = await requestRenderRow(ds, {
+      merchantId,
+      projectId: before.projectId,
+      preset: 'standard',
+      stageVersion: renderer.stageVersion,
+    });
+    expect(next.outcome).toBe('created');
+    expect(next.renderId).not.toBe(req.renderId);
+    const row2 = await ds.getRepository(RenderEntity).findOneByOrFail({ id: next.renderId });
+    expect(row2).toMatchObject({ projectVersionId: v2.id, projectVersion: 2, outputKey: null });
+    const again = await requestRenderRow(ds, {
+      merchantId,
+      projectId: before.projectId,
+      version: 1,
+      preset: 'standard',
+      stageVersion: renderer.stageVersion,
+    });
+    expect(again).toEqual({ renderId: req.renderId, outcome: 'cached' });
+  });
+
+  it('a late second attempt for a finished render cannot replace its output', async () => {
+    const { renderer, runner: r } = await runner();
+    const req = await requestRender(30, renderer.stageVersion);
+    expect(await r.run(req.jobId)).toBe('succeeded');
+    const first = await ds.getRepository(RenderEntity).findOneByOrFail({ id: req.renderId });
+    // a duplicate job for the same render (e.g. an old retry still queued) runs afterwards
+    const dup = await ds.transaction(async (em) => {
+      const run = await createRunInTransaction(em, { merchantId, kind: 'render' });
+      const { job } = await enqueueInTransaction(em, {
+        merchantId,
+        workflowRunId: run.id,
+        type: 'render.video',
+        queue: 'render',
+        idempotencyKey: `late:${req.renderId}`,
+        payload: { renderId: req.renderId },
+      });
+      await em.query(`UPDATE jobs SET status = 'queued' WHERE id = $1`, [job.id]);
+      return job.id;
+    });
+    expect(await r.run(dup)).toBe('succeeded');
+    const [j] = await ds.query(`SELECT result FROM jobs WHERE id = $1`, [dup]);
+    expect(j.result).toMatchObject({ reused: true, outputKey: first.outputKey });
+    const after = await ds.getRepository(RenderEntity).findOneByOrFail({ id: req.renderId });
+    expect(after).toMatchObject({ outputKey: first.outputKey, sha256: first.sha256 });
+    expect(await storage.list(`m/${merchantId}/renders/${req.renderId}/`)).toEqual([first.outputKey]);
   });
 });

@@ -2,7 +2,14 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isAlive, probeOutput, S01_PATH, s01Project, sampleTreeRss } from '../../../test/render-helpers.js';
+import {
+  frameMd5,
+  isAlive,
+  probeOutput,
+  S01_PATH,
+  s01Project,
+  sampleTreeRss,
+} from '../../../test/render-helpers.js';
 import { ChromiumRenderer } from '../src/render/chromium-renderer.js';
 import { loadStageBundle } from '../src/render/stage-bundle.js';
 
@@ -38,6 +45,29 @@ describe.skipIf(!S01_PATH)('ChromiumRenderer on a real 15 s project', () => {
     expect(progress.at(-1)).toBe(1);
     expect(progress.every((v, i) => i === 0 || v >= (progress[i - 1] as number))).toBe(true);
     expect(stats.stageVersion).toMatch(/^[0-9a-f]{12}$/);
+  }, 600_000);
+
+  it('two renders of the same project are frame-identical (framemd5) with identical audio', async () => {
+    const project = s01Project(120);
+    const asset = Object.keys(project.assets)[0] as string;
+    const renderer = new ChromiumRenderer(await loadStageBundle());
+    const md5s: { video: string[]; audio: string[] }[] = [];
+    for (const name of ['d1.mp4', 'd2.mp4']) {
+      const file = join(out, name);
+      await renderer.render(
+        { project, media: { [asset]: S01_PATH as string }, preset: 'standard', outPath: file },
+        { signal: new AbortController().signal },
+      );
+      md5s.push({ video: await frameMd5(file, 'v'), audio: await frameMd5(file, 'a') });
+    }
+    const [a, b] = md5s as [(typeof md5s)[0], (typeof md5s)[0]];
+    const differing = a.video.filter((h, i) => h !== b.video[i]).length;
+    console.log(
+      `determinism: ${a.video.length} frames, ${differing} differ; audio packets equal: ${a.audio.join() === b.audio.join()}`,
+    );
+    expect(a.video).toHaveLength(120);
+    expect(differing).toBe(0);
+    expect(a.audio).toEqual(b.audio);
   }, 600_000);
 
   it('cancel mid-render kills Chromium and ffmpeg and removes the temp dir', async () => {

@@ -166,7 +166,11 @@ describe('render API (real Postgres; the render itself is the worker’s, tested
     );
     await ds.query(`UPDATE workflow_runs SET status = 'succeeded' WHERE id = $1`, [first.runId]);
     const runsBefore = await count(`SELECT count(*) AS n FROM workflow_runs`, []);
+    const t0 = performance.now();
     const cached = await requestRender();
+    const ms = performance.now() - t0;
+    console.log(`cached render request answered in ${ms.toFixed(1)} ms`);
+    expect(ms).toBeLessThan(300); // instant: no render, no run
     expect(cached).toMatchObject({
       id: first.id,
       status: 'ready',
