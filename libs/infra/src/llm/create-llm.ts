@@ -2,6 +2,7 @@ import type { LlmPort } from '@myvideo/domain';
 import type { Env } from '../config/env.js';
 import type { LlmAdapter } from './adapter.js';
 import { AnthropicApiAdapter } from './api-anthropic.js';
+import { OpenRouterApiAdapter } from './api-openrouter.js';
 import { ClaudeCliAdapter } from './local-agent-claude.js';
 import { type LlmCallStore, RulesOnlyLlm, StructuredLlm } from './structured-llm.js';
 
@@ -42,12 +43,15 @@ export function createLlmAdapter(env: LlmEnv): LlmAdapter | null {
       }
       return new ClaudeCliAdapter({ models, effort: env.LLM_EFFORT });
     case 'api':
+      if (!env.LLM_API_KEY) throw new LlmConfigError('LLM_MODE=api needs LLM_API_KEY');
+      if (env.LLM_PROVIDER === 'openrouter') {
+        return new OpenRouterApiAdapter({ apiKey: env.LLM_API_KEY, baseURL: env.LLM_BASE_URL, models });
+      }
       if (env.LLM_PROVIDER !== 'anthropic') {
         throw new LlmConfigError(
-          `LLM_PROVIDER=${env.LLM_PROVIDER ?? ''} has no adapter yet (supported: anthropic)`,
+          `LLM_PROVIDER=${env.LLM_PROVIDER ?? ''} has no adapter yet (supported: anthropic, openrouter)`,
         );
       }
-      if (!env.LLM_API_KEY) throw new LlmConfigError('LLM_MODE=api needs LLM_API_KEY');
       return new AnthropicApiAdapter({
         apiKey: env.LLM_API_KEY,
         baseURL: env.LLM_BASE_URL,
