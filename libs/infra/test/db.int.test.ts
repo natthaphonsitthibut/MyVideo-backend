@@ -26,6 +26,7 @@ describe('database baseline (real Postgres, test database)', () => {
   it('migrates up, down to empty, and up again', async () => {
     expect(await tables(ds)).toEqual([
       'analyses',
+      'brand_kits',
       'clip_suggestions',
       'detected_shots',
       'job_attempts',
@@ -52,6 +53,7 @@ describe('database baseline (real Postgres, test database)', () => {
     await ds.runMigrations();
     expect(await tables(ds)).toEqual([
       'analyses',
+      'brand_kits',
       'clip_suggestions',
       'detected_shots',
       'job_attempts',

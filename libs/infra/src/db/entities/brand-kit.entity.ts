@@ -1,4 +1,4 @@
-import { Check, Column, Entity, Index, JoinColumn, OneToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseRow } from './base.js';
 import { MerchantEntity } from './merchant.entity.js';
 
@@ -17,7 +17,8 @@ export class BrandKitEntity extends BaseRow {
   @Column({ name: 'merchant_id', type: 'uuid' })
   merchantId!: string;
 
-  @OneToOne(() => MerchantEntity, { onDelete: 'CASCADE', nullable: false })
+  // ManyToOne + the unique index above: one kit per merchant without a second UNIQUE constraint
+  @ManyToOne(() => MerchantEntity, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({ name: 'merchant_id', foreignKeyConstraintName: 'brand_kits_merchant_id_fkey' })
   merchant?: MerchantEntity;
 
