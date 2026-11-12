@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from . import __version__
 from .asr import AsrBusyError, WhisperServer
 from .settings import PathNotAllowed, Settings, checked_path
+from .thai import segment_words
 from .vad import VadOptions, run_vad
 
 
@@ -37,10 +38,18 @@ class AsrRequest(BaseModel):
     path: str = Field(description="Local audio chunk (16 kHz mono FLAC/WAV)")
 
 
+class WordOut(BaseModel):
+    text: str
+    start_ms: int
+    end_ms: int
+    kind: str
+
+
 class AsrSegmentOut(BaseModel):
     start_ms: int
     end_ms: int
     text: str
+    words: list[WordOut]
     avg_logprob: float | None
     no_speech_prob: float | None
 
@@ -113,7 +122,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return AsrResponse(
             language=r.language,
             duration_ms=r.duration_ms,
-            segments=[AsrSegmentOut(**s.__dict__) for s in r.segments],
+            segments=[
+                AsrSegmentOut(
+                    **s.__dict__, words=[WordOut(**w) for w in segment_words(s.text, s.start_ms, s.end_ms)]
+                )
+                for s in r.segments
+            ],
             model=r.model,
             engine=r.engine,
             elapsed_ms=r.elapsed_ms,

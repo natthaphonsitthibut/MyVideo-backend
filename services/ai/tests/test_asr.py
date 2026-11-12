@@ -52,6 +52,11 @@ def test_asr_on_real_thai_clip(tmp_path):
         assert starts == sorted(starts)
         assert all(s["end_ms"] > s["start_ms"] for s in segs)
         assert all(0 <= s["start_ms"] <= 55_000 for s in segs)
+        words = [w for s in segs for w in s["words"]]
+        assert len(words) > len(segs)
+        assert [w["start_ms"] for w in words] == sorted(
+            w["start_ms"] for w in words
+        )  # monotonic word timings
         thai = "".join(s["text"] for s in segs)
         assert sum("฀" <= ch <= "๿" for ch in thai) > 100  # real Thai text came back
         # warm model: a second request is faster (no load)

@@ -44,6 +44,15 @@ export const AsrResult = z.object({
       start_ms: z.number().int(),
       end_ms: z.number().int(),
       text: z.string(),
+      /** Display words (pythainlp), timings spread over the segment. */
+      words: z.array(
+        z.object({
+          text: z.string(),
+          start_ms: z.number().int(),
+          end_ms: z.number().int(),
+          kind: z.string(),
+        }),
+      ),
       avg_logprob: z.number().nullable(),
       no_speech_prob: z.number().nullable(),
     }),
