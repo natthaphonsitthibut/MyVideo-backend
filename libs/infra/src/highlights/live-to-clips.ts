@@ -22,6 +22,7 @@ import { loudnessFromPeaks, PEAKS_RECIPE, type PeaksJson } from '../media/peaks.
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import type { StageTextLayout } from '../render/text-layout.js';
+import { correctCaptions, selectCaptionSegments } from './caption-fix.js';
 import { layoutClipProject, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
@@ -354,11 +355,12 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       }
       const hook = suggestions.find((x) => x.kind === 'hook');
       const title = suggestions.find((x) => x.kind === 'title')?.text ?? source.title;
-      const clipWords = words.slice(s.startWord, s.endWord + 1).map((w) => ({
-        text: w.text,
-        startMs: w.startMs,
-        endMs: w.endMs,
-      }));
+      const clipWords = await correctCaptions(
+        llm,
+        selectCaptionSegments(segments, s.startWord, s.endWord),
+        product.name ? [product.name] : [],
+        { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
+      );
       const projectId = seededIds(`${job.workflowRunId}:${rank}:project`)();
       const layout = await openLayout();
       let project: Awaited<ReturnType<typeof layoutClipProject>>;

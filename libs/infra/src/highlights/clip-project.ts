@@ -25,7 +25,7 @@ export type ClipSourceInfo = {
   durationFrames: number;
   hasAudio: boolean;
 };
-export type ClipWordMs = { text: string; startMs: number; endMs: number };
+export type ClipWordMs = { text: string; startMs: number; endMs: number; origin?: 'ai'; asrText?: string };
 export type ClipPlan = {
   /** Cut on the source timeline (ms), already snapped to word boundaries (F04). */
   startMs: number;
@@ -113,7 +113,20 @@ export function buildClipProject(input: {
         startFrame: p.startFrame,
         durationFrames: Math.max(1, Math.min(p.durationFrames, durationFrames - p.startFrame)),
         origin: 'ai',
-        words: p.words,
+        // Layout may discard extra fields. Reattach provenance by text + absolute frame bounds,
+        // not by text alone (the same spoken word can occur repeatedly on different pages).
+        words: p.words.map((word) => {
+          const original = plan.words.find(
+            (w) =>
+              w.asrText !== undefined &&
+              w.text.trim() === word.text &&
+              Math.max(0, toFrame(w.startMs, source.fps) - sourceInFrame) ===
+                p.startFrame + word.startFrame &&
+              Math.min(durationFrames, toFrame(w.endMs, source.fps) - sourceInFrame) ===
+                p.startFrame + word.endFrame,
+          );
+          return original ? { ...word, origin: 'ai' as const, asrText: original.asrText } : word;
+        }),
         lines: p.lines,
         styleRef: CLIP_CAPTION_STYLE,
         transform: transform(CAPTION_Y),

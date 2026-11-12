@@ -112,6 +112,9 @@ export const CaptionWord = named(
   'CaptionWord',
   z.object({
     text: z.string().min(1).max(100),
+    /** Present only for an AI spelling correction; retain the original token for undo. */
+    origin: z.literal('ai').optional(),
+    asrText: z.string().min(1).optional(),
     /** Relative to the caption element's start. */
     startFrame: frame,
     endFrame: frame,
