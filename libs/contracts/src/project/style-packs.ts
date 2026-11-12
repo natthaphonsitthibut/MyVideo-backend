@@ -159,7 +159,8 @@ export const STYLE_PACKS: readonly StylePack[] = [
     hook: { seconds: 3, y: -480, fontWeight: 500, color: '#ffffff', animationIn: 'fade' },
     endCard: { seconds: 3, color: '#f5f0e6', background: '#1c1917e6', animationIn: 'fade' },
     cuts: { maxPauseMs: 650, keepPauseMs: 250, removeFillers: true, removeRestarts: true, maxShotMs: null },
-    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0.01 },
+    // one long shot is normal here: a slow, steady push keeps it alive (long monologue → push 100 → ~105 %)
+    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0.05 },
     graphics: {
       priceTag: null,
       productName: { color: '#f5f0e6', background: '#1c1917b3', animationIn: 'fade', y: -330 },
