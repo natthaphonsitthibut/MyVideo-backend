@@ -24,6 +24,7 @@ class Settings:
     vad_bin: str = field(
         default_factory=lambda: os.environ.get("WHISPER_VAD_BIN", "whisper-vad-speech-segments")
     )
+    whisper_server: str = field(default_factory=lambda: os.environ.get("WHISPER_SERVER", "whisper-server"))
     vad_model: str = field(default_factory=lambda: os.environ.get("VAD_MODEL", "ggml-silero-v6.2.0.bin"))
     asr_model: str = field(
         default_factory=lambda: os.environ.get("ASR_MODEL", "ggml-large-v3-turbo-q5_0.bin")

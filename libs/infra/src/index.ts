@@ -4,6 +4,7 @@ export {
   type AiServiceClientOptions,
   AiServiceError,
   AiServiceUnavailableError,
+  AsrResult,
   VadResult,
 } from './ai/ai-service.client.js';
 export { hashPassword, verifyPassword } from './auth/password.js';

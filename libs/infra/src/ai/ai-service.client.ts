@@ -36,6 +36,24 @@ export const VadResult = z.object({
 });
 export type VadResult = z.infer<typeof VadResult>;
 
+export const AsrResult = z.object({
+  language: z.string(),
+  duration_ms: z.number().int(),
+  segments: z.array(
+    z.object({
+      start_ms: z.number().int(),
+      end_ms: z.number().int(),
+      text: z.string(),
+      avg_logprob: z.number().nullable(),
+      no_speech_prob: z.number().nullable(),
+    }),
+  ),
+  model: z.string(),
+  engine: z.string(),
+  elapsed_ms: z.number().int(),
+});
+export type AsrResult = z.infer<typeof AsrResult>;
+
 export type AiServiceClientOptions = { baseUrl: string; timeoutMs?: number };
 
 /** Typed HTTP client for `services/ai`. Every call has a timeout; errors map to the two classes above. */
@@ -101,6 +119,16 @@ export class AiServiceClient {
       method: 'POST',
       body: { path, min_silence_ms: opts.minSilenceMs ?? 300 },
       timeoutMs: 10 * 60_000,
+      signal: opts.signal,
+    });
+  }
+
+  /** Transcribes one local audio chunk. 409 (busy) is retryable: the service runs one chunk at a time. */
+  asr(path: string, opts: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<AsrResult> {
+    return this.request('/asr', AsrResult, {
+      method: 'POST',
+      body: { path },
+      timeoutMs: opts.timeoutMs ?? 30 * 60_000,
       signal: opts.signal,
     });
   }

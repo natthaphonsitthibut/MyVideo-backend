@@ -2,11 +2,13 @@
 
 import platform
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from . import __version__
+from .asr import AsrBusyError, WhisperServer
 from .settings import PathNotAllowed, Settings, checked_path
 from .vad import VadOptions, run_vad
 
@@ -31,6 +33,27 @@ class Segment(BaseModel):
     end_ms: int
 
 
+class AsrRequest(BaseModel):
+    path: str = Field(description="Local audio chunk (16 kHz mono FLAC/WAV)")
+
+
+class AsrSegmentOut(BaseModel):
+    start_ms: int
+    end_ms: int
+    text: str
+    avg_logprob: float | None
+    no_speech_prob: float | None
+
+
+class AsrResponse(BaseModel):
+    language: str
+    duration_ms: int
+    segments: list[AsrSegmentOut]
+    model: str
+    engine: str
+    elapsed_ms: int
+
+
 class VadResponse(BaseModel):
     segments: list[Segment]
     speech_ms: int
@@ -39,7 +62,15 @@ class VadResponse(BaseModel):
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or Settings()
-    app = FastAPI(title="MyVideo AI", version=__version__, docs_url=None, redoc_url=None)
+    asr = WhisperServer(cfg)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        yield
+        asr.stop()  # never leave the model process behind
+
+    app = FastAPI(title="MyVideo AI", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.asr = asr
 
     @app.get("/health")
     def health() -> Health:
@@ -65,6 +96,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             segments=[Segment(start_ms=s, end_ms=e) for s, e in segs],
             speech_ms=sum(e - s for s, e in segs),
             model=cfg.vad_model,
+        )
+
+    @app.post("/asr")
+    def transcribe(req: AsrRequest) -> AsrResponse:
+        try:
+            audio = checked_path(cfg, req.path)
+        except PathNotAllowed as err:
+            raise HTTPException(status_code=400, detail=str(err)) from err
+        try:
+            r = asr.transcribe(audio)
+        except AsrBusyError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from err
+        except (RuntimeError, FileNotFoundError, OSError) as err:
+            raise HTTPException(status_code=500, detail=str(err)) from err
+        return AsrResponse(
+            language=r.language,
+            duration_ms=r.duration_ms,
+            segments=[AsrSegmentOut(**s.__dict__) for s in r.segments],
+            model=r.model,
+            engine=r.engine,
+            elapsed_ms=r.elapsed_ms,
         )
 
     return app
