@@ -153,9 +153,21 @@ export function editFrames(source: ClipSourceInfo, plan: ClipPlan, cut: JumpCutP
 }
 
 /**
- * Scale per shot: the style's cycle, or its punch-in where a price / call to action is spoken — never on two shots
- * in a row (a punch-in that never lets go stops meaning "this matters").
+ * Camera rules (D-037, after the user's "the picture bounces" report; measured on an AI clip: framing changed
+ * every 1–3 s between 1.0 / 1.08 / 1.2 and was zoomed 63 % of the time). Sources: research/notes/kitti-study.md
+ * §3.1 and critic item 19, skill `short-form-editing` §2.4.
  */
+export const CAMERA_RULES = {
+  /**
+   * Minimum time between two framing changes (skill `short-form-editing` §2.4: never two zoom changes within ~2 s;
+   * 2.5 s left almost no spoken price long enough for a punch-in).
+   */
+  holdSeconds: 2,
+  /** Share of the clip that may be zoomed in. */
+  maxZoomShare: 0.2,
+} as const;
+
+/** Scale per shot (see `segmentShots`). */
 export function segmentScales(
   style: StylePack,
   segments: readonly EditSegmentFrames[],
@@ -164,33 +176,74 @@ export function segmentScales(
   return segmentShots(style, segments, minFrames).map((s) => s.scale);
 }
 
-/** Scale per shot plus which key moment (price / call to action) a punch-in shot marks. */
+export type Shot = {
+  scale: number;
+  /** The key moment a punch-in marks (the camera moved for it). */
+  punch: 'price' | 'cta' | null;
+  /** The key moment spoken in this shot, whether or not the camera moved (sound effects follow the words). */
+  moment: 'price' | 'cta' | null;
+};
+
+/**
+ * Framing per shot. The base framing (1.0) most of the time; the style's punch-in only where a price / call to
+ * action is spoken, and only when ALL hold:
+ *  - the shot starts at a jump cut (the source jumps) — a continuous take never re-frames mid-sentence;
+ *  - ≥ `holdSeconds` since the last framing change, and the punch can be released at a later jump cut that is
+ *    again ≥ `holdSeconds` away (or the clip ends);
+ *  - the zoomed stretch keeps the clip within `maxZoomShare`;
+ *  - not within `punchGap` shots of the previous punch, and the shot is at least `minFrames` long.
+ * From a zoom the only change is back to 1.0 (never zoom → other zoom).
+ */
 export function segmentShots(
   style: StylePack,
   segments: readonly EditSegmentFrames[],
-  /** Shorter pieces keep the previous framing (≈ 1 s). */
+  /** Pieces shorter than this never change framing (≈ 1 s at the clip fps). */
   minFrames = 30,
-): { scale: number; punch: 'price' | 'cta' | null }[] {
-  const cycle = style.zoom.cycle.length > 0 ? style.zoom.cycle : [1];
-  // shots since the last punch-in: a punch-in only means "this matters" when it is rare
-  let since = Number.POSITIVE_INFINITY;
-  let framing = 0;
-  let previous: { scale: number; punch: 'price' | 'cta' | null } | undefined;
-  return segments.map((s) => {
-    // a piece under a second keeps the framing before it: a re-frame that short reads as a glitch
-    if (previous && s.durationFrames < minFrames) {
-      since++;
-      return { scale: previous.scale, punch: null };
+): Shot[] {
+  const fpsFrames = minFrames; // callers pass one second of frames
+  const hold = Math.round(CAMERA_RULES.holdSeconds * fpsFrames);
+  const total = segments.reduce((n, s) => n + s.durationFrames, 0);
+  const budget = Math.floor(total * CAMERA_RULES.maxZoomShare);
+  const isJump = (i: number) => {
+    const prev = segments[i - 1];
+    const cur = segments[i];
+    return !!prev && !!cur && prev.sourceInFrame + prev.durationFrames !== cur.sourceInFrame;
+  };
+  /** Frames from shot `i` until the first later jump cut at least `hold` after it (or the clip end). */
+  const stretchFrom = (i: number) => {
+    const start = segments[i]?.startFrame ?? 0;
+    for (let j = i + 1; j < segments.length; j++) {
+      const at = segments[j]?.startFrame ?? 0;
+      if (isJump(j) && at - start >= hold && (segments[j]?.durationFrames ?? 0) >= minFrames) return at - start;
     }
-    const kind =
-      style.zoom.punchIn !== null && since >= Math.max(1, style.zoom.punchGap)
-        ? keyMomentKind(s.words)
-        : null;
-    since = kind !== null ? 1 : since + 1;
-    previous = kind
-      ? { scale: style.zoom.punchIn as number, punch: kind }
-      : { scale: cycle[framing++ % cycle.length] ?? 1, punch: null };
-    return previous;
+    return total - start;
+  };
+  let scale = 1;
+  let lastChange = 0;
+  let zoomed = 0;
+  let sincePunch = Number.POSITIVE_INFINITY;
+  return segments.map((s, i) => {
+    const moment = keyMomentKind(s.words);
+    const canChange = i > 0 && isJump(i) && s.durationFrames >= minFrames && s.startFrame - lastChange >= hold;
+    let punch: Shot['punch'] = null;
+    if (canChange && scale !== 1) {
+      scale = 1;
+      lastChange = s.startFrame;
+    } else if (
+      canChange &&
+      moment !== null &&
+      style.zoom.punchIn !== null &&
+      sincePunch >= Math.max(1, style.zoom.punchGap) &&
+      zoomed + stretchFrom(i) <= budget
+    ) {
+      scale = style.zoom.punchIn;
+      punch = moment;
+      lastChange = s.startFrame;
+      sincePunch = 0;
+    }
+    sincePunch++;
+    if (scale > 1) zoomed += s.durationFrames;
+    return { scale, punch, moment };
   });
 }
 
@@ -226,7 +279,7 @@ export function buildClipProject(input: {
   ];
   const shots = edit
     ? segmentShots(edit.style, segments, Math.round(source.fps.num / source.fps.den))
-    : segments.map(() => ({ scale: 1, punch: null as 'price' | 'cta' | null }));
+    : segments.map((): Shot => ({ scale: 1, punch: null, moment: null }));
   const scales = shots.map((s) => s.scale);
   const assetId = newId();
   const videoTrack = newId();
@@ -235,18 +288,31 @@ export function buildClipProject(input: {
   const transform = (y: number, scale = 1) => ({ x: 0, y, scale, rotation: 0 });
   const elements: Project['elements'] = {};
   const drift = edit?.style.zoom.drift ?? 0;
+  // one slow push-in per RUN of shots with the same framing (not per shot: restarting the push at every cut made
+  // the picture snap back at each cut); rounded to keep the JSON readable
+  const runs: { from: number; frames: number }[] = [];
+  segments.forEach((seg, i) => {
+    const last = runs.at(-1);
+    if (last && i > 0 && scales[i] === scales[i - 1]) last.frames += seg.durationFrames;
+    else runs.push({ from: seg.startFrame, frames: seg.durationFrames });
+  });
+  const runOf = (frame: number) => runs.findLast((r) => r.from <= frame) ?? { from: 0, frames: 1 };
+  const pushAt = (scale: number, frame: number) => {
+    const r = runOf(frame);
+    const t = r.frames > 1 ? (frame - r.from) / (r.frames - 1) : 0;
+    return Math.round(scale * (1 + drift * t) * 10_000) / 10_000;
+  };
   const videoIds = segments.map((seg, i) => {
     const id = newId();
     const scale = scales[i] ?? 1;
-    // one-way push-in over the segment (never back out inside a shot); rounded to keep the JSON readable
-    const pushed = Math.round(scale * (1 + drift) * 10_000) / 10_000;
+    const lastFrame = seg.startFrame + seg.durationFrames - 1;
     elements[id] = {
       ...(drift > 0 && seg.durationFrames > 1
         ? {
             keyframes: {
               'transform.scale': [
-                { frame: 0, value: scale, easing: 'linear' as const },
-                { frame: seg.durationFrames - 1, value: pushed, easing: 'linear' as const },
+                { frame: 0, value: pushAt(scale, seg.startFrame), easing: 'linear' as const },
+                { frame: seg.durationFrames - 1, value: pushAt(scale, lastFrame), easing: 'linear' as const },
               ],
             },
           }
@@ -461,12 +527,13 @@ export function buildClipProject(input: {
     const cutsUntil = endCardStart === undefined ? durationFrames : endCardStart - Math.round(fps / 2);
     let prices = 0;
     segments.forEach((seg, i) => {
-      const punch = shots[i]?.punch ?? null;
-      if (punch === 'price') {
+      // the words decide the sound, not the camera (a price said too soon for a re-frame still gets its sound)
+      const moment = shots[i]?.moment ?? null;
+      if (moment === 'price') {
         // a price sound only means something the first time or two
         if (prices < (edit.style.sfx?.maxPrice ?? 0)) moments.push({ frame: seg.startFrame, kind: 'price' });
         prices++;
-      } else if (punch) moments.push({ frame: seg.startFrame, kind: punch });
+      } else if (moment) moments.push({ frame: seg.startFrame, kind: moment });
       else if (i > 0 && seg.startFrame < cutsUntil && (edit.style.sfx?.cut.length ?? 0) > 0)
         moments.push({ frame: seg.startFrame, kind: 'cut' });
     });

@@ -2956,6 +2956,7 @@
               "build_clips",
               "review_to_video",
               "render",
+              "purge",
               "system_test"
             ],
             "type": "string"

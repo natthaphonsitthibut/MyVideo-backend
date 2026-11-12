@@ -45,11 +45,13 @@ export type StylePack = {
     maxShotMs: number | null;
   };
   /**
-   * Camera. `cycle`: framing per shot, alternated at cuts (a light change hides a jump cut); `punchIn`: tighter
-   * framing for the shot where a price or call to action is spoken, at most once per `punchGap` shots; `drift`:
-   * slow one-way push-in over each shot (fraction of its scale) so the picture never looks frozen.
+   * Camera (rules in `segmentShots`, D-037): the base framing most of the time; `punchIn` = tighter framing for the
+   * shot where a price or call to action is spoken, at most once per `punchGap` shots and only where the camera
+   * rules allow it (jump cut, 2.5 s hold, ≤ 20 % zoomed); `drift` = one slow push-in over each run of shots with
+   * the same framing (fraction of its scale) so the picture never looks frozen. There is no per-cut alternating
+   * framing any more: it made the picture bounce (user report, measured 2026-11-13).
    */
-  zoom: { cycle: number[]; punchIn: number | null; punchGap: number; drift: number };
+  zoom: { punchIn: number | null; punchGap: number; drift: number };
   /**
    * Motion graphics, each tied to the words: `priceTag` pops up with a spoken price (the seller's own words, at most
    * `maxPerClip`); `productName` = the merchant's product name as a lower-third after the hook; `cta` = a call-to-
@@ -99,8 +101,8 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'pop',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#111111e6', animationIn: 'pop' },
-    cuts: { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true, removeRestarts: true, maxShotMs: 4500 },
-    zoom: { cycle: [1, 1.08], punchIn: 1.2, punchGap: 3, drift: 0.012 },
+    cuts: { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.2, punchGap: 3, drift: 0.012 },
     graphics: {
       priceTag: { color: '#111111', background: '#facc15', animationIn: 'pop', y: 80, maxPerClip: 2 },
       productName: { color: '#ffffff', background: '#111111cc', animationIn: 'slide-up', y: -330 },
@@ -132,8 +134,8 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'slide-up',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#000000cc', animationIn: 'slide-up' },
-    cuts: { maxPauseMs: 450, keepPauseMs: 150, removeFillers: true, removeRestarts: true, maxShotMs: 6500 },
-    zoom: { cycle: [1, 1.05], punchIn: 1.12, punchGap: 4, drift: 0.008 },
+    cuts: { maxPauseMs: 450, keepPauseMs: 150, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.12, punchGap: 4, drift: 0.008 },
     graphics: {
       priceTag: { color: '#111111', background: '#ffffffee', animationIn: 'slide-up', y: 120, maxPerClip: 1 },
       productName: { color: '#ffffff', background: '#000000aa', animationIn: 'slide-up', y: -330 },
@@ -160,7 +162,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     endCard: { seconds: 3, color: '#f5f0e6', background: '#1c1917e6', animationIn: 'fade' },
     cuts: { maxPauseMs: 650, keepPauseMs: 250, removeFillers: true, removeRestarts: true, maxShotMs: null },
     // one long shot is normal here: a slow, steady push keeps it alive (long monologue → push 100 → ~105 %)
-    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0.05 },
+    zoom: { punchIn: null, punchGap: 0, drift: 0.05 },
     graphics: {
       priceTag: null,
       productName: { color: '#f5f0e6', background: '#1c1917b3', animationIn: 'fade', y: -330 },
@@ -192,8 +194,8 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'bounce',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#7c3aede6', animationIn: 'bounce' },
-    cuts: { maxPauseMs: 220, keepPauseMs: 60, removeFillers: true, removeRestarts: true, maxShotMs: 3500 },
-    zoom: { cycle: [1, 1.1], punchIn: 1.22, punchGap: 2, drift: 0.015 },
+    cuts: { maxPauseMs: 220, keepPauseMs: 60, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.22, punchGap: 2, drift: 0.015 },
     graphics: {
       priceTag: { color: '#ffffff', background: '#ec4899', animationIn: 'bounce', y: 100, maxPerClip: 2 },
       productName: null,
@@ -226,7 +228,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     },
     endCard: null,
     cuts: { maxPauseMs: 800, keepPauseMs: 300, removeFillers: false, removeRestarts: false, maxShotMs: null },
-    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0 },
+    zoom: { punchIn: null, punchGap: 0, drift: 0 },
     graphics: { priceTag: null, productName: null, cta: null },
     sfx: null,
   },

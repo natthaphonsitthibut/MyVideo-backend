@@ -1,6 +1,6 @@
 import { librarySound, STYLE_PACKS, stylePack, validateProject } from '@myvideo/contracts';
 import { describe, expect, it } from 'vitest';
-import { buildClipProject, editFrames, segmentScales } from './clip-project.js';
+import { buildClipProject, CAMERA_RULES, editFrames, segmentScales, segmentShots } from './clip-project.js';
 import { planJumpCuts } from './jump-cuts.js';
 
 const source = {
@@ -75,31 +75,73 @@ describe('style-pack edit of a clip', () => {
     expect(project.meta.styleId).toBe('sale-fast');
   });
 
-  it('zoom cycles per segment and punches in where a price is spoken', () => {
-    const { project, style } = build('sale-fast');
+  it('the price shot 2 s in keeps the base framing (too soon after the start to re-frame)', () => {
+    const { project } = build('sale-fast');
     const scales = Object.values(project.elements)
       .filter((e) => e.type === 'video')
       .map((v) => (v as { transform: { scale: number } }).transform.scale);
-    // segment 1 "ตัว นี้ สวย" → cycle[0]; segment 2 "80 บาท พิมพ์" → punch-in
-    expect(scales).toEqual([style.zoom.cycle[0], style.zoom.punchIn]);
-    // a zoomed shot moves down so the top (face) is kept, and never far enough to show an edge
-    const zoomed = Object.values(project.elements).find(
-      (e) => e.type === 'video' && (e as { transform: { scale: number } }).transform.scale > 1,
-    ) as { transform: { scale: number; y: number } };
+    expect(scales).toEqual([1, 1]);
+  });
+
+  it('a punch-in on a spoken price keeps the face: the zoomed shot moves down, never showing an edge', () => {
+    const style = stylePack('sale-fast');
+    // 3 s of talk, a pause, the price (2 s), a pause, 8 s more talk → the price shot starts 3 s in and is
+    // released at the next jump cut 2 s later; zoomed 2 s of ~13 s stays within the 20 % share
+    const plan2 = {
+      startMs: 10_000,
+      endMs: 27_000,
+      title: 'มัดย้อม',
+      words: [
+        w('ตัว', 10_000, 11_000),
+        w('นี้', 11_000, 12_000),
+        w('สวย', 12_000, 13_000),
+        w('80', 15_000, 16_000),
+        w('บาท', 16_000, 17_000),
+        w('ผ้า', 19_000, 23_000),
+        w('นุ่ม', 23_000, 27_000),
+      ],
+    };
+    const speech2 = [
+      { startMs: 10_000, endMs: 13_000 },
+      { startMs: 15_000, endMs: 17_000 },
+      { startMs: 19_000, endMs: 27_000 },
+    ];
+    const cut = planJumpCuts({ startMs: plan2.startMs, endMs: plan2.endMs }, plan2.words, speech2, style.cuts);
+    const frames = editFrames(source, plan2, cut);
+    const project = buildClipProject({
+      projectId: '00000000-0000-4000-8000-0000000000aa',
+      merchantId: '00000000-0000-4000-8000-0000000000bb',
+      source,
+      plan: plan2,
+      pages: [],
+      edit: { style, cut },
+      seed: 'test',
+    });
+    expect(frames.segments).toHaveLength(3);
+    const videos = Object.values(project.elements).filter((e) => e.type === 'video') as {
+      transform: { scale: number; y: number };
+    }[];
+    expect(videos.map((v) => v.transform.scale)).toEqual([1, style.zoom.punchIn, 1]);
+    const zoomed = videos[1] as { transform: { scale: number; y: number } };
     const topCrop = (zoomed.transform.scale - 1) * (1920 / 2);
     expect(zoomed.transform.y).toBeGreaterThan(0);
     expect(zoomed.transform.y).toBeLessThan(topCrop);
   });
 
-  it('camera pushes in one way inside each segment, never back out; wider again only at a cut', () => {
+  it('camera drift is one slow push across shots of the same framing: no snap back at a cut', () => {
     const { project, style } = build('sale-fast');
-    const videos = Object.values(project.elements).filter((e) => e.type === 'video');
+    const videos = Object.values(project.elements)
+      .filter((e) => e.type === 'video')
+      .sort((a, b) => a.startFrame - b.startFrame);
+    const values = videos.flatMap((v) => (v.keyframes?.['transform.scale'] ?? []).map((k) => k.value));
+    // monotonic over the whole run (both shots keep the base framing here), total push = the style's drift
+    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThanOrEqual(values[i - 1] ?? 0);
+    expect(values[0]).toBe(1);
+    expect(values.at(-1)).toBeCloseTo(1 + style.zoom.drift, 4);
     for (const v of videos) {
       const k = v.keyframes?.['transform.scale'];
-      expect(k).toHaveLength(2);
       expect(k?.[0]?.frame).toBe(0);
       expect(k?.[1]?.frame).toBe(v.durationFrames - 1);
-      expect(k?.[1]?.value).toBeCloseTo((k?.[0]?.value ?? 0) * (1 + style.zoom.drift), 3);
     }
     // the style without drift adds no keyframes
     const plain = Object.values(build('simple').project.elements).filter((e) => e.type === 'video');
@@ -248,17 +290,18 @@ describe('style-pack edit of a clip', () => {
 
   it('a piece shorter than a second keeps the framing before it (a re-frame that short reads as a glitch)', () => {
     const style = stylePack('sale-fast');
-    const seg = (startFrame: number, durationFrames: number, words: string[] = []) => ({
-      sourceInFrame: startFrame,
-      startFrame,
-      durationFrames,
-      words,
-    });
-    // real case (S01a sale-fast): a 0.2-s piece between two removals
-    const scales = segmentScales(style, [seg(0, 84), seg(84, 6), seg(90, 120), seg(210, 90, ['80', 'บาท'])]);
-    expect(scales[1]).toBe(scales[0]);
-    expect(scales[2]).not.toBe(scales[1]);
+    // real case (S01a sale-fast): a 0.2-s piece between two removals, then a price 3 s later
+    const segs = shotsOf([
+      { frames: 84 },
+      { frames: 6, gap: 20, words: ['80', 'บาท'] },
+      { frames: 120, gap: 20 },
+      { frames: 90, gap: 20, words: ['80', 'บาท'] },
+      { frames: 600, gap: 20 },
+    ]);
+    const scales = segmentScales(style, segs);
+    expect(scales[1]).toBe(scales[0]); // the 0.2-s piece never re-frames, even on a price
     expect(scales[3]).toBe(style.zoom.punchIn);
+    expect(scales[4]).toBe(1);
   });
 
   it('simple has no sound effects; premium only its quiet title / end-card sounds', () => {
@@ -272,16 +315,71 @@ describe('style-pack edit of a clip', () => {
     expect(ids).toEqual(['sting-minimal-short']);
   });
 
-  it('segmentScales: punch-ins at most once per punchGap shots; other shots alternate the framing', () => {
-    const shot = (words: string[]) => ({ sourceInFrame: 0, startFrame: 0, durationFrames: 60, words });
-    const price = ['80', 'บาท'];
-    const style = stylePack('sale-fast'); // punchGap 3
-    expect(segmentScales(style, [shot(price), shot(price), shot(['สวย']), shot(price)])).toEqual([
-      style.zoom.punchIn,
-      style.zoom.cycle[0],
-      style.zoom.cycle[1],
-      style.zoom.punchIn,
-    ]);
+  /** Shots laid end to end on the output; `gap` = source frames skipped before the shot (0 = continuous take). */
+  function shotsOf(spec: { frames: number; gap?: number; words?: string[] }[]) {
+    let out = 0;
+    let src = 1000;
+    return spec.map((s) => {
+      src += s.gap ?? 0;
+      const seg = { sourceInFrame: src, startFrame: out, durationFrames: s.frames, words: s.words ?? [] };
+      out += s.frames;
+      src += s.frames;
+      return seg;
+    });
+  }
+  const changes = (scales: number[], segs: { startFrame: number }[]) =>
+    scales.flatMap((s, i) => (i > 0 && s !== scales[i - 1] ? [segs[i]?.startFrame ?? 0] : []));
+
+  it('camera (user report "เด้งไปเด้งมา"): framing changes only at a jump cut, never within 2 s of the last', () => {
+    const style = stylePack('sale-fast');
+    const hold = CAMERA_RULES.holdSeconds * 30;
+    // 12 jump cuts 1.5 s apart (real sale-fast rhythm on S01a), 30 fps → at most one change per `hold` frames
+    const segs = shotsOf(
+      Array.from({ length: 12 }, (_, i) => ({ frames: 45, gap: 30, words: i % 2 ? ['80', 'บาท'] : [] })),
+    );
+    const scales = segmentScales(style, segs);
+    const at = changes(scales, segs);
+    expect(at.length).toBeGreaterThan(0); // the rule limits zooms, it does not forbid them
+    for (let i = 1; i < at.length; i++) expect((at[i] ?? 0) - (at[i - 1] ?? 0)).toBeGreaterThanOrEqual(hold);
+    // a continuous take split into pieces (no source jump) never changes framing
+    const take = shotsOf([{ frames: 90 }, { frames: 90, gap: 0 }, { frames: 90, gap: 0 }]);
+    expect(new Set(segmentScales(style, take)).size).toBe(1);
+  });
+
+  it('camera: zoomed for at most 20 % of the clip, and always back to the base framing between two zooms', () => {
+    for (const id of STYLE_PACKS.map((s) => s.id)) {
+      const style = stylePack(id);
+      const segs = shotsOf(
+        Array.from({ length: 20 }, (_, i) => ({ frames: 60, gap: 20, words: i % 3 === 0 ? ['80', 'บาท'] : [] })),
+      );
+      const scales = segmentScales(style, segs);
+      const total = segs.reduce((n, s) => n + s.durationFrames, 0);
+      const zoomed = segs.reduce((n, s, i) => n + ((scales[i] ?? 1) > 1 ? s.durationFrames : 0), 0);
+      expect(zoomed / total, id).toBeLessThanOrEqual(0.2);
+      expect(scales[0], id).toBe(1); // the hook shot is not cropped
+      for (let i = 1; i < scales.length; i++) {
+        const a = scales[i - 1] ?? 1;
+        const b = scales[i] ?? 1;
+        if (a !== b) expect(a === 1 || b === 1, `${id}: ${a} → ${b} jumps between two zooms`).toBe(true);
+      }
+    }
+  });
+
+  it('camera: a punch-in lands on a spoken price at a jump cut when the hold allows it', () => {
+    const style = stylePack('sale-fast');
+    const segs = shotsOf([{ frames: 90 }, { frames: 90, gap: 40, words: ['80', 'บาท'] }, { frames: 300, gap: 40 }]);
+    const shots = segmentShots(style, segs);
+    expect(shots.map((s) => s.scale)).toEqual([1, style.zoom.punchIn, 1]);
+    expect(shots[1]?.punch).toBe('price');
+  });
+
+  it('price / call-to-action moments are marked even when the camera does not move (sound follows the words)', () => {
+    const style = stylePack('sale-fast');
+    // the price shot starts 1 s in: too soon for a re-frame, still a price moment
+    const segs = shotsOf([{ frames: 30 }, { frames: 60, gap: 40, words: ['80', 'บาท'] }]);
+    const shots = segmentShots(style, segs);
+    expect(shots.map((s) => s.scale)).toEqual([1, 1]);
+    expect(shots.map((s) => s.moment)).toEqual([null, 'price']);
   });
 
   it('segmentScales: no punch-in for a style without one', () => {
