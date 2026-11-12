@@ -31,6 +31,8 @@ export {
   JobEventEntity,
   MediaAssetEntity,
   MerchantEntity,
+  ProjectEntity,
+  ProjectVersionEntity,
   SessionEntity,
   TranscriptChunkEntity,
   TranscriptEditEntity,

@@ -1,6 +1,13 @@
 import { getMe, login, logout } from './http/auth.js';
 import { getHealth } from './http/health.js';
 import { cancelJob, retryJob } from './http/jobs.js';
+import {
+  createProject,
+  getProject,
+  listProjectVersions,
+  restoreProjectVersion,
+  saveProject,
+} from './http/projects.js';
 import { createTestRun, getRun, listRuns, runEvents } from './http/runs.js';
 import {
   getSource,
@@ -42,4 +49,9 @@ export const routes: RouteContract[] = [
   listTranscriptSegments,
   editTranscriptWord,
   revertTranscriptWord,
+  createProject,
+  getProject,
+  saveProject,
+  listProjectVersions,
+  restoreProjectVersion,
 ];

@@ -1,0 +1,173 @@
+import {
+  type ProjectDraft,
+  type ProjectRecord,
+  type ProjectVersionList,
+  validateProject,
+} from '@myvideo/contracts';
+import { uuidv7 } from '@myvideo/domain';
+import { ProjectEntity, ProjectVersionEntity } from '@myvideo/infra';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { DataSource, type EntityManager } from 'typeorm';
+import type { z } from 'zod';
+
+type VersionList = z.infer<typeof ProjectVersionList>;
+
+const CONFLICT = 'โปรเจกต์นี้ถูกบันทึกจากที่อื่นไปแล้ว โหลดเวอร์ชันล่าสุดก่อนแล้วค่อยแก้ต่อ (version conflict)';
+
+@Injectable()
+export class ProjectsService {
+  constructor(@Inject(DataSource) private readonly ds: DataSource) {}
+
+  /**
+   * Full validation of a document before it is stored: the pure validator plus merchant ownership of every
+   * source the assets point to (ARCHITECTURE §6: every referenced asset belongs to the merchant).
+   */
+  private async checked(merchantId: string, projectId: string, draft: ProjectDraft) {
+    const r = validateProject({ ...draft, id: projectId, merchantId });
+    if (!r.ok) {
+      throw new BadRequestException({
+        error: 'invalid_project',
+        message: r.errors[0]?.message ?? 'invalid project',
+        issues: r.errors.map((e) => ({ path: e.path, message: `${e.code}: ${e.message}` })),
+      });
+    }
+    const sourceIds = [...new Set(Object.values(r.project.assets).map((a) => a.sourceId))];
+    if (sourceIds.length) {
+      const own: { id: string }[] = await this.ds.query(
+        `SELECT id FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[])`,
+        [merchantId, sourceIds],
+      );
+      const mine = new Set(own.map((x) => x.id));
+      const missing = Object.entries(r.project.assets).filter(([, a]) => !mine.has(a.sourceId));
+      if (missing.length) {
+        throw new BadRequestException({
+          error: 'invalid_project',
+          message: 'project uses a video that does not exist',
+          issues: missing.map(([k, a]) => ({
+            path: `assets.${k}.sourceId`,
+            message: `missing_asset: source ${a.sourceId} does not exist`,
+          })),
+        });
+      }
+    }
+    return r.project;
+  }
+
+  private async record(
+    em: EntityManager | DataSource,
+    merchantId: string,
+    id: string,
+  ): Promise<ProjectRecord> {
+    const p = await em.getRepository(ProjectEntity).findOneBy({ id, merchantId });
+    if (!p) throw new NotFoundException('Project not found');
+    const v = await em
+      .getRepository(ProjectVersionEntity)
+      .findOneByOrFail({ projectId: id, version: p.currentVersion });
+    return {
+      id: p.id,
+      title: p.title,
+      version: p.currentVersion,
+      doc: v.doc as ProjectRecord['doc'],
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+    };
+  }
+
+  async create(merchantId: string, title: string, draft: ProjectDraft): Promise<ProjectRecord> {
+    const id = uuidv7();
+    const doc = await this.checked(merchantId, id, draft);
+    return this.ds.transaction(async (em) => {
+      await em.getRepository(ProjectEntity).insert({ id, merchantId, title, currentVersion: 1 });
+      await em
+        .getRepository(ProjectVersionEntity)
+        .insert({ merchantId, projectId: id, version: 1, doc, reason: 'create', restoredFrom: null });
+      return this.record(em, merchantId, id);
+    });
+  }
+
+  get(merchantId: string, id: string): Promise<ProjectRecord> {
+    return this.record(this.ds, merchantId, id);
+  }
+
+  /**
+   * Optimistic lock: the version only moves if it is still `baseVersion` (one conditional UPDATE, so of two
+   * concurrent saves on the same base exactly one row update succeeds; the other gets 409).
+   */
+  private async append(
+    merchantId: string,
+    id: string,
+    baseVersion: number,
+    doc: Record<string, unknown>,
+    reason: 'save' | 'restore',
+    restoredFrom: number | null,
+  ): Promise<ProjectRecord> {
+    return this.ds.transaction(async (em) => {
+      const [rows]: [{ current_version: number }[], number] = await em.query(
+        `UPDATE projects SET current_version = current_version + 1, updated_at = now()
+          WHERE id = $1 AND merchant_id = $2 AND current_version = $3 RETURNING current_version`,
+        [id, merchantId, baseVersion],
+      );
+      const next = rows[0]?.current_version;
+      if (next === undefined) {
+        const exists = await em.getRepository(ProjectEntity).existsBy({ id, merchantId });
+        if (!exists) throw new NotFoundException('Project not found');
+        throw new ConflictException({ error: 'version_conflict', message: CONFLICT });
+      }
+      await em
+        .getRepository(ProjectVersionEntity)
+        .insert({ merchantId, projectId: id, version: next, doc: doc as never, reason, restoredFrom });
+      return this.record(em, merchantId, id);
+    });
+  }
+
+  async save(
+    merchantId: string,
+    id: string,
+    baseVersion: number,
+    draft: ProjectDraft,
+  ): Promise<ProjectRecord> {
+    // another merchant's project is simply "not found" — before any validation detail can leak
+    if (!(await this.ds.getRepository(ProjectEntity).existsBy({ id, merchantId })))
+      throw new NotFoundException('Project not found');
+    const doc = await this.checked(merchantId, id, draft);
+    return this.append(merchantId, id, baseVersion, doc, 'save', null);
+  }
+
+  async versions(merchantId: string, id: string): Promise<VersionList> {
+    const exists = await this.ds.getRepository(ProjectEntity).existsBy({ id, merchantId });
+    if (!exists) throw new NotFoundException('Project not found');
+    const rows = await this.ds.getRepository(ProjectVersionEntity).find({
+      where: { projectId: id, merchantId },
+      order: { version: 'DESC' },
+      select: { version: true, createdAt: true, reason: true, restoredFrom: true },
+    });
+    return {
+      items: rows.map((r) => ({
+        version: r.version,
+        createdAt: r.createdAt.toISOString(),
+        reason: r.reason,
+        restoredFrom: r.restoredFrom,
+      })),
+    };
+  }
+
+  /** Copies an old version's doc into a NEW version (history is never rewritten). */
+  async restore(
+    merchantId: string,
+    id: string,
+    version: number,
+    baseVersion: number,
+  ): Promise<ProjectRecord> {
+    const old = await this.ds
+      .getRepository(ProjectVersionEntity)
+      .findOneBy({ projectId: id, merchantId, version });
+    if (!old) throw new NotFoundException('Version not found');
+    return this.append(merchantId, id, baseVersion, old.doc, 'restore', version);
+  }
+}
