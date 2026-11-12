@@ -20,6 +20,16 @@ type VersionList = z.infer<typeof ProjectVersionList>;
 
 const CONFLICT = 'โปรเจกต์นี้ถูกบันทึกจากที่อื่นไปแล้ว โหลดเวอร์ชันล่าสุดก่อนแล้วค่อยแก้ต่อ (version conflict)';
 
+type ProjectSummaryDto = {
+  id: string;
+  title: string;
+  version: number;
+  createdBy: 'ai' | 'user';
+  durationFrames: number;
+  fps: { num: number; den: number };
+  updatedAt: string;
+};
+
 @Injectable()
 export class ProjectsService {
   constructor(@Inject(DataSource) private readonly ds: DataSource) {}
@@ -89,6 +99,38 @@ export class ProjectsService {
         .insert({ merchantId, projectId: id, version: 1, doc, reason: 'create', restoredFrom: null });
       return this.record(em, merchantId, id);
     });
+  }
+
+  /** Newest change first; doc fields read in SQL so the list stays small. */
+  async list(merchantId: string): Promise<{ items: ProjectSummaryDto[] }> {
+    const rows: {
+      id: string;
+      title: string;
+      version: number;
+      created_by: 'ai' | 'user';
+      duration_frames: number;
+      fps_num: number;
+      fps_den: number;
+      updated_at: Date;
+    }[] = await this.ds.query(
+      `SELECT p.id, p.title, p.current_version AS version, v.doc->'meta'->>'createdBy' AS created_by,
+              (v.doc->>'durationFrames')::int AS duration_frames, (v.doc->'fps'->>'num')::int AS fps_num,
+              (v.doc->'fps'->>'den')::int AS fps_den, p.updated_at
+         FROM projects p JOIN project_versions v ON v.project_id = p.id AND v.version = p.current_version
+        WHERE p.merchant_id = $1 ORDER BY p.updated_at DESC LIMIT 200`,
+      [merchantId],
+    );
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        version: r.version,
+        createdBy: r.created_by === 'ai' ? 'ai' : 'user',
+        durationFrames: r.duration_frames,
+        fps: { num: r.fps_num, den: r.fps_den },
+        updatedAt: new Date(r.updated_at).toISOString(),
+      })),
+    };
   }
 
   get(merchantId: string, id: string): Promise<ProjectRecord> {

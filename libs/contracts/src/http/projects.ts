@@ -131,3 +131,28 @@ export const restoreProjectVersion = defineRoute({
     409: { description: 'Version conflict', schema: ApiErrorBody },
   },
 });
+
+export const ProjectSummary = named(
+  'ProjectSummary',
+  z.object({
+    id: z.uuid(),
+    title: z.string(),
+    version: z.number().int().min(1),
+    /** Who made version 1: `ai` (generated clip) or `user`. */
+    createdBy: z.enum(['ai', 'user']),
+    durationFrames: z.number().int(),
+    fps: z.object({ num: z.number().int(), den: z.number().int() }),
+    updatedAt: z.iso.datetime({ offset: true }),
+  }),
+);
+export const ProjectList = named('ProjectList', z.object({ items: z.array(ProjectSummary) }));
+
+export const listProjects = defineRoute({
+  operationId: 'listProjects',
+  method: 'get',
+  path: '/projects',
+  summary: 'Projects of the merchant, newest change first (at most 200)',
+  tags: ['projects'],
+  auth: true,
+  responses: { 200: { description: 'Projects', schema: ProjectList } },
+});

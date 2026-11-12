@@ -2,16 +2,20 @@ import {
   AiServiceClient,
   ChromiumRenderer,
   createDataSource,
+  createLlm,
   createStorage,
+  DbLlmCallStore,
   Dispatcher,
   type Env,
   HandlerRegistry,
   ingestHandlers,
   JobRunner,
+  liveToClipsHandlers,
   loadStageBundle,
   QueueSet,
   QueueWorkers,
   renderHandler,
+  StageTextLayout,
   shotsHandler,
   systemHandlers,
   transcribeHandlers,
@@ -133,7 +137,16 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     }),
   );
   // the stage bundle is verified once at start; a broken or missing bundle stops the worker loudly
-  const renderer = new ChromiumRenderer(await loadStageBundle());
+  const bundle = await loadStageBundle();
+  const renderer = new ChromiumRenderer(bundle);
+  const clips = liveToClipsHandlers({
+    ds,
+    storage: createStorage(env),
+    ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+    llm: createLlm(env, new DbLlmCallStore(ds)),
+    openLayout: () => StageTextLayout.open(bundle),
+  });
+  for (const h of clips) registry.register(h);
   registry.register(renderHandler({ ds, storage: createStorage(env), renderer }));
   return registry;
 }

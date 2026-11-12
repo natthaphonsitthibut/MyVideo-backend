@@ -1,4 +1,5 @@
 import { AnalysisEntity, DetectedShotEntity } from './analysis.entity.js';
+import { ClipSuggestionEntity } from './clip-suggestion.entity.js';
 import { JobEntity } from './job.entity.js';
 import { JobAttemptEntity } from './job-attempt.entity.js';
 import { JobEventEntity } from './job-event.entity.js';
@@ -21,6 +22,7 @@ import { WorkflowRunEntity } from './workflow-run.entity.js';
 export { ATTEMPT_STATUSES, type AttemptStatus } from './job-attempt.entity.js';
 export {
   AnalysisEntity,
+  ClipSuggestionEntity,
   DetectedShotEntity,
   JobAttemptEntity,
   JobEntity,
@@ -61,4 +63,5 @@ export const entities = [
   LlmCallEntity,
   AnalysisEntity,
   DetectedShotEntity,
+  ClipSuggestionEntity,
 ];

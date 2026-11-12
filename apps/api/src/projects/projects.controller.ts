@@ -2,6 +2,7 @@ import {
   CreateProjectBody,
   type ProjectDraft,
   ProjectIdParams,
+  type ProjectList,
   type ProjectRecord,
   type ProjectVersionList,
   RestoreBody,
@@ -25,6 +26,11 @@ export class ProjectsController {
     @Body(new ZodPipe(CreateProjectBody)) body: { title: string; doc: ProjectDraft },
   ): Promise<ProjectRecord> {
     return this.projects.create(merchantId, body.title, body.doc);
+  }
+
+  @Get()
+  list(@CurrentMerchant() merchantId: string): Promise<z.infer<typeof ProjectList>> {
+    return this.projects.list(merchantId);
   }
 
   @Get(':id')

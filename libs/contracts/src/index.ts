@@ -1,4 +1,5 @@
 export * from './http/auth.js';
+export * from './http/clips.js';
 export * from './http/errors.js';
 export * from './http/health.js';
 export * from './http/jobs.js';

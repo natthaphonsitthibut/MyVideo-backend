@@ -10,6 +10,7 @@ import { Projects1794455702974 } from './1794455702974-Projects.js';
 import { Renders1794460818268 } from './1794460818268-Renders.js';
 import { LlmCalls1794465998262 } from './1794465998262-LlmCalls.js';
 import { ShotAnalyses1794467847630 } from './1794467847630-ShotAnalyses.js';
+import { ClipSuggestions1794468684239 } from './1794468684239-ClipSuggestions.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -26,4 +27,5 @@ export const migrations: Function[] = [
   Renders1794460818268,
   LlmCalls1794465998262,
   ShotAnalyses1794467847630,
+  ClipSuggestions1794468684239,
 ];

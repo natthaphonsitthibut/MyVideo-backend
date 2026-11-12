@@ -31,6 +31,7 @@ export {
 export {
   ATTEMPT_STATUSES,
   type AttemptStatus,
+  ClipSuggestionEntity,
   entities,
   JobAttemptEntity,
   JobEntity,
@@ -69,6 +70,15 @@ export {
   suggestHooks,
   suggestHooksRules,
 } from './highlights/hooks.js';
+export {
+  clipsBuildHandler,
+  clipsPlanHandler,
+  type LiveToClipsDeps,
+  LiveToClipsUnavailableError,
+  liveToClipsHandlers,
+  loadCorrectedTranscript,
+  requestLiveToClips,
+} from './highlights/live-to-clips.js';
 export {
   flattenWords,
   limitByInputShare,

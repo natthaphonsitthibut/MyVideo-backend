@@ -109,6 +109,19 @@ export function shotsHandler({ ds, storage, ai, partMs }: ShotsDeps): JobHandler
         detectMs: parts.reduce((n, p) => n + (p.elapsedMs ?? 0), 0),
       };
     },
+    next(job) {
+      // inside a live-to-clips run, planning follows shot detection
+      if (job.payload.nextStep !== 'clips.plan') return [];
+      return [
+        {
+          type: 'clips.plan',
+          queue: 'ai',
+          payload: { sourceId: job.payload.sourceId, product: job.payload.product ?? {} },
+          maxAttempts: 3,
+          timeoutMs: 30 * 60_000,
+        },
+      ];
+    },
     async onDead(em, job, error) {
       const sourceId = String(job.payload.sourceId ?? '');
       await em.query(

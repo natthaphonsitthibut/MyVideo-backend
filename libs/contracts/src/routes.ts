@@ -1,9 +1,11 @@
 import { getMe, login, logout } from './http/auth.js';
+import { discardClip, generateClips, getClips } from './http/clips.js';
 import { getHealth } from './http/health.js';
 import { cancelJob, retryJob } from './http/jobs.js';
 import {
   createProject,
   getProject,
+  listProjects,
   listProjectVersions,
   restoreProjectVersion,
   saveProject,
@@ -51,6 +53,7 @@ export const routes: RouteContract[] = [
   editTranscriptWord,
   revertTranscriptWord,
   createProject,
+  listProjects,
   getProject,
   saveProject,
   listProjectVersions,
@@ -60,4 +63,7 @@ export const routes: RouteContract[] = [
   listRenders,
   getRender,
   getRenderFile,
+  getClips,
+  generateClips,
+  discardClip,
 ];
