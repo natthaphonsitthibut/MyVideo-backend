@@ -124,6 +124,8 @@ function atempo(rate: number): string {
  * ffmpeg filter graph for the mix: each input `i` is already cut to its range (`-ss/-t` on the input), then
  * resampled, retimed, scaled and delayed; `amix` sums without normalising (volumes are the user's), and the
  * result is padded/trimmed to exactly `totalSec`. Output label `[aout]`.
+ * The mix is re-timed from its sample count (`asetpts=N/SR/TB`) before the trim: with many delayed inputs (jump
+ * cuts) amix's output timestamps were seen to start late (S01a: +1.867 s), so a timestamp trim cut off the tail.
  */
 export function audioFilterGraph(
   clips: { input: number; rate: number; volume: number; delaySec: number }[],
@@ -136,7 +138,7 @@ export function audioFilterGraph(
       `[${c.input}:a]aresample=48000,asetpts=PTS-STARTPTS,${atempo(c.rate)}volume=${c.volume},adelay=${Math.round(c.delaySec * 1000)}:all=1[a${i}]`,
   );
   const labels = clips.map((_, i) => `[a${i}]`).join('');
-  return `${chains.join(';')};${labels}amix=inputs=${clips.length}:normalize=0:duration=longest,apad,atrim=0:${total},asetpts=PTS-STARTPTS[aout]`;
+  return `${chains.join(';')};${labels}amix=inputs=${clips.length}:normalize=0:duration=longest,asetpts=N/SR/TB,apad,atrim=0:${total},asetpts=PTS-STARTPTS[aout]`;
 }
 
 /** Renders are cached per (project version, preset, stage version) — not by file hash (D-003). */

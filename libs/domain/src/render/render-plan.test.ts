@@ -134,8 +134,18 @@ describe('audioFilterGraph', () => {
     expect(g).toBe(
       '[1:a]aresample=48000,asetpts=PTS-STARTPTS,volume=1,adelay=0:all=1[a0];' +
         '[2:a]aresample=48000,asetpts=PTS-STARTPTS,atempo=2,volume=0.5,adelay=1500:all=1[a1];' +
-        '[a0][a1]amix=inputs=2:normalize=0:duration=longest,apad,atrim=0:15,asetpts=PTS-STARTPTS[aout]',
+        '[a0][a1]amix=inputs=2:normalize=0:duration=longest,asetpts=N/SR/TB,apad,atrim=0:15,asetpts=PTS-STARTPTS[aout]',
     );
+  });
+
+  it('re-times the mix from its sample count before trimming (jump-cut clips lost their tail)', () => {
+    // Real case (S01a, 10 jump-cut clips): amix output timestamps started 1.867 s late, so atrim=0:22.9 kept only
+    // 21.033 s. Counting samples instead of trusting amix timestamps gives 22.900 s, aligned within ±0.2 ms.
+    const g = audioFilterGraph(
+      Array.from({ length: 10 }, (_, i) => ({ input: i, rate: 1, volume: 1, delaySec: i * 2 })),
+      22.9,
+    );
+    expect(g).toMatch(/amix=inputs=10:normalize=0:duration=longest,asetpts=N\/SR\/TB,apad,atrim=0:22\.9/);
   });
 
   it('makes silence when nothing has sound', () => {
