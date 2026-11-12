@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// Shared document schemas not (yet) used by a route still belong in the contract (Project JSON → frontend types).
+import './project/schema.js';
 import { componentRegistry } from './registry.js';
 import type { RouteContract } from './route.js';
 import { routes } from './routes.js';
