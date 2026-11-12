@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import type { Writable } from 'node:stream';
 
 export class ProcessError extends Error {
   constructor(
@@ -29,6 +30,8 @@ export type RunProcessOptions = {
   /** Raw stdout bytes (e.g. PCM from ffmpeg). Mutually exclusive with onStdoutLine. */
   onStdoutData?: (chunk: Buffer) => void;
   onSpawn?: (pid: number) => void;
+  /** Gives the child's stdin (piped) to the caller, e.g. to stream frames into ffmpeg; otherwise it is closed. */
+  onStdin?: (stdin: Writable) => void;
 };
 
 export type ProcessResult = { code: number; stderrTail: string; durationMs: number };
@@ -52,7 +55,7 @@ export function runProcess(
     const child = spawn(command, args, {
       cwd: opts.cwd,
       env: opts.env ?? process.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [opts.onStdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
       detached: true, // own process group → kill(-pid) reaches grandchildren too
     });
     let stderr = '';
@@ -84,6 +87,10 @@ export function runProcess(
         )
       : undefined;
     if (child.pid) opts.onSpawn?.(child.pid);
+    if (opts.onStdin && child.stdin) {
+      child.stdin.on('error', () => {}); // EPIPE when the child exits early → its exit code reports it
+      opts.onStdin(child.stdin);
+    }
     if (opts.onStdoutData && child.stdout) {
       child.stdout.on('data', opts.onStdoutData);
     } else if (opts.onStdoutLine && child.stdout) {

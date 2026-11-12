@@ -1,5 +1,6 @@
 import {
   AiServiceClient,
+  ChromiumRenderer,
   createDataSource,
   createStorage,
   Dispatcher,
@@ -7,8 +8,10 @@ import {
   HandlerRegistry,
   ingestHandlers,
   JobRunner,
+  loadStageBundle,
   QueueSet,
   QueueWorkers,
+  renderHandler,
   systemHandlers,
   transcribeHandlers,
 } from '@myvideo/infra';
@@ -97,7 +100,7 @@ export class WorkerModule {
         {
           provide: HANDLERS,
           inject: [DataSource],
-          useFactory: (ds: DataSource) => handlers ?? defaultHandlers(env, ds),
+          useFactory: async (ds: DataSource) => handlers ?? (await defaultHandlers(env, ds)),
         },
         WorkerLifecycle,
       ],
@@ -105,7 +108,7 @@ export class WorkerModule {
   }
 }
 
-export function defaultHandlers(env: Env, ds: DataSource): HandlerRegistry {
+export async function defaultHandlers(env: Env, ds: DataSource): Promise<HandlerRegistry> {
   const registry = new HandlerRegistry();
   for (const h of systemHandlers) registry.register(h);
   const ingest = ingestHandlers({
@@ -121,5 +124,8 @@ export function defaultHandlers(env: Env, ds: DataSource): HandlerRegistry {
     ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
   });
   for (const h of transcribe) registry.register(h);
+  // the stage bundle is verified once at start; a broken or missing bundle stops the worker loudly
+  const renderer = new ChromiumRenderer(await loadStageBundle());
+  registry.register(renderHandler({ ds, storage: createStorage(env), renderer }));
   return registry;
 }

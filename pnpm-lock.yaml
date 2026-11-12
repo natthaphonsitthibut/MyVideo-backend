@@ -161,6 +161,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1167.0
         version: 3.1167.0
+      '@myvideo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@myvideo/domain':
         specifier: workspace:*
         version: link:../domain

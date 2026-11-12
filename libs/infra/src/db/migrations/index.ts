@@ -7,6 +7,7 @@ import { MediaSources1794439961977 } from './1794439961977-MediaSources.js';
 import { Transcripts1794448632344 } from './1794448632344-Transcripts.js';
 import { TranscriptEdits1794452328318 } from './1794452328318-TranscriptEdits.js';
 import { Projects1794455702974 } from './1794455702974-Projects.js';
+import { Renders1794460818268 } from './1794460818268-Renders.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -20,4 +21,5 @@ export const migrations: Function[] = [
   Transcripts1794448632344,
   TranscriptEdits1794452328318,
   Projects1794455702974,
+  Renders1794460818268,
 ];
