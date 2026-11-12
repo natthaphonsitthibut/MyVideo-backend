@@ -1,4 +1,5 @@
 import {
+  AiServiceClient,
   createDataSource,
   createStorage,
   Dispatcher,
@@ -9,6 +10,7 @@ import {
   QueueSet,
   QueueWorkers,
   systemHandlers,
+  transcribeHandlers,
 } from '@myvideo/infra';
 import {
   type DynamicModule,
@@ -113,5 +115,11 @@ export function defaultHandlers(env: Env, ds: DataSource): HandlerRegistry {
     proxySegmentSeconds: env.PROXY_SEGMENT_SECONDS,
   });
   for (const h of ingest) registry.register(h);
+  const transcribe = transcribeHandlers({
+    ds,
+    storage: createStorage(env),
+    ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+  });
+  for (const h of transcribe) registry.register(h);
   return registry;
 }

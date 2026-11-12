@@ -63,6 +63,14 @@ export const AsrResult = z.object({
 });
 export type AsrResult = z.infer<typeof AsrResult>;
 
+export const AsrInfo = z.object({
+  engine: z.string(),
+  model: z.string(),
+  language: z.string(),
+  flags: z.string(),
+});
+export type AsrInfo = z.infer<typeof AsrInfo>;
+
 export type AiServiceClientOptions = { baseUrl: string; timeoutMs?: number };
 
 /** Typed HTTP client for `services/ai`. Every call has a timeout; errors map to the two classes above. */
@@ -140,6 +148,11 @@ export class AiServiceClient {
       timeoutMs: opts.timeoutMs ?? 30 * 60_000,
       signal: opts.signal,
     });
+  }
+
+  /** Which engine/model `/asr` runs (does not load the model). Used in the transcript cache key. */
+  asrInfo(opts: { signal?: AbortSignal } = {}): Promise<AsrInfo> {
+    return this.request('/asr/info', AsrInfo, { signal: opts.signal });
   }
 
   health(timeoutMs = 2000): Promise<AiHealth> {

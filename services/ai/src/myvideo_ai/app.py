@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from . import __version__
-from .asr import AsrBusyError, WhisperServer
+from .asr import ENGINE, TUNED_FLAGS, AsrBusyError, WhisperServer
 from .settings import PathNotAllowed, Settings, checked_path
 from .thai import segment_words
 from .vad import VadOptions, run_vad
@@ -19,6 +19,13 @@ class Health(BaseModel):
     service: str
     version: str
     python: str
+
+
+class AsrInfo(BaseModel):
+    engine: str
+    model: str
+    language: str
+    flags: str
 
 
 class VadRequest(BaseModel):
@@ -88,6 +95,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             service="myvideo-ai",
             version=__version__,
             python=f"{platform.python_version()} ({sys.platform})",
+        )
+
+    @app.get("/asr/info")
+    def asr_info() -> AsrInfo:
+        """What `/asr` would run, without loading the model (callers use it as a cache key)."""
+        return AsrInfo(
+            engine=ENGINE, model=asr.model_name, language=asr.language, flags=" ".join(TUNED_FLAGS)
         )
 
     @app.post("/vad")

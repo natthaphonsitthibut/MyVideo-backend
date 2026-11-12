@@ -113,7 +113,8 @@ export class JobRunner {
         [job.id, job.attempts, attemptStatus, patch.error ? JSON.stringify(patch.error) : null],
       );
       if (to === 'succeeded' && handler?.next) {
-        for (const step of handler.next(job, (patch.result ?? {}) as Record<string, unknown>)) {
+        const steps = await handler.next(job, (patch.result ?? {}) as Record<string, unknown>, em);
+        for (const step of steps) {
           await enqueueInTransaction(em, {
             merchantId: job.merchantId,
             workflowRunId: job.workflowRunId,
@@ -121,7 +122,7 @@ export class JobRunner {
             queue: step.queue,
             payload: step.payload,
             stepIndex: job.stepIndex + 1,
-            idempotencyKey: `${job.workflowRunId}:${step.type}`,
+            idempotencyKey: `${job.workflowRunId}:${step.type}${step.key ? `:${step.key}` : ''}`,
             maxAttempts: step.maxAttempts,
             timeoutMs: step.timeoutMs,
           });
