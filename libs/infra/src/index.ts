@@ -29,6 +29,7 @@ export {
   JobAttemptEntity,
   JobEntity,
   JobEventEntity,
+  LlmCallEntity,
   MediaAssetEntity,
   MerchantEntity,
   ProjectEntity,
@@ -73,6 +74,20 @@ export {
   refreshRunStatus,
 } from './jobs/runner.js';
 export { QueueWorkers, type QueueWorkersConfig } from './jobs/workers.js';
+export type { AdapterCall, AdapterResult, LlmAdapter } from './llm/adapter.js';
+export { AnthropicApiAdapter, estimateCostUsd } from './llm/api-anthropic.js';
+export { createLlm, createLlmAdapter, LlmConfigError } from './llm/create-llm.js';
+export { DbLlmCallStore } from './llm/db-store.js';
+export { ClaudeCliAdapter, type CliExec, realCliExec } from './llm/local-agent-claude.js';
+export { zodStructuredSchema } from './llm/schema.js';
+export {
+  type LlmCallRecord,
+  type LlmCallStore,
+  llmCacheKey,
+  MemoryLlmCallStore,
+  RulesOnlyLlm,
+  StructuredLlm,
+} from './llm/structured-llm.js';
 export { AUDIO_RECIPE, audioHandler } from './media/audio-handler.js';
 export {
   type IngestDeps,

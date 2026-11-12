@@ -1,6 +1,7 @@
 import { JobEntity } from './job.entity.js';
 import { JobAttemptEntity } from './job-attempt.entity.js';
 import { JobEventEntity } from './job-event.entity.js';
+import { LlmCallEntity } from './llm-call.entity.js';
 import { MediaAssetEntity } from './media-asset.entity.js';
 import { MerchantEntity } from './merchant.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from './project.entity.js';
@@ -21,6 +22,7 @@ export {
   JobAttemptEntity,
   JobEntity,
   JobEventEntity,
+  LlmCallEntity,
   MediaAssetEntity,
   MerchantEntity,
   ProjectEntity,
@@ -53,4 +55,5 @@ export const entities = [
   ProjectEntity,
   ProjectVersionEntity,
   RenderEntity,
+  LlmCallEntity,
 ];

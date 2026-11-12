@@ -38,6 +38,8 @@ export const envSchema = z
     LLM_BASE_URL: optionalString,
     LLM_MODEL_FAST: optionalString,
     LLM_MODEL_SMART: optionalString,
+    /** Reasoning effort for models that take one (api and local-agent). */
+    LLM_EFFORT: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).default('medium'),
     LOCAL_AGENT_CLI: z.string().default('claude'),
     LLM_MAX_CALLS_PER_RUN: z.coerce.number().int().min(0).default(50),
     UPLOAD_MAX_BYTES: z.coerce
