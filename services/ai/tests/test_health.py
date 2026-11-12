@@ -28,3 +28,4 @@ def test_asr_info_names_the_model_without_loading_it():
     assert body["model"].endswith(".bin")
     assert body["language"] == "th"
     assert app.state.asr.proc is None  # info must not start the model process
+    assert body["flags"] == "-mc 0 -sns"  # built-in VAD off by default (D-017)

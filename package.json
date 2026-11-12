@@ -24,6 +24,7 @@
     "ai:sync": "uv --directory services/ai sync --frozen",
     "ai:start": "uv --directory services/ai run --frozen python -m myvideo_ai",
     "ai:test": "uv --directory services/ai run --frozen pytest",
+    "eval:asr": "uv --directory services/ai run --frozen python -m myvideo_ai.eval_asr --out ../../../docs/eval/asr-$(date +%F).md",
     "ai:lint": "uv --directory services/ai run --frozen ruff check . && uv --directory services/ai run --frozen ruff format --check ."
   },
   "devDependencies": {

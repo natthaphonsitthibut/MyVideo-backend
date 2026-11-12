@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from . import __version__
-from .asr import ENGINE, TUNED_FLAGS, AsrBusyError, WhisperServer
+from .asr import ENGINE, AsrBusyError, WhisperServer, decode_flags
 from .settings import PathNotAllowed, Settings, checked_path
 from .thai import segment_words
 from .vad import VadOptions, run_vad
@@ -101,7 +101,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def asr_info() -> AsrInfo:
         """What `/asr` would run, without loading the model (callers use it as a cache key)."""
         return AsrInfo(
-            engine=ENGINE, model=asr.model_name, language=asr.language, flags=" ".join(TUNED_FLAGS)
+            engine=ENGINE,
+            model=asr.model_name,
+            language=asr.language,
+            flags=" ".join(decode_flags(cfg.asr_builtin_vad, cfg.vad_model)),
         )
 
     @app.post("/vad")

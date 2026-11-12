@@ -18,8 +18,19 @@ from pathlib import Path
 from .settings import Settings
 
 ENGINE = "whisper.cpp"
-# Anti-loop flags chosen in E01-F03 (no carried context, suppress non-speech tokens, VAD-split segments)
-TUNED_FLAGS = ["-mc", "0", "-sns", "--vad", "-vmsd", "30"]
+# Anti-loop flags chosen in E01-F03 (no carried context, suppress non-speech tokens) + whisper.cpp's built-in
+# silero VAD segmentation. The built-in VAD can be switched off (ASR_BUILTIN_VAD=0): whisper.cpp 1.9.5 drops
+# the Thai mark ์ on some audio with it (D-017); chunks are already cut at silences by our own VAD.
+BASE_FLAGS = ["-mc", "0", "-sns"]
+BUILTIN_VAD_FLAGS = ["--vad", "-vmsd", "30"]
+TUNED_FLAGS = [*BASE_FLAGS, *BUILTIN_VAD_FLAGS]
+
+
+def decode_flags(builtin_vad: bool, vad_model: Path | str) -> list[str]:
+    """whisper-server decoding flags for the chosen configuration."""
+    if not builtin_vad:
+        return list(BASE_FLAGS)
+    return [*BASE_FLAGS, *BUILTIN_VAD_FLAGS, "-vm", str(vad_model)]
 
 
 class AsrBusyError(RuntimeError):
@@ -117,7 +128,7 @@ class WhisperServer:
                 return
             model = self.settings.models_dir / self.settings.asr_model
             vad = self.settings.models_dir / self.settings.vad_model
-            for f in (model, vad):
+            for f in (model, vad) if self.settings.asr_builtin_vad else (model,):
                 if not f.is_file():
                     raise FileNotFoundError(f"model missing: {f}")
             self.port = _free_port()
@@ -129,9 +140,7 @@ class WhisperServer:
                 self.language,
                 "-t",
                 "4",
-                *TUNED_FLAGS,
-                "-vm",
-                str(vad),
+                *decode_flags(self.settings.asr_builtin_vad, vad),
                 "--host",
                 "127.0.0.1",
                 "--port",

@@ -9,4 +9,5 @@ export type TranscriptChunkStatus = (typeof TRANSCRIPT_CHUNK_STATUSES)[number];
  * Version of the transcribe recipe (chunk plan + merge + word layout). Part of the cache key with the audio
  * sha256 and the ASR model: bump it when the output for the same audio would change.
  */
-export const TRANSCRIPT_RECIPE = 1;
+// 2: whisper.cpp built-in VAD off (D-017)
+export const TRANSCRIPT_RECIPE = 2;

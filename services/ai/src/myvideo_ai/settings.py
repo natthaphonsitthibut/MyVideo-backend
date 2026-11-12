@@ -29,6 +29,11 @@ class Settings:
     asr_model: str = field(
         default_factory=lambda: os.environ.get("ASR_MODEL", "ggml-large-v3-turbo-q5_0.bin")
     )
+    # whisper.cpp's own silero VAD inside a chunk — OFF by default (D-017, docs/eval/asr-2026-11-12.md:
+    # off gives CER 13.7 % vs 16.9 %, segment starts 350 ms vs 3190 ms off, no loops on live audio)
+    asr_builtin_vad: bool = field(
+        default_factory=lambda: os.environ.get("ASR_BUILTIN_VAD", "0").strip().lower() in ("1", "true", "yes")
+    )
     # Only files under these directories may be read (internal service, but paths still come from requests).
     allowed_roots: list[Path] = field(default_factory=_roots)
 
