@@ -2,9 +2,10 @@ import type { CaptionStyleId } from './schema.js';
 
 /**
  * Edit style packs: how an AI-made clip is cut and dressed. A pack is DATA read by the pure clip builder — the
- * AI decides *what* (the cut, the words, the key moments), the pack decides *how it looks*. Switching packs
- * rebuilds the project from the same plan without calling the AI again. A new style is a new entry here plus,
- * if it needs a new caption look or animation, that look in the stage.
+ * AI decides *what* (the cut, the words, the key moments), the pack decides *how it is edited*. Packs must differ
+ * in editing, not only in looks: pace (pauses, restarts, shot length), words per caption page, caption position,
+ * emphasis, re-framing rule, motion graphics, hook format and sound density (user review 2026-11-12: "เปลี่ยนแค่
+ * ฟอนต์ สี"). Every effect is tied to what is said (a price, a call to action), never to a timer.
  *
  * Animation preset ids are the stage's (`animationKeyframes`); unknown ids fall back to `fade`.
  */
@@ -13,8 +14,14 @@ export type StylePack = {
   /** Shown to the merchant (Thai). */
   name: string;
   description: string;
-  captions: { styleRef: CaptionStyleId /** canvas px from centre */; y: number };
-  /** Opening title (the hook): shown over the first seconds. */
+  /** What kind of seller video it suits (Thai) — shown with the AI's style recommendation. */
+  suits: string;
+  /**
+   * `y`: canvas px from centre. `maxWords`: phrases per caption page on `maxLines` lines (short-form pages, balanced,
+   * a number never split from its unit); null = classic fill of `maxLines` lines.
+   */
+  captions: { styleRef: CaptionStyleId; y: number; maxWords: number | null; maxLines: number };
+  /** Opening title (the hook): on the first frame, over the first seconds. */
   hook: {
     seconds: number;
     y: number;
@@ -26,27 +33,49 @@ export type StylePack = {
   /** Closing card with the clip title (merchant/product text only — never invented claims). Null = none. */
   endCard: { seconds: number; color: string; background: string; animationIn: string } | null;
   /**
-   * Jump cuts on the speech: pauses longer than `maxPauseMs` shrink to `keepPauseMs`; filler words go.
-   * `maxShotMs`: longer shots are split at word starts into a new framing (no time removed); null = never.
+   * Jump cuts on the speech: pauses longer than `maxPauseMs` shrink to `keepPauseMs`; filler words go; restarts
+   * (a phrase said again) keep only the later take. `maxShotMs`: a longer continuous shot gets one re-frame at a
+   * word start (no time removed); null = never.
    */
-  cuts: { maxPauseMs: number; keepPauseMs: number; removeFillers: boolean; maxShotMs: number | null };
+  cuts: {
+    maxPauseMs: number;
+    keepPauseMs: number;
+    removeFillers: boolean;
+    removeRestarts: boolean;
+    maxShotMs: number | null;
+  };
   /**
-   * Camera. `cycle`: scale per kept segment, cycled (a new framing at each jump cut hides the cut); `punchIn`: scale
-   * for a segment where a price or call to action is spoken; `drift`: slow one-way push-in over each segment
-   * (fraction of its scale, linear) so the picture never looks frozen. The camera never zooms back out inside a
-   * segment — going wider again only happens at a cut.
+   * Camera. `cycle`: framing per shot, alternated at cuts (a light change hides a jump cut); `punchIn`: tighter
+   * framing for the shot where a price or call to action is spoken, at most once per `punchGap` shots; `drift`:
+   * slow one-way push-in over each shot (fraction of its scale) so the picture never looks frozen.
    */
-  zoom: { cycle: number[]; punchIn: number | null; drift: number };
+  zoom: { cycle: number[]; punchIn: number | null; punchGap: number; drift: number };
   /**
-   * Sound effects from `SOUND_LIBRARY` (D-026); each starts at (moment − its sync point) so the hit lands on the
-   * moment. `cut`: cycled at shot changes, at most one per `minGapMs`; `price` / `cta`: on the shot where a price /
-   * call to action is spoken (instead of the cut sound); `hook` / `endCard`: when the opening title / closing card
-   * appears. `gainDb` is added to each sound's own under-speech gain. Null = no sound effects.
+   * Motion graphics, each tied to the words: `priceTag` pops up with a spoken price (the seller's own words, at most
+   * `maxPerClip`); `productName` = the merchant's product name as a lower-third after the hook; `cta` = a call-to-
+   * action pill over the closing seconds. Null = not in this style.
+   */
+  graphics: {
+    priceTag: {
+      color: string;
+      background: string;
+      animationIn: string;
+      y: number;
+      maxPerClip: number;
+    } | null;
+    productName: { color: string; background: string; animationIn: string; y: number } | null;
+    cta: { label: string; animationIn: string; y: number } | null;
+  };
+  /**
+   * Sound effects from `SOUND_LIBRARY` (D-026) mark moments, they do not decorate cuts: `hook` / `endCard` when the
+   * title / closing card appears, `price` / `cta` on those shots (`price` at most `maxPrice` per clip), `cut` only in
+   * energetic styles and at most one per `minGapMs`. `gainDb` is added to each sound's under-speech gain.
    */
   sfx: {
     cut: string[];
     minGapMs: number;
     price: string | null;
+    maxPrice: number;
     cta: string | null;
     hook: string | null;
     endCard: string | null;
@@ -58,23 +87,30 @@ export const STYLE_PACKS: readonly StylePack[] = [
   {
     id: 'sale-fast',
     name: 'ขายไว ไฟลุก',
-    description: 'ตัดช่วงเงียบหมด เปลี่ยนมุมซูมทุกช็อต ซูมแรงตอนพูดราคา ซับคำต่อคำตัวใหญ่',
-    captions: { styleRef: 'pop-word', y: 480 },
+    description: 'ตัดกระชับ ซับทีละ 2–3 คำกลางจอ ป้ายราคาเด้งตอนพูดราคา ปิดด้วยปุ่มสั่งซื้อ',
+    suits: 'ไลฟ์ขายของที่พูดราคา/โปรบ่อย อยากให้ปิดการขายไว',
+    captions: { styleRef: 'pop-word', y: 330, maxWords: 3, maxLines: 1 },
     hook: {
-      seconds: 3,
+      seconds: 2.5,
       y: -560,
       fontWeight: 900,
       color: '#111111',
       background: '#facc15',
       animationIn: 'pop',
     },
-    endCard: { seconds: 2, color: '#111111', background: '#facc15', animationIn: 'pop' },
-    cuts: { maxPauseMs: 250, keepPauseMs: 80, removeFillers: true, maxShotMs: 3000 },
-    zoom: { cycle: [1, 1.12], punchIn: 1.28, drift: 0.045 },
+    endCard: { seconds: 2.5, color: '#ffffff', background: '#111111e6', animationIn: 'pop' },
+    cuts: { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true, removeRestarts: true, maxShotMs: 4500 },
+    zoom: { cycle: [1, 1.08], punchIn: 1.2, punchGap: 3, drift: 0.012 },
+    graphics: {
+      priceTag: { color: '#111111', background: '#facc15', animationIn: 'pop', y: 80, maxPerClip: 2 },
+      productName: { color: '#ffffff', background: '#111111cc', animationIn: 'slide-up', y: -330 },
+      cta: { label: 'กดตะกร้า สั่งได้เลย', animationIn: 'pop', y: 170 },
+    },
     sfx: {
-      cut: ['whoosh-fast-soft', 'swish-soft'],
-      minGapMs: 2500,
+      cut: [],
+      minGapMs: 0,
       price: 'money-register',
+      maxPrice: 2,
       cta: 'pop-medium-in',
       hook: 'pop-medium-in',
       endCard: 'sting-bold-short',
@@ -83,9 +119,10 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'friendly',
-    name: 'เป็นกันเอง',
-    description: 'ตัดเงียบพอดี ๆ ซูมเบา ๆ ซับในกล่องอ่านง่าย',
-    captions: { styleRef: 'boxed', y: 520 },
+    name: 'เล่าเป็นกันเอง',
+    description: 'จังหวะพูดธรรมชาติ ซับในกล่องทีละประโยคสั้น ชื่อสินค้าขึ้นมุมล่าง ไม่หวือหวา',
+    suits: 'รีวิว/เล่าเรื่องสินค้า พูดช้า ๆ อธิบายรายละเอียด',
+    captions: { styleRef: 'boxed', y: 520, maxWords: 5, maxLines: 1 },
     hook: {
       seconds: 3,
       y: -520,
@@ -94,43 +131,57 @@ export const STYLE_PACKS: readonly StylePack[] = [
       background: '#000000aa',
       animationIn: 'slide-up',
     },
-    endCard: { seconds: 2, color: '#ffffff', background: '#000000cc', animationIn: 'slide-up' },
-    cuts: { maxPauseMs: 400, keepPauseMs: 150, removeFillers: true, maxShotMs: 4500 },
-    zoom: { cycle: [1, 1.06], punchIn: 1.15, drift: 0.027 },
+    endCard: { seconds: 2.5, color: '#ffffff', background: '#000000cc', animationIn: 'slide-up' },
+    cuts: { maxPauseMs: 450, keepPauseMs: 150, removeFillers: true, removeRestarts: true, maxShotMs: 6500 },
+    zoom: { cycle: [1, 1.05], punchIn: 1.12, punchGap: 4, drift: 0.008 },
+    graphics: {
+      priceTag: { color: '#111111', background: '#ffffffee', animationIn: 'slide-up', y: 120, maxPerClip: 1 },
+      productName: { color: '#ffffff', background: '#000000aa', animationIn: 'slide-up', y: -330 },
+      cta: { label: 'สนใจ ทักแชทได้เลย', animationIn: 'slide-up', y: 170 },
+    },
     sfx: {
-      cut: ['whoosh-fast-soft'],
-      minGapMs: 4000,
+      cut: [],
+      minGapMs: 0,
       price: 'shimmer-short-bright',
-      cta: 'notification-attention-soft',
+      maxPrice: 1,
+      cta: null,
       hook: 'pop-small-in',
       endCard: 'sting-warm-short',
-      gainDb: -3,
+      gainDb: -6,
     },
   },
   {
     id: 'premium',
     name: 'เรียบหรู',
-    description: 'ตัดนุ่ม ไม่ซูมสลับ ซับตัวบางด้านล่าง เปิด-ปิดแบบค่อย ๆ จาง',
-    captions: { styleRef: 'minimal', y: 640 },
+    description: 'ภาพนิ่งนาน ค่อย ๆ ดันกล้องช้า ๆ ซับบางด้านล่าง ไม่มีป้ายเด้ง เปิด–ปิดแบบจาง',
+    suits: 'สินค้าราคาสูง/แบรนด์ อยากให้ดูแพง สงบ',
+    captions: { styleRef: 'minimal', y: 640, maxWords: 6, maxLines: 1 },
     hook: { seconds: 3, y: -480, fontWeight: 500, color: '#ffffff', animationIn: 'fade' },
-    endCard: { seconds: 2.5, color: '#f5f0e6', background: '#1c1917', animationIn: 'fade' },
-    cuts: { maxPauseMs: 600, keepPauseMs: 250, removeFillers: true, maxShotMs: 7000 },
-    zoom: { cycle: [1], punchIn: null, drift: 0.008 },
+    endCard: { seconds: 3, color: '#f5f0e6', background: '#1c1917e6', animationIn: 'fade' },
+    cuts: { maxPauseMs: 650, keepPauseMs: 250, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0.01 },
+    graphics: {
+      priceTag: null,
+      productName: { color: '#f5f0e6', background: '#1c1917b3', animationIn: 'fade', y: -330 },
+      cta: null,
+    },
     sfx: {
       cut: [],
       minGapMs: 0,
       price: null,
+      maxPrice: 0,
       cta: null,
       hook: 'shimmer-short-soft',
       endCard: 'sting-minimal-short',
-      gainDb: -6,
+      gainDb: -8,
     },
   },
   {
     id: 'fun',
     name: 'สนุก มีสีสัน',
-    description: 'ตัดเร็ว ซูมเด้งแรง ซับขอบหนาสีจัด',
-    captions: { styleRef: 'outline-bold', y: 420 },
+    description: 'ตัดเร็ว ซับทีละ 1–2 คำตัวใหญ่ ซูมเน้นบ่อยขึ้น ป้ายราคาเด้งสีจัด',
+    suits: 'คนขายพลังเยอะ พูดเร็ว สินค้าแฟชั่น/ของเล่น/ขนม',
+    captions: { styleRef: 'outline-bold', y: 380, maxWords: 2, maxLines: 1 },
     hook: {
       seconds: 2.5,
       y: -560,
@@ -139,13 +190,19 @@ export const STYLE_PACKS: readonly StylePack[] = [
       background: '#ec4899',
       animationIn: 'bounce',
     },
-    endCard: { seconds: 2, color: '#ffffff', background: '#7c3aed', animationIn: 'bounce' },
-    cuts: { maxPauseMs: 200, keepPauseMs: 60, removeFillers: true, maxShotMs: 2500 },
-    zoom: { cycle: [1, 1.15, 1.05], punchIn: 1.35, drift: 0.045 },
+    endCard: { seconds: 2.5, color: '#ffffff', background: '#7c3aede6', animationIn: 'bounce' },
+    cuts: { maxPauseMs: 220, keepPauseMs: 60, removeFillers: true, removeRestarts: true, maxShotMs: 3500 },
+    zoom: { cycle: [1, 1.1], punchIn: 1.22, punchGap: 2, drift: 0.015 },
+    graphics: {
+      priceTag: { color: '#ffffff', background: '#ec4899', animationIn: 'bounce', y: 100, maxPerClip: 2 },
+      productName: null,
+      cta: { label: 'กดตะกร้าเลย!', animationIn: 'bounce', y: 170 },
+    },
     sfx: {
-      cut: ['swish-medium', 'whoosh-fast-soft', 'pop-medium-bubble'],
-      minGapMs: 1800,
+      cut: ['swish-medium'],
+      minGapMs: 6000,
       price: 'money-coin-drop',
+      maxPrice: 2,
       cta: 'pop-large-bubble',
       hook: 'pop-large-bubble',
       endCard: 'sting-playful-short',
@@ -155,8 +212,9 @@ export const STYLE_PACKS: readonly StylePack[] = [
   {
     id: 'simple',
     name: 'มินิมอล',
-    description: 'ตัดเฉพาะเงียบนาน ๆ ไม่ซูม ซับเรียบ ไม่มีการ์ดปิด',
-    captions: { styleRef: 'clean', y: 560 },
+    description: 'ตัดเฉพาะเงียบนาน ๆ ไม่ซูม ไม่มีกราฟิก/เสียงเพิ่ม ซับเรียบ 2 บรรทัด',
+    suits: 'อยากได้คลิปดิบ ๆ เป็นธรรมชาติ ไปแต่งต่อเอง',
+    captions: { styleRef: 'clean', y: 560, maxWords: null, maxLines: 2 },
     hook: {
       seconds: 3,
       y: -520,
@@ -166,8 +224,9 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'fade',
     },
     endCard: null,
-    cuts: { maxPauseMs: 800, keepPauseMs: 300, removeFillers: false, maxShotMs: null },
-    zoom: { cycle: [1], punchIn: null, drift: 0 },
+    cuts: { maxPauseMs: 800, keepPauseMs: 300, removeFillers: false, removeRestarts: false, maxShotMs: null },
+    zoom: { cycle: [1], punchIn: null, punchGap: 0, drift: 0 },
+    graphics: { priceTag: null, productName: null, cta: null },
     sfx: null,
   },
 ];

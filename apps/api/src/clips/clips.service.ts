@@ -1,9 +1,11 @@
 import { type ClipSuggestion, type ClipsState, STYLE_PACKS } from '@myvideo/contracts';
 import {
+  BuildClipsUnavailableError,
   ClipSuggestionEntity,
   type Env,
   LiveToClipsUnavailableError,
   RestyleUnavailableError,
+  requestBuildClips,
   requestLiveToClips,
   requestRestyle,
 } from '@myvideo/infra';
@@ -56,22 +58,92 @@ export class ClipsService {
       [sourceId, merchantId],
     );
     if (src.length === 0) throw new NotFoundException('Source not found');
-    const runs: { id: string; status: ClipsState['status'] }[] = await this.ds.query(
-      `SELECT id, status FROM workflow_runs WHERE merchant_id = $1 AND kind = 'live_to_clips' AND subject_type = 'source'
+    type Run = { id: string; status: ClipsState['status']; input: { styleId?: string } | null };
+    const runs: Run[] = await this.ds.query(
+      `SELECT id, status, input FROM workflow_runs WHERE merchant_id = $1 AND kind = 'live_to_clips' AND subject_type = 'source'
           AND subject_id = $2 ORDER BY created_at DESC LIMIT 1`,
       [merchantId, sourceId],
     );
     const run = runs[0];
-    if (!run) return { runId: null, status: 'none', mode: null, clips: [] };
+    if (!run) {
+      return {
+        runId: null,
+        status: 'none',
+        mode: null,
+        phase: 'none',
+        styleId: null,
+        advice: null,
+        clips: [],
+      };
+    }
     const rows = await this.ds
       .getRepository(ClipSuggestionEntity)
       .find({ where: { merchantId, workflowRunId: run.id }, order: { rank: 'ASC' } });
+    const builds: Run[] = await this.ds.query(
+      `SELECT id, status, input FROM workflow_runs WHERE merchant_id = $1 AND kind = 'build_clips'
+          AND input->>'planRunId' = $2 ORDER BY created_at DESC LIMIT 1`,
+      [merchantId, run.id],
+    );
+    const build = builds[0];
+    const plan: {
+      result: { advice?: { origin: 'ai' | 'rules'; items: { styleId: string; reason: string }[] } } | null;
+    }[] = await this.ds.query(
+      `SELECT result FROM jobs WHERE workflow_run_id = $1 AND type = 'clips.plan' AND status = 'succeeded' LIMIT 1`,
+      [run.id],
+    );
+    const raw = plan[0]?.result?.advice;
+    const advice = raw
+      ? {
+          origin: raw.origin,
+          items: raw.items.flatMap((x) => {
+            const pack = STYLE_PACKS.find((p) => p.id === x.styleId);
+            return pack ? [{ styleId: x.styleId, name: pack.name, reason: x.reason }] : [];
+          }),
+        }
+      : null;
+    const styleId = run.input?.styleId ?? build?.input?.styleId ?? null;
+    let phase: ClipsState['phase'];
+    if (run.status === 'pending' || run.status === 'running') phase = 'analysing';
+    else if (run.status !== 'succeeded') phase = 'failed';
+    else if (run.input?.styleId) phase = 'done';
+    else if (build) {
+      phase =
+        build.status === 'succeeded'
+          ? 'done'
+          : build.status === 'pending' || build.status === 'running'
+            ? 'building'
+            : 'failed';
+    } else phase = rows.length === 0 ? 'done' : 'choose_style';
     return {
       runId: run.id,
-      status: run.status,
+      // what the page polls on: the edit once it started, else the analysis
+      status: build?.status ?? run.status,
       mode: rows[0]?.mode ?? this.env.LLM_MODE,
+      phase,
+      styleId,
+      advice,
       clips: rows.filter((r) => r.status !== 'discarded').map(toDto),
     };
+  }
+
+  async build(merchantId: string, sourceId: string, styleId: string): Promise<ClipsState> {
+    try {
+      await requestBuildClips(this.ds, {
+        merchantId,
+        sourceId,
+        styleId,
+        maxUnfinishedRuns: this.env.MERCHANT_MAX_ACTIVE_RUNS,
+      });
+    } catch (err) {
+      if (err instanceof BuildClipsUnavailableError) {
+        if (err.reason === 'not_found') throw new NotFoundException('Source not found');
+        if (err.reason === 'unknown_style')
+          throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
+        throw new ConflictException('ยังไม่มีผลวิเคราะห์คลิปของวิดีโอนี้ กด "สร้างคลิปอัตโนมัติ" ก่อน');
+      }
+      throw err;
+    }
+    return this.state(merchantId, sourceId);
   }
 
   async generate(

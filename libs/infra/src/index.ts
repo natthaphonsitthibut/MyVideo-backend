@@ -71,12 +71,14 @@ export {
   suggestHooksRules,
 } from './highlights/hooks.js';
 export {
+  BuildClipsUnavailableError,
   clipsBuildHandler,
   clipsPlanHandler,
   type LiveToClipsDeps,
   LiveToClipsUnavailableError,
   liveToClipsHandlers,
   loadCorrectedTranscript,
+  requestBuildClips,
   requestLiveToClips,
 } from './highlights/live-to-clips.js';
 export {

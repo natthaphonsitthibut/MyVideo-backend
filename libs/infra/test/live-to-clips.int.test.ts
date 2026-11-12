@@ -18,6 +18,7 @@ import { parseClipBuildInput } from '../src/highlights/clip-build-input.js';
 import {
   LiveToClipsUnavailableError,
   liveToClipsHandlers,
+  requestBuildClips,
   requestLiveToClips,
 } from '../src/highlights/live-to-clips.js';
 import { clipsRestyleHandler, requestRestyle } from '../src/highlights/restyle.js';
@@ -139,16 +140,43 @@ describe.skipIf(!has)(
       expect(created).toBe(true);
       expect((await requestLiveToClips(ds, { merchantId, sourceId })).runId).toBe(runId); // joins while running
 
+      // analysis only: clips are found and styles recommended, nothing is edited before the merchant picks a style
       const ran = await drain(runId, new JobRunner(ds, await registry(), { workerId: 'w' }));
-      expect(ran.slice(0, 2)).toEqual(['shots.detect', 'clips.plan']);
-      const clips = await ds
-        .getRepository(ClipSuggestionEntity)
-        .find({ where: { workflowRunId: runId }, order: { rank: 'ASC' } });
-      expect(clips.length).toBeGreaterThan(0);
-      expect(ran.filter((x) => x === 'clips.build')).toHaveLength(clips.length);
+      expect(ran).toEqual(['shots.detect', 'clips.plan']);
       expect((await ds.query(`SELECT status FROM workflow_runs WHERE id = $1`, [runId]))[0].status).toBe(
         'succeeded',
       );
+      const planned = await ds.getRepository(ClipSuggestionEntity).find({ where: { workflowRunId: runId } });
+      expect(planned.length).toBeGreaterThan(0);
+      expect(planned.every((c) => c.status === 'planned' && c.projectId === null)).toBe(true);
+      const planResult = (
+        await ds.query(`SELECT result FROM jobs WHERE workflow_run_id = $1 AND type = 'clips.plan'`, [runId])
+      )[0].result as { advice: { origin: string; items: { styleId: string; reason: string }[] } };
+      // rules mode: the measured-features ranking, every style once, each with a reason
+      expect(planResult.advice.origin).toBe('rules');
+      expect(planResult.advice.items.map((x) => x.styleId).sort()).toEqual([
+        'friendly',
+        'fun',
+        'premium',
+        'sale-fast',
+        'simple',
+      ]);
+      console.log(`style advice: ${JSON.stringify(planResult.advice.items)}`);
+
+      // the merchant picks a style → a build run edits every planned clip; asking again joins it
+      const build = await requestBuildClips(ds, { merchantId, sourceId, styleId: 'sale-fast' });
+      expect(build.created).toBe(true);
+      expect((await requestBuildClips(ds, { merchantId, sourceId, styleId: 'sale-fast' })).runId).toBe(
+        build.runId,
+      );
+      const built = await drain(build.runId, new JobRunner(ds, await registry(), { workerId: 'w' }));
+      const clips = await ds
+        .getRepository(ClipSuggestionEntity)
+        .find({ where: { workflowRunId: runId }, order: { rank: 'ASC' } });
+      expect(built.filter((x) => x === 'clips.build')).toHaveLength(clips.length);
+      await expect(requestBuildClips(ds, { merchantId, sourceId, styleId: 'fun' })).rejects.toMatchObject({
+        reason: 'not_analysed', // every clip is built now
+      });
 
       for (const c of clips) {
         expect(c).toMatchObject({ status: 'ready', mode: 'rules', origin: 'rules' });
@@ -162,7 +190,7 @@ describe.skipIf(!has)(
           .findOneByOrFail({ projectId: c.projectId ?? '', version: 1 });
         expect(validateProject(v.doc).ok).toBe(true);
         const doc = v.doc as { meta: { createdBy: string; workflowRunId: string }; durationFrames: number };
-        expect(doc.meta).toMatchObject({ createdBy: 'ai', workflowRunId: runId });
+        expect(doc.meta).toMatchObject({ createdBy: 'ai', workflowRunId: runId, styleId: 'sale-fast' });
         console.log(
           `rank ${c.rank}: ${(c.startMs / 1000).toFixed(2)}–${(c.endMs / 1000).toFixed(2)} s score ${c.score} title "${c.title}" hook "${c.hook}"`,
         );

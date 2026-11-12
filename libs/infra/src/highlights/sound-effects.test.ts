@@ -1,9 +1,19 @@
-import { librarySound, stylePack } from '@myvideo/contracts';
+import { librarySound, type StylePack, stylePack } from '@myvideo/contracts';
 import { describe, expect, it } from 'vitest';
 import { placeSoundEffects, type SfxMoment } from './sound-effects.js';
 
 const fps = { num: 30, den: 1 };
-const sfx = stylePack('sale-fast').sfx!;
+// the placement mechanism with cut sounds on (the shipped packs use cut sounds sparingly or not at all)
+const sfx: NonNullable<StylePack['sfx']> = {
+  cut: ['whoosh-fast-soft', 'swish-soft'],
+  minGapMs: 2500,
+  price: 'money-register',
+  maxPrice: 2,
+  cta: 'pop-medium-in',
+  hook: 'pop-medium-in',
+  endCard: 'sting-bold-short',
+  gainDb: 0,
+};
 const frameOf = (sec: number) => Math.round(sec * 30);
 
 describe('placeSoundEffects', () => {

@@ -40,6 +40,20 @@ export const ClipsState = named(
     status: z.enum(['none', 'pending', 'running', 'succeeded', 'failed', 'cancelled']),
     /** Analysis mode of that run: api | local-agent | rules. */
     mode: z.string().nullable(),
+    /**
+     * none → analysing (finding clips, recommending styles) → choose_style (the merchant picks one) → building →
+     * done; failed when the analysis or the edit failed. Runs started with a style skip choose_style.
+     */
+    phase: z.enum(['none', 'analysing', 'choose_style', 'building', 'done', 'failed']),
+    /** The style the clips are (being) edited with; null before the choice. */
+    styleId: z.string().nullable(),
+    /** Styles ranked for this video with a Thai reason (best first); null until the analysis is done. */
+    advice: z
+      .object({
+        origin: z.enum(['ai', 'rules']),
+        items: z.array(z.object({ styleId: z.string(), name: z.string(), reason: z.string() })),
+      })
+      .nullable(),
     clips: z.array(ClipSuggestion),
   }),
 );
@@ -140,6 +154,25 @@ export const restyleProject = defineRoute({
     400: { description: 'Unknown style', schema: ApiErrorBody },
     404: { description: 'No such project for this merchant', schema: ApiErrorBody },
     409: { description: 'Not an AI clip with stored build inputs (Thai message)', schema: ApiErrorBody },
+    429: { description: 'Too many unfinished runs', schema: ApiErrorBody },
+  },
+});
+
+export const BuildClipsBody = named('BuildClipsBody', z.object({ styleId: z.string().min(1).max(64) }));
+
+export const buildClips = defineRoute({
+  operationId: 'buildClips',
+  method: 'post',
+  path: '/sources/{id}/clips/build',
+  summary: 'Edit the analysed clips with the style the merchant picked (starts or joins the edit)',
+  tags: ['clips'],
+  auth: true,
+  request: { params: SourceIdParams, body: BuildClipsBody },
+  responses: {
+    202: { description: 'Edit started or joined', schema: ClipsState },
+    400: { description: 'Unknown style', schema: ApiErrorBody },
+    404: { description: 'No such source', schema: ApiErrorBody },
+    409: { description: 'No finished analysis / nothing left to edit (Thai message)', schema: ApiErrorBody },
     429: { description: 'Too many unfinished runs', schema: ApiErrorBody },
   },
 });

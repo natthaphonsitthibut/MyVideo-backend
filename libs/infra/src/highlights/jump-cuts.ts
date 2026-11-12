@@ -7,7 +7,13 @@ import type { ClipWordMs } from './clip-project.js';
  * maps any source time onto the shortened output timeline.
  */
 export type SpanMs = { startMs: number; endMs: number };
-export type CutRules = { maxPauseMs: number; keepPauseMs: number; removeFillers: boolean };
+export type CutRules = {
+  maxPauseMs: number;
+  keepPauseMs: number;
+  removeFillers: boolean;
+  /** Drop the first take of a phrase the seller says again (`findRestarts`). */
+  removeRestarts?: boolean;
+};
 export type JumpCutPlan = {
   /** Kept source ranges, in order; played back to back. */
   segments: SpanMs[];
@@ -41,6 +47,48 @@ export function keyMomentKind(tokens: readonly string[]): 'price' | 'cta' | null
 /** A price or a call to action in these words. */
 export function isKeyMoment(tokens: readonly string[]): boolean {
   return keyMomentKind(tokens) !== null;
+}
+
+/** Particles or hesitations that may sit between two takes of the same phrase ("ไซส์เสียค่ะ ไซส์เสีย"). */
+const BETWEEN_TAKES = new Set(['ค่ะ', 'คะ', 'ครับ', 'นะ', 'อ่ะ', 'เอ่อ', 'อ่า', 'อืม', 'เอิ่ม']);
+const normToken = (t: string) => t.trim().toLowerCase();
+
+/**
+ * Restarts: a phrase (1–4 words) said again right after itself, optionally with one particle between — the first
+ * take is dropped, the later (usually cleaner) one stays. A single repeated word counts only if it is long (≥ 4
+ * characters): short doubled words ("ดี ดี", "มาก มาก") are Thai emphasis, not a stumble. Returns word ranges
+ * (inclusive) to remove; consecutive ones (ASR loops "ตอนนี้ ตอนนี้ ตอนนี้") are merged.
+ */
+export function findRestarts(
+  words: readonly ClipWordMs[],
+  maxRun = 4,
+  maxSpanMs = 6000,
+): { fromWord: number; toWord: number }[] {
+  const t = words.map((w) => normToken(w.text));
+  const out: { fromWord: number; toWord: number }[] = [];
+  let i = 0;
+  while (i < t.length) {
+    let found: { fromWord: number; toWord: number } | null = null;
+    for (let len = Math.min(maxRun, t.length - i); len >= 1 && !found; len--) {
+      const run = t.slice(i, i + len).join('|');
+      if (len === 1 && (t[i] ?? '').length < 4) continue;
+      for (let gap = 0; gap <= 1 && !found; gap++) {
+        if (gap === 1 && !BETWEEN_TAKES.has(t[i + len] ?? '')) continue;
+        const j = i + len + gap;
+        if (j + len > t.length) continue;
+        if (t.slice(j, j + len).join('|') !== run) continue;
+        const span = (words[j] as ClipWordMs).startMs - (words[i] as ClipWordMs).startMs;
+        if (span <= maxSpanMs) found = { fromWord: i, toWord: j - 1 };
+      }
+    }
+    if (found) {
+      const last = out[out.length - 1];
+      if (last && last.toWord + 1 === found.fromWord) last.toWord = found.toWord;
+      else out.push(found);
+      i = found.toWord + 1;
+    } else i++;
+  }
+  return out;
 }
 
 /** A shot shorter than this after a split would feel like a glitch. */
@@ -120,6 +168,18 @@ export function planJumpCuts(
       if (!isFiller(w.text)) continue;
       fillers.add(w);
       removals.push({ startMs: Math.max(w.startMs, clip.startMs), endMs: Math.min(w.endMs, clip.endMs) });
+    }
+  }
+  if (rules.removeRestarts) {
+    for (const r of findRestarts(words)) {
+      const first = words[r.fromWord] as ClipWordMs;
+      const next = words[r.toWord + 1];
+      for (let k = r.fromWord; k <= r.toWord; k++) fillers.add(words[k] as ClipWordMs);
+      // up to where the kept take starts, so no sliver of the dropped take is heard
+      removals.push({
+        startMs: Math.max(first.startMs, clip.startMs),
+        endMs: Math.min(next ? next.startMs : (words[r.toWord] as ClipWordMs).endMs, clip.endMs),
+      });
     }
   }
   const merged = removals

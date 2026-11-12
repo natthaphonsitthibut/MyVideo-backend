@@ -60,17 +60,17 @@ function build(styleId: string) {
 describe('style-pack edit of a clip', () => {
   it('sale-fast: jump cut on the silence and the filler, contiguous segments, valid project', () => {
     const { project, cut } = build('sale-fast');
-    // silence 12.0–14.0 shrinks to 80 ms, filler 14.0–14.5 goes too
+    // silence 12.0–14.0 shrinks to 100 ms (keepPauseMs), filler 14.0–14.5 goes too
     expect(cut.segments).toEqual([
-      { startMs: 10_000, endMs: 12_040 },
+      { startMs: 10_000, endMs: 12_050 },
       { startMs: 14_500, endMs: 16_000 },
     ]);
     const videos = Object.values(project.elements).filter((e) => e.type === 'video');
     expect(videos.map((v) => [v.startFrame, v.durationFrames, v.sourceInFrame])).toEqual([
-      [0, 61, 300],
-      [61, 45, 435],
+      [0, 62, 300],
+      [62, 45, 435],
     ]);
-    expect(project.durationFrames).toBe(106);
+    expect(project.durationFrames).toBe(107);
     expect(validateProject(project).ok).toBe(true);
     expect(project.meta.styleId).toBe('sale-fast');
   });
@@ -112,8 +112,8 @@ describe('style-pack edit of a clip', () => {
     if (caption?.type !== 'caption') throw new Error('no caption');
     expect(caption.styleRef).toBe('pop-word');
     expect(caption.words.map((x) => x.text)).toEqual(['ตัว', 'นี้', 'สวย', '80', 'บาท', 'พิมพ์']);
-    // "80" was at 14.5 s in the source → right after the first segment (61 frames) on the output
-    expect(caption.words[3]?.startFrame).toBe(61);
+    // "80" was at 14.5 s in the source → right after the first segment (62 frames) on the output
+    expect(caption.words[3]?.startFrame).toBe(62);
     expect(caption.words[5]).toMatchObject({ text: 'พิมพ์', origin: 'ai', asrText: 'พิม' });
   });
 
@@ -122,8 +122,8 @@ describe('style-pack edit of a clip', () => {
     const texts = Object.values(project.elements).filter((e) => e.type === 'text');
     const end = texts.find((t) => t.type === 'text' && t.content === plan.title);
     expect(end).toBeDefined();
-    // clip is 106 frames, end card 2 s = 60 frames → would start at 46, but no hook here → 46
-    expect(end?.startFrame).toBe(46);
+    // clip is 107 frames, end card 2.5 s = 75 frames → starts at 32 (no hook here to protect)
+    expect(end?.startFrame).toBe(32);
     expect((end?.startFrame ?? 0) + (end?.durationFrames ?? 0)).toBe(project.durationFrames);
   });
 
@@ -154,12 +154,56 @@ describe('style-pack edit of a clip', () => {
       expect(e.volume).toBeLessThan(1);
       return { id: sound.id, sync: e.startFrame - e.sourceInFrame + Math.round(sound.syncAtSec * 30) };
     });
-    // the second shot ("80 บาท") is a punch-in on a price → the price sound on its first frame (61), not a whoosh;
-    // the end card appears at frame 46 → the closing sting meets it
-    expect(placed).toContainEqual({ id: 'money-register', sync: 61 });
-    expect(placed).toContainEqual({ id: 'sting-bold-short', sync: 46 });
-    expect(placed.some((p) => p.id.startsWith('whoosh') && p.sync === 61)).toBe(false);
+    // the second shot ("80 บาท") is a punch-in on a price → the price sound on its first frame (62);
+    // the end card appears at frame 32 → the closing sting meets it; plain cuts get no sound in this style
+    expect(placed).toContainEqual({ id: 'money-register', sync: 62 });
+    expect(placed).toContainEqual({ id: 'sting-bold-short', sync: 32 });
+    expect(placed.some((p) => p.id.startsWith('whoosh') || p.id.startsWith('swish'))).toBe(false);
     expect(validateProject(project).ok).toBe(true);
+  });
+
+  it('motion graphics: price tag where the price is said, product lower-third, CTA pill — one at a time', () => {
+    const style = stylePack('sale-fast');
+    const cut = planJumpCuts({ startMs: plan.startMs, endMs: plan.endMs }, plan.words, speech, style.cuts);
+    const frames = editFrames(source, plan, cut);
+    const laid = (text: string) => ({ text, fontSize: 80, lines: 1 });
+    const project = buildClipProject({
+      projectId: '00000000-0000-4000-8000-0000000000aa',
+      merchantId: '00000000-0000-4000-8000-0000000000bb',
+      source,
+      plan,
+      pages: [
+        {
+          startFrame: 0,
+          durationFrames: frames.durationFrames,
+          words: frames.words.map(({ text, startFrame, endFrame }) => ({ text, startFrame, endFrame })),
+          lines: [frames.words.map((_, i) => i)],
+        },
+      ],
+      graphics: {
+        prices: [{ frame: 62, text: laid('80 บาท') }],
+        productName: laid('Liquid Blue'),
+        cta: laid('กดตะกร้า'),
+      },
+      edit: { style, cut },
+      seed: 'test',
+    });
+    expect(validateProject(project).ok).toBe(true);
+    const gfxTrack = project.tracks.filter((t) => t.kind === 'overlay').at(-1);
+    const els = (gfxTrack?.elementIds ?? []).map((id) => project.elements[id]);
+    const shown = els.map((e) => (e?.type === 'text' ? [e.content, e.startFrame, e.durationFrames] : null));
+    // product name right away (no hook here) for 2.5 s; the price at 62 overlaps it → the price tag starts only
+    // when the frame is free (skipped here: 62 < 75); the CTA takes the last 2.5 s
+    expect(shown).toEqual([
+      ['Liquid Blue', 0, 75],
+      ['กดตะกร้า', 75, 32],
+    ]);
+    // never two graphics at once
+    const spans = els.map((e) => [e?.startFrame ?? 0, (e?.startFrame ?? 0) + (e?.durationFrames ?? 0)]);
+    for (let i = 1; i < spans.length; i++)
+      expect(spans[i]?.[0]).toBeGreaterThanOrEqual(spans[i - 1]?.[1] ?? 0);
+    // a style without graphics adds none
+    expect(build('simple').project.tracks.filter((t) => t.kind === 'overlay')).toHaveLength(0);
   });
 
   it('simple has no sound effects; premium only its quiet title / end-card sounds', () => {

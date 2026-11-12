@@ -1,5 +1,12 @@
 import { getMe, login, logout } from './http/auth.js';
-import { discardClip, generateClips, getClips, listStylePacks, restyleProject } from './http/clips.js';
+import {
+  buildClips,
+  discardClip,
+  generateClips,
+  getClips,
+  listStylePacks,
+  restyleProject,
+} from './http/clips.js';
 import { getHealth } from './http/health.js';
 import { cancelJob, retryJob } from './http/jobs.js';
 import { getLibrarySound } from './http/library.js';
@@ -66,6 +73,7 @@ export const routes: RouteContract[] = [
   getRenderFile,
   getClips,
   generateClips,
+  buildClips,
   discardClip,
   listStylePacks,
   restyleProject,

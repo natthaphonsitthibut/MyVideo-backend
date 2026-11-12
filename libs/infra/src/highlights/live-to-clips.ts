@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { STYLE_PACKS } from '@myvideo/contracts';
 import {
   finalizeClips,
   flattenTranscript,
@@ -26,7 +27,9 @@ import { correctCaptions, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
 import { layoutClipProject, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
+import { keyMomentKind } from './jump-cuts.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
+import { adviseStyles, type StyleAdvice } from './style-advice.js';
 
 /**
  * The `live_to_clips` workflow (E07-F08, ARCHITECTURE §9): `shots.detect` → `clips.plan` → one `clips.build` per
@@ -108,6 +111,87 @@ export async function requestLiveToClips(
       },
       timeoutMs: 60 * 60_000,
     });
+    return { runId: run.id, created: true };
+  });
+}
+
+export class BuildClipsUnavailableError extends Error {
+  constructor(
+    readonly reason: 'not_found' | 'unknown_style' | 'not_analysed',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'BuildClipsUnavailableError';
+  }
+}
+
+/**
+ * The merchant picked a style for the newest analysis run of a source: edit its planned clips with that style in a
+ * `build_clips` run (one `clips.build` per clip; the clips stay owned by the analysis run). Joins an unfinished
+ * build of the same analysis instead of starting a second one.
+ */
+export async function requestBuildClips(
+  ds: DataSource,
+  input: { merchantId: string; sourceId: string; styleId: string; maxUnfinishedRuns?: number },
+): Promise<{ runId: string; created: boolean }> {
+  if (!STYLE_PACKS.some((p) => p.id === input.styleId))
+    throw new BuildClipsUnavailableError('unknown_style', 'unknown style');
+  return ds.transaction(async (em) => {
+    const src: unknown[] = await em.query(
+      `SELECT 1 FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+      [input.sourceId, input.merchantId],
+    );
+    if (src.length === 0) throw new BuildClipsUnavailableError('not_found', 'source not found');
+    const plans: { id: string; input: { product?: ProductInfo } }[] = await em.query(
+      `SELECT id, input FROM workflow_runs WHERE merchant_id = $1 AND kind = 'live_to_clips' AND subject_type = 'source'
+          AND subject_id = $2 AND status = 'succeeded' ORDER BY created_at DESC LIMIT 1`,
+      [input.merchantId, input.sourceId],
+    );
+    const plan = plans[0];
+    if (!plan) throw new BuildClipsUnavailableError('not_analysed', 'no finished analysis');
+    const open: { id: string }[] = await em.query(
+      `SELECT id FROM workflow_runs WHERE merchant_id = $1 AND kind = 'build_clips' AND input->>'planRunId' = $2
+          AND status IN ('pending', 'running') LIMIT 1`,
+      [input.merchantId, plan.id],
+    );
+    if (open[0]) return { runId: open[0].id, created: false };
+    const planned = await em.getRepository(ClipSuggestionEntity).find({
+      where: { merchantId: input.merchantId, workflowRunId: plan.id, status: 'planned' },
+      order: { rank: 'ASC' },
+    });
+    if (planned.length === 0) throw new BuildClipsUnavailableError('not_analysed', 'nothing left to edit');
+    const planJob: { result: { speechByRank?: Record<string, SpanMs[]> } | null }[] = await em.query(
+      `SELECT result FROM jobs WHERE workflow_run_id = $1 AND type = 'clips.plan' AND status = 'succeeded' LIMIT 1`,
+      [plan.id],
+    );
+    const speech = planJob[0]?.result?.speechByRank ?? {};
+    if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
+    const run = await createRunInTransaction(em, {
+      merchantId: input.merchantId,
+      kind: 'build_clips',
+      subjectType: 'source',
+      subjectId: input.sourceId,
+      input: { planRunId: plan.id, styleId: input.styleId },
+    });
+    for (const s of planned) {
+      await enqueueInTransaction(em, {
+        merchantId: input.merchantId,
+        workflowRunId: run.id,
+        type: 'clips.build',
+        queue: 'ai',
+        idempotencyKey: `${run.id}:clips.build:${s.rank}`,
+        payload: {
+          sourceId: input.sourceId,
+          rank: s.rank,
+          planRunId: plan.id,
+          product: plan.input?.product ?? {},
+          speech: speech[String(s.rank)] ?? [],
+          styleId: input.styleId,
+        },
+        maxAttempts: 3,
+        timeoutMs: 10 * 60_000,
+      });
+    }
     return { runId: run.id, created: true };
   });
 }
@@ -323,14 +407,53 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
           .filter((s) => s.endMs > c.startMs && s.startMs < c.endMs)
           .map((s) => ({ startMs: s.startMs, endMs: s.endMs }));
       }
+      // no style chosen yet: recommend styles for this video; the merchant picks one, then `build_clips` edits
+      let advice: StyleAdvice | undefined;
+      if (typeof job.payload.styleId !== 'string' && final.length > 0) {
+        const flat = flattenTranscript(segments);
+        const speechSec =
+          speech.reduce((n, s) => n + (s.endMs - s.startMs), 0) / 1000 || probe.durationMs / 1000;
+        const minutes = Math.max(probe.durationMs / 60_000, 1 / 60);
+        const texts = flat.map((w) => w.text);
+        let prices = 0;
+        let ctas = 0;
+        for (let i = 0; i < texts.length; i++) {
+          const kind = keyMomentKind(texts.slice(i, i + 2));
+          if (kind === 'price' && !/^\d/.test(texts[i - 1] ?? '')) prices++;
+          if (kind === 'cta') ctas++;
+        }
+        const pauses = speech.filter(
+          (s, i) => i > 0 && s.startMs - (speech[i - 1] as SpanMs).endMs >= 500,
+        ).length;
+        const sample = final
+          .map((c) => texts.slice(c.startWord, c.endWord + 1).join(''))
+          .join(' … ')
+          .slice(0, 2500);
+        advice = await adviseStyles(
+          llm,
+          {
+            durationMin: Math.round(minutes * 10) / 10,
+            wordsPerSec: Math.round((texts.length / speechSec) * 10) / 10,
+            pricesPerMin: Math.round((prices / minutes) * 10) / 10,
+            ctaPerMin: Math.round((ctas / minutes) * 10) / 10,
+            pausesPerMin: Math.round((pauses / minutes) * 10) / 10,
+            productTerms: product.name ? [product.name] : [],
+          },
+          sample,
+          { merchantId: job.merchantId, workflowRunId: runId },
+        );
+      }
       return {
         clips: final.length,
         ranks: final.map((c) => c.rank),
         shotCuts: shotCutsMs.length,
         speechByRank,
+        ...(advice ? { advice } : {}),
       };
     },
     next(job, result) {
+      // analysis only: the edit starts when the merchant picks a style (`requestBuildClips`)
+      if (typeof job.payload.styleId !== 'string') return [];
       const ranks = (result.ranks as number[]) ?? [];
       const speech = (result.speechByRank ?? {}) as Record<string, SpanMs[]>;
       return ranks.map((r) =>
@@ -393,6 +516,7 @@ export async function layoutClip(
       plan: planOf(a.input),
       seed: `${a.workflowRunId}:${a.rank}`,
       style: { ...(a.styleId ? { styleId: a.styleId } : {}), speech: a.input.speech },
+      ...(a.input.productName ? { productName: a.input.productName } : {}),
     });
   } finally {
     await layout.close();
@@ -409,8 +533,10 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       if (!probe) throw new FatalJobError('source has no probe result');
       const repo = ds.getRepository(ClipSuggestionEntity);
       const rank = Number(job.payload.rank);
+      // a build started by the merchant's style choice runs in its own run; the clips belong to the analysis run
+      const planRunId = typeof job.payload.planRunId === 'string' ? job.payload.planRunId : job.workflowRunId;
       const s = await repo.findOneByOrFail({
-        workflowRunId: job.workflowRunId,
+        workflowRunId: planRunId,
         rank,
         merchantId: job.merchantId,
       });
@@ -442,7 +568,7 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         product.name ? [product.name] : [],
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
       );
-      const projectId = clipProjectId(job.workflowRunId, rank);
+      const projectId = clipProjectId(planRunId, rank);
       const buildInput = clipBuildInput({
         plan: {
           startMs: s.startMs,
@@ -453,11 +579,12 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         },
         // older queued jobs have no speech spans: then only filler words are cut
         speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
+        ...(product.name ? { productName: product.name } : {}),
       });
       const project = await layoutClip(openLayout, {
         projectId,
         merchantId: job.merchantId,
-        workflowRunId: job.workflowRunId,
+        workflowRunId: planRunId,
         rank,
         source: sourceInfo(source.id, probe),
         input: buildInput,
@@ -499,7 +626,12 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       await em.query(
         `UPDATE clip_suggestions SET status = 'failed', error = $4, updated_at = now()
           WHERE workflow_run_id = $1 AND rank = $2 AND merchant_id = $3 AND status = 'planned'`,
-        [job.workflowRunId, Number(job.payload.rank), job.merchantId, error.message.slice(0, 1000)],
+        [
+          typeof job.payload.planRunId === 'string' ? job.payload.planRunId : job.workflowRunId,
+          Number(job.payload.rank),
+          job.merchantId,
+          error.message.slice(0, 1000),
+        ],
       );
     },
   };

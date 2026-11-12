@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isFiller, isKeyMoment, planJumpCuts, splitLongShots } from './jump-cuts.js';
+import { findRestarts, isFiller, isKeyMoment, planJumpCuts, splitLongShots } from './jump-cuts.js';
 
 const cuts = { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true };
 const w = (text: string, startMs: number, endMs: number) => ({ text, startMs, endMs });
@@ -136,5 +136,37 @@ describe('word classes', () => {
     expect(isKeyMoment(['CF', 'ได้', 'เลย'])).toBe(true);
     expect(isKeyMoment(['ยาว', '29', 'นิ้ว'])).toBe(false);
     expect(isKeyMoment(['สี', 'สวย', 'มาก'])).toBe(false);
+  });
+});
+
+describe('restarts (the seller says it again)', () => {
+  // real S01a caption: "คุณพีแคปแล้วบอกว่าไซส์เสียค่ะไซส์เสียคุณพีแคป" (ASR tokens, 300 ms each)
+  const tokens = ['คุณ', 'พี', 'แคป', 'แล้ว', 'บอก', 'ว่า', 'ไซส์', 'เสีย', 'ค่ะ', 'ไซส์', 'เสีย', 'คุณ', 'พี', 'แคป'];
+  const words = tokens.map((t, i) => w(t, i * 300, i * 300 + 300));
+  const all = [{ startMs: 0, endMs: tokens.length * 300 }];
+
+  it('finds a repeated phrase and the first take to drop', () => {
+    expect(findRestarts(words)).toEqual([{ fromWord: 6, toWord: 8 }]); // "ไซส์ เสีย ค่ะ" — the later take stays
+  });
+
+  it('drops the first take from picture and captions when enabled', () => {
+    const r = planJumpCuts({ startMs: 0, endMs: tokens.length * 300 }, words, all, {
+      ...cuts,
+      removeRestarts: true,
+    });
+    expect(r.words.map((x) => x.text).join('')).toBe('คุณพีแคปแล้วบอกว่าไซส์เสียคุณพีแคป');
+    expect(r.segments).toEqual([
+      { startMs: 0, endMs: 1800 },
+      { startMs: 2700, endMs: 4200 },
+    ]);
+  });
+
+  it('a long word said again and again (ASR loop) keeps one; short doubled words stay', () => {
+    const loop = ['ตอนนี้', 'ตอนนี้', 'ตอนนี้', 'ราคา', 'ดี', 'ดี'].map((t, i) => w(t, i * 400, i * 400 + 400));
+    expect(findRestarts(loop)).toEqual([{ fromWord: 0, toWord: 1 }]);
+  });
+
+  it('a phrase repeated far apart is not a restart', () => {
+    expect(findRestarts(words).some((r) => r.fromWord === 0)).toBe(false);
   });
 });

@@ -17,8 +17,21 @@ export type LaidOutText = { text: string; fontSize: number; lines: number };
 type StageLib = {
   buildCaptions(
     words: LayoutWord[],
-    opts: { measure: (t: string) => number; maxWidth: number; maxLines: number; pauseFrames: number },
+    opts: {
+      measure: (t: string) => number;
+      maxWidth: number;
+      maxLines: number;
+      pauseFrames: number;
+      maxWords?: number;
+    },
   ): LaidOutCaptionPage[];
+  phraseTokens(text: string): string[];
+  balancedLines(
+    tokens: readonly string[],
+    measure: (t: string) => number,
+    maxWidth: number,
+    maxLines: number,
+  ): string[] | null;
   canvasMeasure(font: string): (t: string) => number;
   captionFont(styleRef: string): string;
   captionMaxWidth(canvasWidth: number, styleRef?: string): number;
@@ -59,7 +72,13 @@ export class StageTextLayout {
 
   layoutCaptions(
     words: LayoutWord[],
-    opts: { styleRef: string; canvasWidth: number; maxLines?: number; pauseFrames?: number },
+    opts: {
+      styleRef: string;
+      canvasWidth: number;
+      maxLines?: number;
+      pauseFrames?: number;
+      maxWords?: number;
+    },
   ): Promise<LaidOutCaptionPage[]> {
     return this.page.evaluate(
       async ([w, o]) => {
@@ -72,6 +91,7 @@ export class StageTextLayout {
           maxWidth: s.captionMaxWidth(o.canvasWidth, o.styleRef),
           maxLines: o.maxLines ?? 2,
           pauseFrames: o.pauseFrames ?? 15,
+          ...(o.maxWords !== undefined ? { maxWords: o.maxWords } : {}),
         });
       },
       [words, opts] as const,
@@ -79,8 +99,9 @@ export class StageTextLayout {
   }
 
   /**
-   * Greedy line fill of `text` at its spaces, measured with the stage font. Tries the given font sizes from the
-   * largest down until every space-separated phrase fits `maxWidth` and there are at most `maxLines` lines.
+   * Line breaks for free text (hook, end card) with the stage's phrase rules: breaks only between phrases (never
+   * inside "number + what it counts" or a Latin name), fewest lines, then the most even split. Tries the font sizes
+   * from the largest down until it fits `maxLines` lines of `maxWidth`.
    */
   layoutText(
     text: string,
@@ -89,25 +110,15 @@ export class StageTextLayout {
     return this.page.evaluate(
       async ([t, o]) => {
         const s = (globalThis as unknown as StagePage).MyVideoStage;
-        const tokens = t.split(/\s+/).filter((x) => x.length > 0);
-        let last = { text: tokens.join(' '), fontSize: o.fontSizes.at(-1) ?? 48, lines: 1 };
+        const tokens = s.phraseTokens(t);
         for (const size of o.fontSizes) {
           const font = `${o.fontWeight} ${size}px ${s.STAGE_FONT}`;
           await s.loadCaptionFont(font);
-          const width = s.canvasMeasure(font);
-          const lines: string[] = [];
-          let ok = true;
-          for (const tok of tokens) {
-            if (width(tok) > o.maxWidth) ok = false;
-            const cur = lines.at(-1);
-            const joined = cur === undefined ? tok : `${cur} ${tok}`;
-            if (cur !== undefined && width(joined) <= o.maxWidth) lines[lines.length - 1] = joined;
-            else lines.push(tok);
-          }
-          last = { text: lines.join('\n'), fontSize: size, lines: lines.length };
-          if (ok && lines.length <= o.maxLines) return last;
+          const lines = s.balancedLines(tokens, s.canvasMeasure(font), o.maxWidth, o.maxLines);
+          if (lines) return { text: lines.join('\n'), fontSize: size, lines: lines.length };
         }
-        return last;
+        // nothing fits: smallest size, one phrase per line (still never inside a phrase)
+        return { text: tokens.join('\n'), fontSize: o.fontSizes.at(-1) ?? 48, lines: tokens.length };
       },
       [text, opts] as const,
     );

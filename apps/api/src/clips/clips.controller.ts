@@ -1,4 +1,5 @@
 import {
+  BuildClipsBody,
   type ClipSuggestion,
   ClipSuggestionParams,
   type ClipsState,
@@ -32,6 +33,16 @@ export class ClipsController {
     @Body(new ZodPipe(GenerateClipsBody)) body: { productName?: string; fresh?: boolean; styleId?: string },
   ): Promise<ClipsState> {
     return this.clips.generate(merchantId, p.id, body);
+  }
+
+  @Post('sources/:id/clips/build')
+  @HttpCode(202)
+  build(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SourceIdParams)) p: { id: string },
+    @Body(new ZodPipe(BuildClipsBody)) body: { styleId: string },
+  ): Promise<ClipsState> {
+    return this.clips.build(merchantId, p.id, body.styleId);
   }
 
   @Get('style-packs')

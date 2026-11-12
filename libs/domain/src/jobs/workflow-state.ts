@@ -24,6 +24,7 @@ export const WORKFLOW_KINDS = [
   'transcribe',
   'live_to_clips',
   'restyle_clip',
+  'build_clips',
   'review_to_video',
   'render',
   'system_test',

@@ -129,6 +129,8 @@ export const CaptionWord = named(
     /** Present only for an AI spelling correction; retain the original token for undo. */
     origin: z.literal('ai').optional(),
     asrText: z.string().min(1).optional(),
+    /** The page's key word (price, product, strong benefit): emphasis colour + slightly larger. */
+    emphasis: z.literal(true).optional(),
     /** Relative to the caption element's start. */
     startFrame: frame,
     endFrame: frame,

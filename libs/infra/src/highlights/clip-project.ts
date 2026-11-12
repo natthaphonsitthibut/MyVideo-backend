@@ -7,7 +7,8 @@ import {
   stylePack,
   validateProject,
 } from '@myvideo/contracts';
-import type { LaidOutCaptionPage, LaidOutText, LayoutWord, StageTextLayout } from '../render/text-layout.js';
+import type { LaidOutText, LayoutWord, StageTextLayout } from '../render/text-layout.js';
+import { type EmphasisPage, markEmphasis, priceMentions } from './clip-graphics.js';
 import { type JumpCutPlan, keyMomentKind, planJumpCuts, type SpanMs, splitLongShots } from './jump-cuts.js';
 import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.js';
 
@@ -26,14 +27,18 @@ const CAPTION_Y = 520;
 /** Upper area for the hook. */
 const HOOK_Y = -520;
 const HOOK_SECONDS = 3;
-const HOOK_STYLE = { fontWeight: 800, fontSizes: [88, 76, 64, 56], maxWidth: 880, maxLines: 3 };
+/** Text boxes hug their text with padding (stage): 760 px of text stays inside the 920-px text area. */
+const HOOK_STYLE = { fontWeight: 800, fontSizes: [88, 76, 64, 56], maxWidth: 760, maxLines: 2 };
 /**
  * Share of a zoom's top crop given back by moving the picture down (0 = zoom on the centre, 1 = top edge fixed).
  * Seen on S01a: a centred 1.28× punch-in cut the seller's eyes off; 0.7 keeps the face, the frame stays covered.
  */
 const ZOOM_KEEP_TOP = 0.7;
 /** Centred mid-frame, where platforms put their button column on the right 15 %: lines stay within 162–918 px. */
-const END_CARD_STYLE = { fontWeight: 800, fontSizes: [80, 68, 56], maxWidth: 756, maxLines: 3 };
+const END_CARD_STYLE = { fontWeight: 800, fontSizes: [80, 68, 56], maxWidth: 680, maxLines: 2 };
+const PRICE_TAG_STYLE = { fontWeight: 900, fontSizes: [96, 84, 72], maxWidth: 560, maxLines: 1 };
+const CTA_STYLE = { fontWeight: 800, fontSizes: [72, 64, 56], maxWidth: 620, maxLines: 1 };
+const PRODUCT_NAME_STYLE = { fontWeight: 700, fontSizes: [56, 48, 40], maxWidth: 620, maxLines: 1 };
 
 export type ClipSourceInfo = {
   sourceId: string;
@@ -159,10 +164,14 @@ export function segmentShots(
   segments: readonly EditSegmentFrames[],
 ): { scale: number; punch: 'price' | 'cta' | null }[] {
   const cycle = style.zoom.cycle.length > 0 ? style.zoom.cycle : [1];
-  let previousPunch = false;
+  // shots since the last punch-in: a punch-in only means "this matters" when it is rare
+  let since = Number.POSITIVE_INFINITY;
   return segments.map((s, i) => {
-    const kind = style.zoom.punchIn !== null && !previousPunch ? keyMomentKind(s.words) : null;
-    previousPunch = kind !== null;
+    const kind =
+      style.zoom.punchIn !== null && since >= Math.max(1, style.zoom.punchGap)
+        ? keyMomentKind(s.words)
+        : null;
+    since = kind !== null ? 1 : since + 1;
     return kind
       ? { scale: style.zoom.punchIn as number, punch: kind }
       : { scale: cycle[i % cycle.length] ?? 1, punch: null };
@@ -176,10 +185,17 @@ export function buildClipProject(input: {
   workflowRunId?: string;
   source: ClipSourceInfo;
   plan: ClipPlan;
-  pages: LaidOutCaptionPage[];
+  pages: EmphasisPage[];
   hook?: LaidOutText;
   /** Title laid out for the closing card (style packs with an end card). */
   endCard?: LaidOutText;
+  /** Motion graphics laid out with the stage font (style packs that have them). */
+  graphics?: {
+    prices: { frame: number; text: LaidOutText }[];
+    productName?: LaidOutText;
+    /** The style's call-to-action label (a fixed instruction, not a product claim). */
+    cta?: LaidOutText;
+  };
   /** Style pack + jump-cut plan. Absent = the plain cut: one video element, default captions. */
   edit?: { style: StylePack; cut: JumpCutPlan };
   seed: string;
@@ -258,15 +274,13 @@ export function buildClipProject(input: {
               w.startFrame === p.startFrame + word.startFrame &&
               w.endFrame === p.startFrame + word.endFrame,
           );
-          return original?.asrText !== undefined
-            ? {
-                text: word.text,
-                startFrame: word.startFrame,
-                endFrame: word.endFrame,
-                origin: 'ai' as const,
-                asrText: original.asrText,
-              }
-            : { text: word.text, startFrame: word.startFrame, endFrame: word.endFrame };
+          return {
+            text: word.text,
+            startFrame: word.startFrame,
+            endFrame: word.endFrame,
+            ...(original?.asrText !== undefined ? { origin: 'ai' as const, asrText: original.asrText } : {}),
+            ...(word.emphasis ? { emphasis: true as const } : {}),
+          };
         }),
         lines: p.lines,
         styleRef: captionStyle,
@@ -334,6 +348,72 @@ export function buildClipProject(input: {
     }
   }
 
+  // motion graphics (E07-F14): one at a time, on their own overlay track, never over the hook
+  const graphicIds: string[] = [];
+  const graphicsTrack = newId();
+  const gfx = edit?.style.graphics;
+  const closingFrom = endCardStart ?? durationFrames;
+  const textEl = (
+    content: LaidOutText,
+    startFrame: number,
+    frames: number,
+    look: { color: string; background: string; animationIn: string; y: number },
+    fontWeight: number,
+  ) => {
+    const id = newId();
+    elements[id] = {
+      type: 'text',
+      id,
+      trackId: graphicsTrack,
+      startFrame,
+      durationFrames: frames,
+      origin: 'ai',
+      content: content.text,
+      style: {
+        fontFamily: 'Noto Sans Thai Variable',
+        fontWeight,
+        fontSize: content.fontSize,
+        color: look.color,
+        background: look.background,
+        align: 'center',
+      },
+      transform: transform(look.y),
+      animationIn: { presetId: look.animationIn, durationFrames: Math.min(9, frames) },
+      animationOut: { presetId: 'fade', durationFrames: Math.min(6, frames) },
+    };
+    graphicIds.push(id);
+  };
+  let graphicsFree = hookEnd;
+  if (gfx?.productName && input.graphics?.productName) {
+    const frames = Math.min(Math.round(2.5 * fps), closingFrom - hookEnd);
+    if (frames >= Math.round(fps)) {
+      textEl(input.graphics.productName, hookEnd, frames, gfx.productName, 700);
+      graphicsFree = hookEnd + frames;
+    }
+  }
+  if (gfx?.priceTag) {
+    for (const p of input.graphics?.prices ?? []) {
+      if (p.frame < graphicsFree) continue;
+      const frames = Math.min(Math.round(2 * fps), closingFrom - p.frame);
+      if (frames < Math.round(fps)) continue;
+      textEl(p.text, p.frame, frames, gfx.priceTag, 900);
+      graphicsFree = p.frame + frames;
+    }
+  }
+  if (gfx?.cta && input.graphics?.cta) {
+    const startFrame = Math.max(graphicsFree, endCardStart ?? durationFrames - Math.round(2.5 * fps));
+    const frames = durationFrames - startFrame;
+    if (frames >= Math.round(fps)) {
+      textEl(
+        input.graphics.cta,
+        startFrame,
+        frames,
+        { color: '#111111', background: '#ffffff', animationIn: gfx.cta.animationIn, y: gfx.cta.y },
+        800,
+      );
+    }
+  }
+
   // sound effects (D-026): created last so the ids above stay what they were before sounds existed
   const assets: Project['assets'] = {
     [assetId]: {
@@ -349,10 +429,16 @@ export function buildClipProject(input: {
     if (hookEnd > 0) moments.push({ frame: 0, kind: 'hook' });
     // no shot-change sound in the half second before / during the closing card: the card has its own
     const cutsUntil = endCardStart === undefined ? durationFrames : endCardStart - Math.round(fps / 2);
+    let prices = 0;
     segments.forEach((seg, i) => {
       const punch = shots[i]?.punch ?? null;
-      if (punch) moments.push({ frame: seg.startFrame, kind: punch });
-      else if (i > 0 && seg.startFrame < cutsUntil) moments.push({ frame: seg.startFrame, kind: 'cut' });
+      if (punch === 'price') {
+        // a price sound only means something the first time or two
+        if (prices < (edit.style.sfx?.maxPrice ?? 0)) moments.push({ frame: seg.startFrame, kind: 'price' });
+        prices++;
+      } else if (punch) moments.push({ frame: seg.startFrame, kind: punch });
+      else if (i > 0 && seg.startFrame < cutsUntil && (edit.style.sfx?.cut.length ?? 0) > 0)
+        moments.push({ frame: seg.startFrame, kind: 'cut' });
     });
     if (endCardStart !== undefined) moments.push({ frame: endCardStart, kind: 'endCard' });
     const placed = placeSoundEffects(edit.style.sfx, moments, { fps: source.fps, durationFrames });
@@ -410,6 +496,9 @@ export function buildClipProject(input: {
       ...(overlayIds.length > 0
         ? [{ id: overlayTrack, kind: 'overlay' as const, elementIds: overlayIds }]
         : []),
+      ...(graphicIds.length > 0
+        ? [{ id: graphicsTrack, kind: 'overlay' as const, elementIds: graphicIds }]
+        : []),
       ...audioTracks,
     ],
     elements,
@@ -436,11 +525,13 @@ export class InvalidClipProjectError extends Error {
  */
 export async function layoutClipProject(
   layout: StageTextLayout,
-  input: Omit<Parameters<typeof buildClipProject>[0], 'pages' | 'hook' | 'endCard' | 'edit'> & {
+  input: Omit<Parameters<typeof buildClipProject>[0], 'pages' | 'hook' | 'endCard' | 'edit' | 'graphics'> & {
     style?: { styleId?: string; speech: readonly SpanMs[] };
+    /** The merchant's product name (lower-third, emphasis) — only what the merchant typed. */
+    productName?: string;
   },
 ): Promise<Project> {
-  const { style: styleInput, ...rest } = input;
+  const { style: styleInput, productName, ...rest } = input;
   let edit: { style: StylePack; cut: JumpCutPlan } | undefined;
   if (styleInput) {
     const style = stylePack(styleInput.styleId);
@@ -458,19 +549,51 @@ export async function layoutClipProject(
     ? editFrames(input.source, input.plan, edit.cut).words
     : clipFrames(input.source, input.plan).words;
   const captionStyle = edit?.style.captions.styleRef ?? CLIP_CAPTION_STYLE;
-  const pages =
+  const capt = edit?.style.captions;
+  const laid =
     words.length > 0
       ? await layout.layoutCaptions(
           words.map(({ text, startFrame, endFrame }) => ({ text, startFrame, endFrame })),
-          { styleRef: captionStyle, canvasWidth: CLIP_WIDTH },
+          {
+            styleRef: captionStyle,
+            canvasWidth: CLIP_WIDTH,
+            maxLines: capt?.maxLines ?? 2,
+            ...(capt?.maxWords ? { maxWords: capt.maxWords } : {}),
+          },
         )
       : [];
+  // short-form pages get one key word each; the classic 2-line look stays plain
+  const pages: EmphasisPage[] = capt?.maxWords ? markEmphasis(laid, productName ? [productName] : []) : laid;
   const hook = input.plan.hook ? await layout.layoutText(input.plan.hook.text, HOOK_STYLE) : undefined;
   const endCard =
     edit?.style.endCard && input.plan.title.trim()
       ? await layout.layoutText(input.plan.title.trim(), END_CARD_STYLE)
       : undefined;
-  const project = buildClipProject({ ...rest, pages, hook, endCard, edit });
+  const gfx = edit?.style.graphics;
+  const fps = input.source.fps.num / input.source.fps.den;
+  const prices = gfx?.priceTag
+    ? await Promise.all(
+        priceMentions(pages, { minGapFrames: Math.round(3 * fps), maxPerClip: gfx.priceTag.maxPerClip }).map(
+          async (m) => ({ frame: m.frame, text: await layout.layoutText(m.text, PRICE_TAG_STYLE) }),
+        ),
+      )
+    : [];
+  const name =
+    gfx?.productName && productName?.trim()
+      ? await layout.layoutText(productName.trim(), PRODUCT_NAME_STYLE)
+      : undefined;
+  const cta = gfx?.cta ? await layout.layoutText(gfx.cta.label, CTA_STYLE) : undefined;
+  const graphics = gfx
+    ? { prices, ...(name ? { productName: name } : {}), ...(cta ? { cta } : {}) }
+    : undefined;
+  const project = buildClipProject({
+    ...rest,
+    pages,
+    hook,
+    endCard,
+    edit,
+    ...(graphics ? { graphics } : {}),
+  });
   const v = validateProject(project);
   if (!v.ok) throw new InvalidClipProjectError(v.errors);
   return project;

@@ -25,10 +25,16 @@ const ClipBuildInputSchema = z.object({
   speech: z.array(Span),
   title: z.string(),
   hook: z.object({ text: z.string(), origin: z.enum(['ai', 'rules']) }).nullable(),
+  /** What the merchant typed as the product name (graphics, emphasis); absent when none. */
+  productName: z.string().optional(),
 });
 export type ClipBuildInput = z.infer<typeof ClipBuildInputSchema>;
 
-export function clipBuildInput(input: { plan: ClipPlan; speech: readonly SpanMs[] }): ClipBuildInput {
+export function clipBuildInput(input: {
+  plan: ClipPlan;
+  speech: readonly SpanMs[];
+  productName?: string;
+}): ClipBuildInput {
   const { plan } = input;
   return {
     version: 1,
@@ -38,6 +44,7 @@ export function clipBuildInput(input: { plan: ClipPlan; speech: readonly SpanMs[
     speech: input.speech.map((s) => ({ startMs: s.startMs, endMs: s.endMs })),
     title: plan.title,
     hook: plan.hook ? { text: plan.hook.text, origin: plan.hook.origin } : null,
+    ...(input.productName?.trim() ? { productName: input.productName.trim() } : {}),
   };
 }
 
