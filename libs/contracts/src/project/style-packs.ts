@@ -78,7 +78,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       cta: 'pop-medium-in',
       hook: 'pop-medium-in',
       endCard: 'sting-bold-short',
-      gainDb: 0,
+      gainDb: -4,
     },
   },
   {
@@ -149,7 +149,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       cta: 'pop-large-bubble',
       hook: 'pop-large-bubble',
       endCard: 'sting-playful-short',
-      gainDb: 0,
+      gainDb: -4,
     },
   },
   {
