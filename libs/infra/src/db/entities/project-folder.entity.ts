@@ -25,6 +25,7 @@ abstract class FolderRow {
 
 @Entity({ name: 'project_folders' })
 @Check('project_folders_title_check', 'length(btrim(title)) BETWEEN 1 AND 200')
+@Check('project_folders_settings_check', "jsonb_typeof(settings) = 'object'")
 @Unique('project_folders_id_merchant_id_key', ['id', 'merchantId'])
 @Index('project_folders_merchant_updated_idx', ['merchantId', 'updatedAt'])
 export class ProjectFolderEntity extends FolderRow {
@@ -35,6 +36,8 @@ export class ProjectFolderEntity extends FolderRow {
   merchant?: MerchantEntity;
   @Column({ type: 'text' })
   title!: string;
+  @Column({ type: 'jsonb', default: {} })
+  settings!: Record<string, unknown>;
 }
 
 @Entity({ name: 'project_folder_sources' })

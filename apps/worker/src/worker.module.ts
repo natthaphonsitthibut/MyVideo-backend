@@ -8,6 +8,7 @@ import {
   DbLlmCallStore,
   Dispatcher,
   type Env,
+  folderAdvanceHandler,
   HandlerRegistry,
   ingestHandlers,
   JobRunner,
@@ -153,6 +154,7 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
   });
   for (const h of clips) registry.register(h);
   registry.register(clipsRestyleHandler({ ds, openLayout: () => StageTextLayout.open(bundle) }));
+  registry.register(folderAdvanceHandler({ ds }));
   registry.register(
     reviewBuildHandler({
       ds,

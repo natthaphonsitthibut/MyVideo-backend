@@ -2,6 +2,7 @@ import { hostname } from 'node:os';
 import { backoffMs, deriveRunStatus, type JobStatus } from '@myvideo/domain';
 import type { DataSource, EntityManager } from 'typeorm';
 import { JobEntity } from '../db/entities/job.entity.js';
+import { wakeFolderEdits } from '../folders/folder-edit.js';
 import { FatalJobError, type HandlerRegistry, type JobHandler } from './handlers.js';
 import { enqueueInTransaction } from './job-store.js';
 
@@ -31,12 +32,14 @@ export async function refreshRunStatus(em: EntityManager, workflowRunId: string)
   ]);
   const status = deriveRunStatus(rows.map((r) => r.status));
   const terminal = status === 'succeeded' || status === 'failed' || status === 'cancelled';
-  await em.query(
+  const [changed]: [{ kind: string }[], number] = await em.query(
     `UPDATE workflow_runs SET status = $2, updated_at = now(),
             finished_at = CASE WHEN $3 THEN coalesce(finished_at, now()) ELSE NULL END
-      WHERE id = $1 AND status IS DISTINCT FROM $2`,
+      WHERE id = $1 AND status IS DISTINCT FROM $2 RETURNING kind`,
     [workflowRunId, status, terminal],
   );
+  // a footage workflow just ended: the project folder edits waiting on it continue (same transaction = outbox)
+  if (terminal && changed[0] && changed[0].kind !== 'folder_edit') await wakeFolderEdits(em, workflowRunId);
 }
 
 /**

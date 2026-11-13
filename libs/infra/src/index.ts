@@ -55,6 +55,15 @@ export {
 export { migrations } from './db/migrations/index.js';
 export { type SeedInput, seedMerchant } from './db/seed.js';
 export { TenantRepository, type TenantRow } from './db/tenant/tenant-repository.js';
+export {
+  chooseFolderStyle,
+  type FolderEditInput,
+  FolderEditUnavailableError,
+  folderAdvanceHandler,
+  folderPlanOf,
+  latestFolderEdit,
+  requestFolderEdit,
+} from './folders/folder-edit.js';
 export { type ProbeResult, probePostgres, probeRedis } from './health/probes.js';
 export {
   buildClipProject,

@@ -26,6 +26,7 @@ export const WORKFLOW_KINDS = [
   'restyle_clip',
   'build_clips',
   'review_to_video',
+  'folder_edit',
   'render',
   'purge',
   'system_test',

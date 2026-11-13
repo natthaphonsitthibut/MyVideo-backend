@@ -76,6 +76,71 @@ it('creates a folder, adds an existing library video idempotently, separates cli
   expect((await call('GET', `/sources/${source}`, a)).status).toBe(200);
 });
 
+it('stores edit settings: defaults on create, typed product text kept as typed, partial update, tenant-scoped', async () => {
+  const made = await call('POST', '/folders', a, { title: 'ตั้งค่า' });
+  const folder = (await made.json()) as { id: string; settings: unknown };
+  expect(folder.settings).toEqual({
+    ratio: 'auto',
+    goal: 'sell',
+    length: 'auto',
+    productName: null,
+    productPrice: null,
+  });
+  const settings = {
+    ratio: '16:9',
+    goal: 'review',
+    length: '30',
+    productName: 'เสื้อมัดย้อม ลายหมาป่า',
+    productPrice: '80 บาท',
+  };
+  const updated = await call('PATCH', `/folders/${folder.id}`, a, { settings });
+  expect(updated.status).toBe(200);
+  expect(await updated.json()).toMatchObject({ title: 'ตั้งค่า', settings });
+  // rename keeps the settings
+  await call('PATCH', `/folders/${folder.id}`, a, { title: 'ตั้งค่าใหม่' });
+  expect(await (await call('GET', `/folders/${folder.id}`, a)).json()).toMatchObject({
+    title: 'ตั้งค่าใหม่',
+    settings,
+  });
+  const created = await call('POST', '/folders', a, { title: 'สร้างพร้อมค่า', settings: { ratio: '1:1' } });
+  expect(((await created.json()) as { settings: { ratio: string; goal: string } }).settings).toMatchObject({
+    ratio: '1:1',
+    goal: 'sell',
+  });
+  expect((await call('PATCH', `/folders/${folder.id}`, a, { settings: { ratio: '21:9' } })).status).toBe(400);
+  expect((await call('PATCH', `/folders/${folder.id}`, a, {})).status).toBe(400);
+  expect((await call('PATCH', `/folders/${folder.id}`, b, { title: 'ขโมย' })).status).toBe(404);
+});
+
+it('plan panel: steps before start, 409 on an empty folder, start joins, style rules, tenant-scoped', async () => {
+  const folder = (await (await call('POST', '/folders', a, { title: 'แผนงาน' })).json()) as { id: string };
+  const before = (await (await call('GET', `/folders/${folder.id}/plan`, a)).json()) as {
+    steps: { id: string }[];
+  };
+  expect(before).toMatchObject({ runId: null, done: 0, total: 5, needs: null, proposals: [] });
+  expect(before.steps.map((s: { id: string }) => s.id)).toEqual([
+    'prepare',
+    'transcribe',
+    'analyse',
+    'style',
+    'edit',
+  ]);
+  expect((await call('POST', `/folders/${folder.id}/edit`, a, {})).status).toBe(409);
+  expect((await call('POST', `/folders/${folder.id}/style`, a, { styleId: 'sale-fast' })).status).toBe(409);
+  await call('POST', `/folders/${folder.id}/sources`, a, { sourceIds: [source] });
+  const started = await call('POST', `/folders/${folder.id}/edit`, a, {});
+  expect(started.status).toBe(200);
+  const plan = (await started.json()) as { runId: string };
+  expect(plan.runId).toBeTruthy();
+  expect(
+    ((await (await call('POST', `/folders/${folder.id}/edit`, a, {})).json()) as { runId: string }).runId,
+  ).toBe(plan.runId);
+  expect((await call('POST', `/folders/${folder.id}/style`, a, { styleId: 'nope' })).status).toBe(400);
+  expect((await call('GET', `/folders/${folder.id}/plan`, b)).status).toBe(404);
+  expect((await call('POST', `/folders/${folder.id}/edit`, b, {})).status).toBe(404);
+  expect((await call('POST', `/folders/${folder.id}/style`, b, { styleId: 'sale-fast' })).status).toBe(404);
+});
+
 it('never exposes another merchant folder or attaches a foreign source; rejects the entire batch', async () => {
   const folder = (await (await call('POST', '/folders', a, { title: 'ส่วนตัว' })).json()) as { id: string };
   expect((await call('GET', `/folders/${folder.id}`, b)).status).toBe(404);
