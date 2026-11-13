@@ -24,6 +24,8 @@ export const SelectedClipsState = named(
     clips: z.array(
       z.object({
         projectId: z.uuid(),
+        clipSourceId: z.uuid().optional(),
+        sourceStatus: z.enum(['processing', 'ready', 'failed']).nullable().optional(),
         startMs: z.number().int(),
         endMs: z.number().int(),
         status: z.enum(['pending', 'running', 'ready', 'failed', 'cancelled']),

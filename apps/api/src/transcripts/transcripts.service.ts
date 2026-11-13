@@ -119,13 +119,20 @@ export class TranscriptsService {
     )) as { id: string }[];
     if (!run) return { runId: null, clips: [] };
     const jobs = (await this.ds.query(
-      `SELECT id, status, progress, payload FROM jobs WHERE workflow_run_id = $1 AND merchant_id = $2 AND type = 'asr.selected-clip' ORDER BY (payload->>'startMs')::int`,
+      `SELECT j.id,j.status,j.progress,j.payload,s.status AS source_status FROM jobs j LEFT JOIN video_sources s ON s.id::text=j.payload->>'clipSourceId' AND s.merchant_id=j.merchant_id WHERE j.workflow_run_id = $1 AND j.merchant_id = $2 AND j.type = 'asr.selected-clip' ORDER BY (j.payload->>'startMs')::int`,
       [run.id, merchantId],
-    )) as { id: string; status: string; progress: number; payload: SelectedRange & { projectId: string } }[];
+    )) as {
+      id: string;
+      status: string;
+      progress: number;
+      source_status: 'processing' | 'ready' | 'failed' | null;
+      payload: SelectedRange & { projectId: string; clipSourceId?: string };
+    }[];
     return {
       runId: run.id,
       clips: jobs.map((j) => ({
         ...j.payload,
+        sourceStatus: j.source_status,
         jobId: j.id,
         status:
           j.status === 'succeeded'

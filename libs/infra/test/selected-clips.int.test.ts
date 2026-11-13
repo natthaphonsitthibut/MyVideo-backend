@@ -2,7 +2,9 @@ import { uuidv7 } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { freshTestDb } from '../../../test/test-db.js';
+import recorded from '../../domain/src/highlights/fixtures/s01-0400-0800.json' with { type: 'json' };
 import { requestSelectedClips } from '../src/ai/selected-clips.js';
+import { saveSelectedSource } from '../src/ai/selected-source.js';
 import { requestTranscription } from '../src/ai/transcribe-handlers.js';
 import { seedMerchant } from '../src/db/seed.js';
 
@@ -58,12 +60,72 @@ it('creates one durable job and stable output id per range; HTTP retries join wi
     [40000, 50000],
   ]);
   expect(new Set(jobs.map((j: { payload: { projectId: string } }) => j.payload.projectId)).size).toBe(2);
+  expect(new Set(jobs.map((j: { payload: { clipSourceId: string } }) => j.payload.clipSourceId)).size).toBe(
+    2,
+  );
   expect(jobs.every((j: { type: string }) => j.type === 'asr.selected-clip')).toBe(true);
   expect(await ds.query(`SELECT id FROM transcripts WHERE source_id = $1`, [sourceId])).toEqual([]);
   // Manual ranges must not be mistaken for an already-running full-source transcription.
   const full = await requestTranscription(ds, { merchantId, sourceId });
   expect(full.created).toBe(true);
   expect(full.runId).not.toBe(id);
+});
+
+it('makes a selected video reusable as independent footage, with zero-based transcript and idempotent ingest', async () => {
+  const id = uuidv7(),
+    s = recorded.segments[0]!;
+  const input = {
+    merchantId,
+    sourceId: id,
+    parentSourceId: sourceId,
+    title: 'Selected range',
+    startMs: 5000,
+    endMs: 15000,
+    video: { key: 'selected.mp4', size: 100, sha256: 'plumbing-only' },
+    audio: { key: 'selected.wav', size: 100, sha256: 'plumbing-only-audio' },
+    asrKey: 'selected.json',
+    asr: {
+      language: 'th',
+      duration_ms: 10000,
+      model: recorded.transcriptModel,
+      engine: 'whisper.cpp',
+      elapsed_ms: 0,
+      segments: [
+        {
+          start_ms: 0,
+          end_ms: s.endMs - s.startMs,
+          text: s.text,
+          words: s.words.map((w) => ({
+            text: w.text,
+            kind: w.kind,
+            start_ms: w.startMs - s.startMs,
+            end_ms: w.endMs - s.startMs,
+          })),
+          avg_logprob: null,
+          no_speech_prob: null,
+        },
+      ],
+    },
+  };
+  await ds.transaction((em) => saveSelectedSource(em, input));
+  await ds.transaction((em) => saveSelectedSource(em, input));
+  const [src] = await ds.query('SELECT status FROM video_sources WHERE id=$1 AND merchant_id=$2', [
+    id,
+    merchantId,
+  ]);
+  expect(src.status).toBe('processing');
+  const transcripts = await ds.query('SELECT id,status,duration_ms FROM transcripts WHERE source_id=$1', [
+    id,
+  ]);
+  expect(transcripts).toHaveLength(1);
+  expect(transcripts[0]).toMatchObject({ status: 'ready', duration_ms: 10000 });
+  const [segment] = await ds.query('SELECT words FROM transcript_segments WHERE transcript_id=$1', [
+    transcripts[0].id,
+  ]);
+  expect(segment.words[0].startMs).toBe(0);
+  expect(await ds.query("SELECT type FROM jobs WHERE payload->>'sourceId'=$1", [id])).toEqual([
+    { type: 'media.probe' },
+  ]);
 });
 
 it('rejects foreign sources and out-of-bounds/overlapping ranges before enqueueing', async () => {

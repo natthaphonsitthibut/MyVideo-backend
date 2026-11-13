@@ -1,9 +1,11 @@
+import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import { type StoragePort, uuidv7 } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
-import { type ClipWordMs, layoutClipProject } from '../highlights/clip-project.js';
+import { VideoSourceEntity } from '../db/entities/video-source.entity.js';
+import { type ClipWordMs, layoutClipProject, seededIds } from '../highlights/clip-project.js';
 import { sourceInfo } from '../highlights/live-to-clips.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
@@ -12,6 +14,7 @@ import { loadSource } from '../media/source-helpers.js';
 import { runProcess, withTempDir } from '../process/run-process.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import type { AiServiceClient } from './ai-service.client.js';
+import { saveSelectedSource, selectedVideoArgs } from './selected-source.js';
 import { asrWhenFree, chunkCutArgs } from './transcribe-handlers.js';
 
 export type SelectedRange = { startMs: number; endMs: number };
@@ -87,7 +90,7 @@ export async function requestSelectedClips(
     )) as { id: string }[];
     if (existing) return existing.id;
     if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
-    const clips = ranges.map((r) => ({ ...r, projectId: uuidv7() }));
+    const clips = ranges.map((r) => ({ ...r, projectId: uuidv7(), clipSourceId: uuidv7() }));
     const run = await createRunInTransaction(em, {
       merchantId: input.merchantId,
       kind: 'transcribe',
@@ -125,9 +128,19 @@ export function selectedClipsHandler({
     queue: 'ai',
     async run({ job, signal, progress }) {
       const projectId = String(job.payload.projectId);
-      if (await ds.getRepository(ProjectEntity).existsBy({ id: projectId, merchantId: job.merchantId }))
-        return { projectId, reused: true };
-      const { source } = await loadSource(ds, job);
+      const clipSourceId =
+        typeof job.payload.clipSourceId === 'string'
+          ? job.payload.clipSourceId
+          : seededIds(`${projectId}:source`)();
+      const projectExists = await ds
+        .getRepository(ProjectEntity)
+        .existsBy({ id: projectId, merchantId: job.merchantId });
+      if (
+        projectExists &&
+        (await ds.getRepository(VideoSourceEntity).existsBy({ id: clipSourceId, merchantId: job.merchantId }))
+      )
+        return { projectId, clipSourceId, reused: true };
+      const { source, original } = await loadSource(ds, job);
       const probe = source.probe as ProbeInfo;
       const range = validateSelectedRanges(
         [{ startMs: Number(job.payload.startMs), endMs: Number(job.payload.endMs) }],
@@ -138,17 +151,43 @@ export function selectedClipsHandler({
         .findOneBy({ merchantId: job.merchantId, sourceId: source.id, kind: 'audio' });
       if (!audio) throw new FatalJobError('ไม่พบเสียงของวิดีโอนี้');
       const file = await storage.localPath(audio.storageKey);
-      let words: ClipWordMs[];
-      try {
-        words = await withTempDir('selected-asr', async (dir) => {
+      let transcript: Awaited<ReturnType<typeof transcribeRange>>;
+      async function transcribeRange(path: string) {
+        return withTempDir('selected-asr', async (dir) => {
           const wav = join(dir, 'selected.wav');
-          await runProcess('ffmpeg', chunkCutArgs(file.path, { index: 0, ...range }, wav), { signal });
+          await runProcess('ffmpeg', chunkCutArgs(path, { index: 0, ...range }, wav), { signal });
           await progress(0.05);
-          const result = await asrWhenFree(ai, wav, signal, 5000, 20 * 60000);
-          return selectedClipWords(result.segments, range);
+          const asr = await asrWhenFree(ai, wav, signal, 5000, 20 * 60000);
+          const key = `m/${job.merchantId}/sources/${clipSourceId}/selected-audio.wav`;
+          const audio = {
+            ...(await storage.put(key, createReadStream(wav), { contentType: 'audio/wav' })),
+            key,
+          };
+          const asrKey = `m/${job.merchantId}/sources/${clipSourceId}/selected-asr.json`;
+          await storage.put(asrKey, Buffer.from(JSON.stringify(asr)), { contentType: 'application/json' });
+          return { asr, audio, asrKey };
         });
+      }
+      try {
+        transcript = await transcribeRange(file.path);
       } finally {
         await file.release();
+      }
+      const words = selectedClipWords(transcript.asr.segments, range);
+      const inputVideo = await storage.localPath(original.storageKey);
+      let video: Awaited<ReturnType<typeof storage.put>> & { key: string };
+      try {
+        video = await withTempDir('selected-video', async (dir) => {
+          const out = join(dir, 'clip.mp4');
+          await runProcess('ffmpeg', selectedVideoArgs(inputVideo.path, range.startMs, range.endMs, out), {
+            signal,
+            timeoutMs: 20 * 60000,
+          });
+          const key = `m/${job.merchantId}/sources/${clipSourceId}/original.mp4`;
+          return { ...(await storage.put(key, createReadStream(out), { contentType: 'video/mp4' })), key };
+        });
+      } finally {
+        await inputVideo.release();
       }
       await progress(0.8);
       signal.throwIfAborted();
@@ -181,19 +220,30 @@ export function selectedClipsHandler({
           [source.id, job.merchantId],
         );
         if (!owned.length) throw new FatalJobError('วิดีโอต้นฉบับถูกลบแล้ว');
-        await em
-          .getRepository(ProjectEntity)
-          .insert({ id: projectId, merchantId: job.merchantId, title, currentVersion: 1 });
-        await em.getRepository(ProjectVersionEntity).insert({
+        if (!projectExists) {
+          await em
+            .getRepository(ProjectEntity)
+            .insert({ id: projectId, merchantId: job.merchantId, title, currentVersion: 1 });
+          await em.getRepository(ProjectVersionEntity).insert({
+            merchantId: job.merchantId,
+            projectId,
+            version: 1,
+            doc: project as never,
+            reason: 'create',
+            restoredFrom: null,
+          });
+        }
+        await saveSelectedSource(em, {
           merchantId: job.merchantId,
-          projectId,
-          version: 1,
-          doc: project as never,
-          reason: 'create',
-          restoredFrom: null,
+          sourceId: clipSourceId,
+          parentSourceId: source.id,
+          title,
+          ...range,
+          video,
+          ...transcript,
         });
       });
-      return { projectId, words: words.length };
+      return { projectId, clipSourceId, words: words.length };
     },
   };
 }
