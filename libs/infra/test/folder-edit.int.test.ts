@@ -272,6 +272,24 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(plan.failed).toBe(false);
   });
 
+  it('an edit closed before it finished (its footage was deleted) shows the folder as not started again', async () => {
+    const f4 = uuidv7();
+    await ds.query(`INSERT INTO project_folders (id, merchant_id, title) VALUES ($1, $2, 'ลบต้นฉบับ')`, [f4, m]);
+    const prev = folder;
+    folder = f4;
+    const gone = await source({ audio: true, transcript: true });
+    folder = prev;
+    const { runId } = await requestFolderEdit(ds, { merchantId: m, folderId: f4 });
+    await ds.query(`DELETE FROM video_sources WHERE id = $1`, [gone]);
+    await ds.query(
+      `UPDATE workflow_runs SET input = input || jsonb_build_object('closedAt', now()::text) WHERE id = $1`,
+      [runId],
+    );
+    const shown = await folderPlanOf(ds, m, f4);
+    expect(shown.runId).toBeNull();
+    expect(shown.plan.finished).toBe(false);
+  });
+
   it('snapshots selected footage and waits for explicit transcription without starting ASR for any upload', async () => {
     const prev = folder;
     folder = uuidv7();

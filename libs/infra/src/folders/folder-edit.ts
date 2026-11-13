@@ -159,7 +159,18 @@ export async function folderPlanOf(
             ? 'running'
             : 'none';
   }
-  return { runId: edit?.id ?? null, styleId: facts.styleId, plan: folderPlan(facts), facts };
+  const plan = folderPlan(facts);
+  // a closed edit that neither finished nor failed (its footage was deleted, or it was stopped) is not running:
+  // show the folder as not started, so the merchant can start again
+  if (edit?.input.closedAt && !plan.finished && !plan.failed) {
+    const fresh: FolderFacts = {
+      started: false,
+      styleId: null,
+      sources: await folderSourceFacts(db, merchantId, folderId),
+    };
+    return { runId: null, styleId: null, plan: folderPlan(fresh), facts: fresh };
+  }
+  return { runId: edit?.id ?? null, styleId: facts.styleId, plan, facts };
 }
 
 const advanceStep = (merchantId: string, runId: string, key: string) => ({
