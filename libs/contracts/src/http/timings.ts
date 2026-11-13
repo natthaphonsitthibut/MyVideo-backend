@@ -89,3 +89,18 @@ export const listTimings = defineRoute({
   request: { query: ListTimingsQuery },
   responses: { 200: { description: 'Recent runs with timings', schema: TimingList } },
 });
+export const clearTimings = defineRoute({
+  operationId: 'clearTimings',
+  method: 'delete',
+  path: '/timings',
+  summary:
+    'Clear all timing history including active entries, without cancelling work or deleting workflow data',
+  tags: ['jobs'],
+  auth: true,
+  responses: {
+    200: {
+      description: 'All existing timing entries archived',
+      schema: named('ClearTimingsResult', z.object({ cleared: z.number().int().nonnegative() })),
+    },
+  },
+});

@@ -68,6 +68,16 @@ export function readUpload(input: Record<string, unknown> | null): TimingRun['up
 export class TimingsService {
   constructor(@Inject(DataSource) private readonly ds: DataSource) {}
 
+  /** Archive presentation history, not workflow state or cache required by editing/retries. */
+  async clear(merchantId: string): Promise<{ cleared: number }> {
+    const rows = await this.ds.query(
+      `UPDATE workflow_runs SET input=coalesce(input,'{}'::jsonb)||jsonb_build_object('timingsHidden',true) WHERE merchant_id=$1 AND input->>'timingsHidden' IS DISTINCT FROM 'true' RETURNING id`,
+      [merchantId],
+    );
+    // TypeORM returns [rows, count] for UPDATE ... RETURNING on Postgres.
+    return { cleared: Array.isArray(rows[0]) ? rows[0].length : rows.length };
+  }
+
   async list(merchantId: string, limit: number, now = new Date()): Promise<TimingList> {
     const runs: RunRow[] = await this.ds.query(
       `SELECT r.id, r.kind, r.status, r.subject_type, r.subject_id, r.input, r.created_at, r.finished_at,
@@ -77,7 +87,7 @@ export class TimingsService {
            ON r.subject_type = 'source' AND s.id = r.subject_id AND s.merchant_id = r.merchant_id
          LEFT JOIN projects p
            ON r.subject_type = 'project' AND p.id = r.subject_id AND p.merchant_id = r.merchant_id
-        WHERE r.merchant_id = $1 AND r.kind NOT IN ('system_test', 'purge')
+        WHERE r.merchant_id = $1 AND r.kind NOT IN ('system_test', 'purge') AND r.input->>'timingsHidden' IS DISTINCT FROM 'true'
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT $2`,
       [merchantId, limit],
