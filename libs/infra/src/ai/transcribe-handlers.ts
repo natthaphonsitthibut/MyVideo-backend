@@ -76,7 +76,7 @@ export async function requestTranscription(
     if (!audio) throw new TranscriptionUnavailableError('no_audio', 'source has no audio track');
     const open: { id: string }[] = await em.query(
       `SELECT id FROM workflow_runs WHERE merchant_id = $1 AND kind = 'transcribe' AND subject_type = 'source'
-          AND subject_id = $2 AND status IN ('pending', 'running') ORDER BY created_at DESC LIMIT 1`,
+          AND subject_id = $2 AND input->>'mode' IS DISTINCT FROM 'selected-clips' AND status IN ('pending', 'running') ORDER BY created_at DESC LIMIT 1`,
       [input.merchantId, input.sourceId],
     );
     if (open[0]) return { runId: open[0].id, created: false };
@@ -287,7 +287,7 @@ const sleep = (ms: number, signal: AbortSignal) =>
  * a worker that died). Waiting stays inside this attempt, so busy time never uses up the job's retries. After
  * `maxWaitMs` the 409 is thrown as a normal (retryable) failure. Other 4xx cannot be fixed by a retry → fatal.
  */
-async function asrWhenFree(
+export async function asrWhenFree(
   ai: AiServiceClient,
   path: string,
   signal: AbortSignal,

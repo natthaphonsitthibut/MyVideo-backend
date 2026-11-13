@@ -1,13 +1,27 @@
-import type { TranscriptSegment, TranscriptSegmentPage, TranscriptState } from '@myvideo/contracts';
+import type {
+  SelectedClipsState,
+  TranscriptSegment,
+  TranscriptSegmentPage,
+  TranscriptState,
+} from '@myvideo/contracts';
 import {
   type Env,
+  requestSelectedClips,
   requestTranscription,
+  SelectedClipsError,
+  type SelectedRange,
   TranscriptEditEntity,
   TranscriptEntity,
   TranscriptionUnavailableError,
   TranscriptSegmentEntity,
 } from '@myvideo/infra';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource, In, MoreThanOrEqual } from 'typeorm';
 import { ENV } from '../config/env.module.js';
 
@@ -45,7 +59,7 @@ export class TranscriptsService {
     await this.assertSource(merchantId, sourceId);
     const runs: { id: string; status: string }[] = await this.ds.query(
       `SELECT id, status FROM workflow_runs WHERE merchant_id = $1 AND kind = 'transcribe' AND subject_type = 'source'
-          AND subject_id = $2 ORDER BY created_at DESC LIMIT 1`,
+          AND subject_id = $2 AND input->>'mode' IS DISTINCT FROM 'selected-clips' ORDER BY created_at DESC LIMIT 1`,
       [merchantId, sourceId],
     );
     const run = runs[0] ?? null;
@@ -95,6 +109,58 @@ export class TranscriptsService {
       throw err;
     }
     return this.state(merchantId, sourceId);
+  }
+
+  async selectedClips(merchantId: string, sourceId: string): Promise<SelectedClipsState> {
+    await this.assertSource(merchantId, sourceId);
+    const [run] = (await this.ds.query(
+      `SELECT id FROM workflow_runs WHERE merchant_id = $1 AND subject_id = $2 AND kind = 'transcribe' AND input->>'mode' = 'selected-clips' ORDER BY created_at DESC LIMIT 1`,
+      [merchantId, sourceId],
+    )) as { id: string }[];
+    if (!run) return { runId: null, clips: [] };
+    const jobs = (await this.ds.query(
+      `SELECT id, status, progress, payload FROM jobs WHERE workflow_run_id = $1 AND merchant_id = $2 AND type = 'asr.selected-clip' ORDER BY (payload->>'startMs')::int`,
+      [run.id, merchantId],
+    )) as { id: string; status: string; progress: number; payload: SelectedRange & { projectId: string } }[];
+    return {
+      runId: run.id,
+      clips: jobs.map((j) => ({
+        ...j.payload,
+        jobId: j.id,
+        status:
+          j.status === 'succeeded'
+            ? 'ready'
+            : j.status === 'dead'
+              ? 'failed'
+              : j.status === 'cancelled'
+                ? 'cancelled'
+                : j.status === 'running'
+                  ? 'running'
+                  : 'pending',
+        progress: j.progress,
+      })),
+    };
+  }
+
+  async startSelectedClips(
+    merchantId: string,
+    sourceId: string,
+    body: { requestId: string; ranges: SelectedRange[] },
+  ): Promise<SelectedClipsState> {
+    try {
+      await requestSelectedClips(this.ds, {
+        merchantId,
+        sourceId,
+        ...body,
+        maxUnfinishedRuns: this.env.MERCHANT_MAX_ACTIVE_RUNS,
+      });
+    } catch (err) {
+      if (!(err instanceof SelectedClipsError)) throw err;
+      if (err.reason === 'not_found') throw new NotFoundException(err.message);
+      if (err.reason === 'not_ready') throw new ConflictException(err.message);
+      throw new BadRequestException(err.message);
+    }
+    return this.selectedClips(merchantId, sourceId);
   }
 
   private async readyTranscript(merchantId: string, sourceId: string): Promise<TranscriptEntity> {

@@ -42,6 +42,7 @@ import {
   listTranscriptSegments,
   revertTranscriptWord,
   reviewTranscriptWord,
+  selectedClipsRoutes,
   startTranscript,
 } from './http/transcripts.js';
 import type { RouteContract } from './route.js';
@@ -74,6 +75,7 @@ export const routes: RouteContract[] = [
   listSources,
   getTranscript,
   startTranscript,
+  ...selectedClipsRoutes,
   listTranscriptSegments,
   editTranscriptWord,
   revertTranscriptWord,

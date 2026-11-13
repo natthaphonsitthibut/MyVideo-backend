@@ -20,6 +20,7 @@ import {
   renderHandler,
   reviewBuildHandler,
   StageTextLayout,
+  selectedClipsHandler,
   shotsHandler,
   systemHandlers,
   transcribeHandlers,
@@ -144,6 +145,14 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
   );
   // the stage bundle is verified once at start; a broken or missing bundle stops the worker loudly
   const bundle = await loadStageBundle();
+  registry.register(
+    selectedClipsHandler({
+      ds,
+      storage: createStorage(env),
+      ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+      openLayout: () => StageTextLayout.open(bundle),
+    }),
+  );
   const renderer = new ChromiumRenderer(bundle);
   const clips = liveToClipsHandlers({
     ds,

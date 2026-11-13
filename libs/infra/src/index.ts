@@ -9,6 +9,12 @@ export {
   ShotsResult,
   VadResult,
 } from './ai/ai-service.client.js';
+export {
+  requestSelectedClips,
+  SelectedClipsError,
+  type SelectedRange,
+  selectedClipsHandler,
+} from './ai/selected-clips.js';
 export { type ShotsDeps, shotsHandler } from './ai/shots-handler.js';
 export {
   asrChunkHandler,

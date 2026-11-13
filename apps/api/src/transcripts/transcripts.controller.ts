@@ -1,4 +1,5 @@
 import {
+  SelectedClipsBody,
   SourceIdParams,
   type TranscriptSegment,
   type TranscriptSegmentPage,
@@ -31,6 +32,27 @@ export class TranscriptsController {
     @Param(new ZodPipe(SourceIdParams)) p: { id: string },
   ): Promise<TranscriptState> {
     return this.transcripts.start(merchantId, p.id);
+  }
+
+  @Get('clips')
+  selectedClips(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SourceIdParams)) p: { id: string },
+  ) {
+    return this.transcripts.selectedClips(merchantId, p.id);
+  }
+
+  @Post('clips')
+  @HttpCode(202)
+  startSelectedClips(
+    @CurrentMerchant() merchantId: string,
+    @Param(new ZodPipe(SourceIdParams)) p: { id: string },
+    @Body(new ZodPipe(SelectedClipsBody)) body: {
+      requestId: string;
+      ranges: { startMs: number; endMs: number }[];
+    },
+  ) {
+    return this.transcripts.startSelectedClips(merchantId, p.id, body);
   }
 
   @Put('words/:seq/:index')

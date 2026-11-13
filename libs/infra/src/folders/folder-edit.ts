@@ -70,7 +70,7 @@ export async function folderSourceFacts(
   }[] = await db.query(
     `SELECT s.id, s.status, s.probe,
         EXISTS (SELECT 1 FROM transcripts t WHERE t.merchant_id = $1 AND t.source_id = s.id AND t.status = 'ready') AS transcript_ready,
-        (SELECT r.status FROM workflow_runs r WHERE r.merchant_id = $1 AND r.kind = 'transcribe' AND r.subject_id = s.id
+        (SELECT r.status FROM workflow_runs r WHERE r.merchant_id = $1 AND r.kind = 'transcribe' AND r.subject_id = s.id AND r.input->>'mode' IS DISTINCT FROM 'selected-clips'
           ORDER BY r.created_at DESC LIMIT 1) AS transcribe_status,
         a.id AS analysis_id, a.status AS analysis_status,
         (SELECT b.status FROM workflow_runs b WHERE b.merchant_id = $1 AND b.kind = 'build_clips' AND b.input->>'planRunId' = a.id::text

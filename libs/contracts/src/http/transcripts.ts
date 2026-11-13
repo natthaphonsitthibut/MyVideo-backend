@@ -4,6 +4,67 @@ import { defineRoute } from '../route.js';
 import { ApiErrorBody } from './errors.js';
 import { SourceIdParams } from './sources.js';
 
+export const SelectedClipRange = named(
+  'SelectedClipRange',
+  z
+    .object({ startMs: z.number().int().min(0), endMs: z.number().int().positive() })
+    .refine(
+      (r) => r.endMs > r.startMs && r.endMs - r.startMs <= 600000,
+      'Range must be positive and at most 10 minutes',
+    ),
+);
+export const SelectedClipsBody = named(
+  'SelectedClipsBody',
+  z.object({ requestId: z.uuid(), ranges: z.array(SelectedClipRange).min(1).max(20) }),
+);
+export const SelectedClipsState = named(
+  'SelectedClipsState',
+  z.object({
+    runId: z.uuid().nullable(),
+    clips: z.array(
+      z.object({
+        projectId: z.uuid(),
+        startMs: z.number().int(),
+        endMs: z.number().int(),
+        status: z.enum(['pending', 'running', 'ready', 'failed', 'cancelled']),
+        progress: z.number(),
+        jobId: z.uuid().nullable(),
+      }),
+    ),
+  }),
+);
+export type SelectedClipsState = z.infer<typeof SelectedClipsState>;
+export const selectedClipsRoutes = [
+  defineRoute({
+    operationId: 'startSelectedTranscriptClips',
+    method: 'post',
+    path: '/sources/{id}/transcript/clips',
+    summary: 'Transcribe only selected ranges and save each as an editable clip, without highlight analysis',
+    tags: ['transcripts'],
+    auth: true,
+    request: { params: SourceIdParams, body: SelectedClipsBody },
+    responses: {
+      202: { description: 'Selected-range transcription queued', schema: SelectedClipsState },
+      400: { description: 'Invalid ranges', schema: ApiErrorBody },
+      404: { description: 'Source not found', schema: ApiErrorBody },
+      409: { description: 'Source not ready or silent', schema: ApiErrorBody },
+    },
+  }),
+  defineRoute({
+    operationId: 'getSelectedTranscriptClips',
+    method: 'get',
+    path: '/sources/{id}/transcript/clips',
+    summary: 'Latest selected-range transcription clips and their durable progress',
+    tags: ['transcripts'],
+    auth: true,
+    request: { params: SourceIdParams },
+    responses: {
+      200: { description: 'Selected clips', schema: SelectedClipsState },
+      404: { description: 'Source not found', schema: ApiErrorBody },
+    },
+  }),
+];
+
 export const TranscriptWord = named(
   'TranscriptWord',
   z.object({
