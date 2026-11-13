@@ -110,7 +110,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'ขายไว ไฟลุก',
     description: 'ตัดกระชับ ซับทีละ 2–3 คำกลางจอ ป้ายราคาเด้งตอนพูดราคา ปิดด้วยปุ่มสั่งซื้อ',
     suits: 'ไลฟ์ขายของที่พูดราคา/โปรบ่อย อยากให้ปิดการขายไว',
-    captions: { styleRef: 'pop-word', y: 330, maxWords: 3, maxLines: 1 },
+    captions: { styleRef: 'stress-bounce', y: 330, maxWords: 3, maxLines: 1 },
     hook: {
       seconds: 2.5,
       y: -560,
@@ -144,7 +144,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'เล่าเป็นกันเอง',
     description: 'จังหวะพูดธรรมชาติ ซับในกล่องทีละประโยคสั้น ชื่อสินค้าขึ้นมุมล่าง ไม่หวือหวา',
     suits: 'รีวิว/เล่าเรื่องสินค้า พูดช้า ๆ อธิบายรายละเอียด',
-    captions: { styleRef: 'boxed', y: 520, maxWords: 5, maxLines: 1 },
+    captions: { styleRef: 'karaoke', y: 520, maxWords: 5, maxLines: 1 },
     hook: {
       seconds: 3,
       y: -520,
@@ -178,7 +178,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'เรียบหรู',
     description: 'ภาพนิ่งนาน ค่อย ๆ ดันกล้องช้า ๆ ซับบางด้านล่าง ไม่มีป้ายเด้ง เปิด–ปิดแบบจาง',
     suits: 'สินค้าราคาสูง/แบรนด์ อยากให้ดูแพง สงบ',
-    captions: { styleRef: 'minimal', y: 640, maxWords: 6, maxLines: 1 },
+    captions: { styleRef: 'anchor', y: 640, maxWords: 6, maxLines: 1 },
     hook: { seconds: 3, y: -480, fontWeight: 500, color: '#ffffff', animationIn: 'fade' },
     endCard: { seconds: 3, color: '#f5f0e6', background: '#1c1917e6', animationIn: 'fade' },
     cuts: { maxPauseMs: 650, keepPauseMs: 250, removeFillers: true, removeRestarts: true, maxShotMs: null },
@@ -206,7 +206,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'สนุก มีสีสัน',
     description: 'ตัดเร็ว ซับทีละ 1–2 คำตัวใหญ่ ซูมเน้นบ่อยขึ้น ป้ายราคาเด้งสีจัด',
     suits: 'คนขายพลังเยอะ พูดเร็ว สินค้าแฟชั่น/ของเล่น/ขนม',
-    captions: { styleRef: 'outline-bold', y: 380, maxWords: 2, maxLines: 1 },
+    captions: { styleRef: 'icon-pop', y: 380, maxWords: 2, maxLines: 1 },
     hook: {
       seconds: 2.5,
       y: -560,
@@ -267,7 +267,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'แม่ค้าไลฟ์ไฟลุก',
     description: 'ตัดถี่มาก ซับทีละ 2 คำ ซูมเน้นทุกจังหวะราคา แฟลชตอนบอกราคา สไลด์ภาพเปลี่ยนช็อต',
     suits: 'ไลฟ์ขายของพลังสูง พูดเร็ว บอกราคาบ่อย อยากได้คลิปเร้าใจ',
-    captions: { styleRef: 'pop-word', y: 360, maxWords: 2, maxLines: 1 },
+    captions: { styleRef: 'word-stack', y: 360, maxWords: 2, maxLines: 2 },
     hook: {
       seconds: 2,
       y: -580,
@@ -301,7 +301,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'รีวิวจริงใจ',
     description: 'จังหวะคนเล่าจริง เก็บช่วงหายใจไว้นิดหน่อย ซับกล่องล่างทีละประโยค ราคาขึ้นเรียบ ๆ ไม่มีเอฟเฟกต์ตัด',
     suits: 'รีวิวใช้จริง เล่าข้อดีข้อเสีย อยากให้คนดูเชื่อใจ',
-    captions: { styleRef: 'boxed', y: 600, maxWords: 6, maxLines: 1 },
+    captions: { styleRef: 'keyword-underline', y: 600, maxWords: 6, maxLines: 1 },
     hook: {
       seconds: 3,
       y: -500,
@@ -326,7 +326,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'สเปกแกดเจ็ต',
     description: 'ภาพคม ตัดเงียบสั้น ซูมเข้าตอนบอกสเปก/ราคา ภาพสไลด์เปลี่ยนช็อต เสียงฟึ่บเบา ๆ ป้ายราคาโทนเทคโนโลยี',
     suits: 'มือถือ หูฟัง อุปกรณ์ไอที โชว์ฟีเจอร์ทีละข้อ',
-    captions: { styleRef: 'minimal', y: 520, maxWords: 4, maxLines: 1 },
+    captions: { styleRef: 'number-roll', y: 520, maxWords: 4, maxLines: 1 },
     hook: {
       seconds: 2.5,
       y: -540,
@@ -360,7 +360,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'พรีเมียมสกินแคร์',
     description: 'ช้า นุ่ม ภาพค่อย ๆ ดันเข้า ซับบางสีอ่อน จางเข้า–ออกระหว่างช็อต ไม่มีป้ายเด้ง',
     suits: 'เครื่องสำอาง สกินแคร์ น้ำหอม อยากให้ดูหรูแต่อบอุ่น',
-    captions: { styleRef: 'minimal', y: 620, maxWords: 5, maxLines: 1 },
+    captions: { styleRef: 'anchor', y: 620, maxWords: 5, maxLines: 1 },
     hook: { seconds: 3, y: -480, fontWeight: 500, color: '#fff1f2', animationIn: 'fade' },
     endCard: { seconds: 3, color: '#fff1f2', background: '#4c0519d9', animationIn: 'fade' },
     cuts: { maxPauseMs: 700, keepPauseMs: 260, removeFillers: true, removeRestarts: true, maxShotMs: null },
@@ -387,7 +387,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'น่ารักสติกเกอร์',
     description: 'ซับตัวหนาขอบชมพูทีละ 1–2 คำ ทุกอย่างเด้งดึ๋ง ซูมเน้นตอนพูดราคา เสียงป๊อปฟองสบู่',
     suits: 'ของน่ารัก ของเล่น เครื่องเขียน กิ๊ฟช็อป กลุ่มลูกค้าวัยรุ่น',
-    captions: { styleRef: 'outline-bold', y: 420, maxWords: 2, maxLines: 1 },
+    captions: { styleRef: 'sticker', y: 420, maxWords: 2, maxLines: 1 },
     hook: {
       seconds: 2.5,
       y: -560,
@@ -421,7 +421,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'แฟลชเซล',
     description: 'จังหวะเร็ว ป้ายราคาแดงเด้งใหญ่ แฟลชตอนบอกราคา ซับไฮไลต์คำสำคัญ ปิดด้วยปุ่มสั่งซื้อ',
     suits: 'โปรลดราคา ของแถม วันเซล อยากให้รีบตัดสินใจ (ใช้ราคาที่พูดจริงเท่านั้น)',
-    captions: { styleRef: 'bold-highlight', y: 400, maxWords: 3, maxLines: 1 },
+    captions: { styleRef: 'number-roll', y: 400, maxWords: 3, maxLines: 1 },
     hook: {
       seconds: 2,
       y: -560,
@@ -455,7 +455,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
     name: 'มินิมอลแบรนด์',
     description: 'สะอาด เว้นจังหวะ ไม่ซูมแรง ซับบรรทัดเดียวล่างจอ จางดำระหว่างช่วง ปิดด้วยชื่อสินค้า',
     suits: 'แบรนด์เสื้อผ้า ของแต่งบ้าน สินค้าที่ภาพสวยอยู่แล้ว',
-    captions: { styleRef: 'clean', y: 680, maxWords: 6, maxLines: 1 },
+    captions: { styleRef: 'anchor', y: 680, maxWords: 6, maxLines: 1 },
     hook: { seconds: 3, y: -500, fontWeight: 600, color: '#ffffff', animationIn: 'fade' },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#000000cc', animationIn: 'fade' },
     cuts: { maxPauseMs: 600, keepPauseMs: 220, removeFillers: true, removeRestarts: true, maxShotMs: null },

@@ -545,21 +545,22 @@ export function buildClipProject(input: {
       if (p.frame < graphicsFree) continue;
       const frames = Math.min(Math.round(2 * fps), closingFrom - p.frame);
       if (frames < Math.round(fps)) continue;
-      textEl(p.text, p.frame, frames, gfx.priceTag, 900);
-      graphicsFree = p.frame + frames;
-      // the tag IS the caption for that moment: drop caption pages saying the same price under it (user review
-      // 2026-11-12: "1,500 บาท" tag right above the caption "1,500 บาทค่ะ")
+      // Captions remain verbatim, including the rest of a sentence around the price.
+      // Suppress the optional duplicate graphic rather than erasing audible caption words.
       const digits = p.text.text.replace(/[^\d]/g, '');
-      for (const cid of captionIds) {
+      const duplicates = captionIds.some((cid) => {
         const c = elements[cid];
-        if (c?.type !== 'caption') continue;
+        if (c?.type !== 'caption') return false;
         const overlaps = c.startFrame < p.frame + frames && c.startFrame + c.durationFrames > p.frame;
         const said = c.words
           .map((w) => w.text)
           .join('')
           .replace(/[^\d]/g, '');
-        if (overlaps && digits && said.includes(digits)) delete elements[cid];
-      }
+        return overlaps && !!digits && said.includes(digits);
+      });
+      if (duplicates) continue;
+      textEl(p.text, p.frame, frames, gfx.priceTag, 900);
+      graphicsFree = p.frame + frames;
     }
   }
   if (gfx?.cta && input.graphics?.cta) {

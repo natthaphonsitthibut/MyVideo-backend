@@ -177,7 +177,7 @@ describe('style-pack edit of a clip', () => {
     const { project } = build('sale-fast');
     const caption = Object.values(project.elements).find((e) => e.type === 'caption');
     if (caption?.type !== 'caption') throw new Error('no caption');
-    expect(caption.styleRef).toBe('pop-word');
+    expect(caption.styleRef).toBe('stress-bounce');
     expect(caption.words.map((x) => x.text)).toEqual(['ตัว', 'นี้', 'สวย', '80', 'บาท', 'พิมพ์']);
     // "80" was at 14.5 s in the source → right after the first segment (66 frames) on the output
     expect(caption.words[3]?.startFrame).toBe(66);
@@ -273,7 +273,7 @@ describe('style-pack edit of a clip', () => {
     expect(build('simple').project.tracks.filter((t) => t.kind === 'overlay')).toHaveLength(0);
   });
 
-  it('a price tag replaces the caption page saying that price; other pages stay', () => {
+  it('keeps every spoken word and suppresses a price graphic that duplicates its caption', () => {
     const style = stylePack('sale-fast');
     const cut = planJumpCuts({ startMs: plan.startMs, endMs: plan.endMs }, plan.words, speech, style.cuts);
     const frames = editFrames(source, plan, cut);
@@ -308,6 +308,7 @@ describe('style-pack edit of a clip', () => {
     const captions = Object.values(project.elements).filter((e) => e.type === 'caption');
     expect(captions.map((c) => (c.type === 'caption' ? c.words.map((x) => x.text).join('') : ''))).toEqual([
       'ตัวนี้สวย',
+      '80บาทพิมพ์',
     ]);
     const track = project.tracks.find((t) => t.kind === 'caption');
     expect(track?.elementIds).toEqual(captions.map((c) => c.id));

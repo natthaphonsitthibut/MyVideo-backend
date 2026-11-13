@@ -19,6 +19,14 @@ export const CAPTION_STYLE_IDS = [
   'boxed',
   'outline-bold',
   'minimal',
+  'anchor',
+  'karaoke',
+  'keyword-underline',
+  'stress-bounce',
+  'number-roll',
+  'icon-pop',
+  'word-stack',
+  'sticker',
 ] as const;
 export type CaptionStyleId = (typeof CAPTION_STYLE_IDS)[number];
 

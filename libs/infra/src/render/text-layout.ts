@@ -35,6 +35,7 @@ type StageLib = {
   canvasMeasure(font: string): (t: string) => number;
   captionFont(styleRef: string): string;
   captionMaxWidth(canvasWidth: number, styleRef?: string): number;
+  lintCaptionLines(words: readonly LayoutWord[], lines: readonly (readonly number[])[]): string[];
   loadCaptionFont(font: string): Promise<void>;
   STAGE_FONT: string;
 };
@@ -85,14 +86,19 @@ export class StageTextLayout {
         const s = (globalThis as unknown as StagePage).MyVideoStage;
         const font = s.captionFont(o.styleRef);
         await s.loadCaptionFont(font);
-        return s.buildCaptions(w, {
+        const pages = s.buildCaptions(w, {
           measure: s.canvasMeasure(font),
           // the style matters: a boxed caption loses its padding from the line width
-          maxWidth: s.captionMaxWidth(o.canvasWidth, o.styleRef),
+          maxWidth: o.styleRef === 'word-stack' ? 1 : s.captionMaxWidth(o.canvasWidth, o.styleRef),
           maxLines: o.maxLines ?? 2,
           pauseFrames: o.pauseFrames ?? 15,
           ...(o.maxWords !== undefined ? { maxWords: o.maxWords } : {}),
         });
+        for (const page of pages) {
+          const errors = s.lintCaptionLines(page.words, page.lines);
+          if (errors.length) throw new Error(`Invalid Thai captions: ${errors.join(',')}`);
+        }
+        return pages;
       },
       [words, opts] as const,
     );
