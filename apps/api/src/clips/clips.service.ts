@@ -2,6 +2,7 @@ import { type ClipSuggestion, type ClipsState, STYLE_PACKS } from '@myvideo/cont
 import {
   BuildClipsUnavailableError,
   ClipSuggestionEntity,
+  customStyles,
   type Env,
   LiveToClipsUnavailableError,
   RestyleUnavailableError,
@@ -170,8 +171,15 @@ export class ClipsService {
     return this.state(merchantId, sourceId);
   }
 
-  listStyles(): { items: { id: string; name: string; description: string }[] } {
-    return { items: STYLE_PACKS.map(({ id, name, description }) => ({ id, name, description })) };
+  async listStyles(merchantId: string) {
+    const custom = await customStyles(this.ds, merchantId);
+    return {
+      items: [...custom.map((s) => s.pack), ...STYLE_PACKS].map(({ id, name, description }) => ({
+        id,
+        name,
+        description,
+      })),
+    };
   }
 
   async restyle(merchantId: string, projectId: string, styleId: string): Promise<{ runId: string }> {

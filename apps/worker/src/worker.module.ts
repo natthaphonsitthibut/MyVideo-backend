@@ -18,6 +18,7 @@ import {
   purgeHandler,
   QueueSet,
   QueueWorkers,
+  referenceHandler,
   renderHandler,
   reviewBuildHandler,
   StageTextLayout,
@@ -157,6 +158,14 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     }),
   );
   const renderer = new ChromiumRenderer(bundle);
+  registry.register(
+    referenceHandler({
+      ds,
+      storage: createStorage(env),
+      ai: new AiServiceClient({ baseUrl: env.AI_SERVICE_URL }),
+      llm: createLlm(env, new DbLlmCallStore(ds)),
+    }),
+  );
   const clips = liveToClipsHandlers({
     ds,
     storage: createStorage(env),

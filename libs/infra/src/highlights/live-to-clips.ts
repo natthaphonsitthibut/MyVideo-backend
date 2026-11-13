@@ -28,6 +28,7 @@ import { loudnessFromPeaks, PEAKS_RECIPE, type PeaksJson } from '../media/peaks.
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
 import { runProcess, withTempDir } from '../process/run-process.js';
+import { customStyles } from '../reference/reference-store.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { clipCaptionWords, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
@@ -81,7 +82,7 @@ export async function requestLiveToClips(
 ): Promise<{ runId: string; created: boolean }> {
   return ds.transaction(async (em) => {
     const rows: { status: string; probe: ProbeInfo | null }[] = await em.query(
-      `SELECT status,probe FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+      `SELECT status,probe FROM video_sources WHERE id = $1 AND merchant_id = $2 AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id) FOR UPDATE`,
       [input.sourceId, input.merchantId],
     );
     if (!rows[0]) throw new LiveToClipsUnavailableError('not_found', 'source not found');
@@ -163,14 +164,20 @@ export async function requestBuildClips(
   },
 ): Promise<{ runId: string; created: boolean }> {
   const styles = [...new Set([input.styleId, ...(input.styleIds ?? [])])];
+  const custom = await customStyles(ds, input.merchantId);
   if (
     styles.length > 3 ||
-    styles.some((id) => !STYLE_PACKS.some((p) => p.id === id) && input.frozenStyle?.pack.id !== id)
+    styles.some(
+      (id) =>
+        !STYLE_PACKS.some((p) => p.id === id) &&
+        input.frozenStyle?.pack.id !== id &&
+        !custom.some((s) => s.pack.id === id),
+    )
   )
     throw new BuildClipsUnavailableError('unknown_style', 'unknown style');
   return ds.transaction(async (em) => {
     const src: unknown[] = await em.query(
-      `SELECT 1 FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+      `SELECT 1 FROM video_sources WHERE id = $1 AND merchant_id = $2 AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id) FOR UPDATE`,
       [input.sourceId, input.merchantId],
     );
     if (src.length === 0) throw new BuildClipsUnavailableError('not_found', 'source not found');
@@ -224,7 +231,7 @@ export async function requestBuildClips(
       },
     });
     for (const s of planned) {
-      const variants: { styleId: string; rank: number }[] = [];
+      const variants: { styleId: string; rank: number; frozenStyle?: FrozenStyle }[] = [];
       for (const [i, styleId] of styles.slice(1).entries()) {
         const rank = Math.max(...planned.map((s) => s.rank)) * (i + 1) + s.rank;
         const {
@@ -239,7 +246,8 @@ export async function requestBuildClips(
           ...copy
         } = s;
         await em.getRepository(ClipSuggestionEntity).insert({ ...copy, rank });
-        variants.push({ styleId, rank });
+        const frozenStyle = custom.find((s) => s.pack.id === styleId);
+        variants.push({ styleId, rank, ...(frozenStyle ? { frozenStyle } : {}) });
       }
       await enqueueInTransaction(em, {
         merchantId: input.merchantId,
@@ -257,7 +265,9 @@ export async function requestBuildClips(
           ...(music ? { music } : {}),
           ...(variants.length ? { variants } : {}),
           ...(input.photos?.length ? { photos: input.photos } : {}),
-          ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
+          ...((input.frozenStyle ?? custom.find((s) => s.pack.id === input.styleId))
+            ? { frozenStyle: input.frozenStyle ?? custom.find((s) => s.pack.id === input.styleId) }
+            : {}),
           ...(input.ratio ? { ratio: input.ratio } : {}),
         },
         maxAttempts: 3,
@@ -759,7 +769,10 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           workflowRunId: planRunId,
           rank,
           source: sourceInfo(source.id, probe),
-          input: base.buildInput,
+          input: {
+            ...base.buildInput,
+            ...(job.payload.frozenStyle ? { frozenStyle: job.payload.frozenStyle as FrozenStyle } : {}),
+          },
           styleId: String(job.payload.styleId),
         });
         const project = await review(draft, base.buildInput, job, signal);
@@ -906,7 +919,11 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
       return { suggestionId: s.id, projectId, hookFallback };
     },
     next(job) {
-      const variants = (job.payload.variants ?? []) as { rank: number; styleId: string }[];
+      const variants = (job.payload.variants ?? []) as {
+        rank: number;
+        styleId: string;
+        frozenStyle?: FrozenStyle;
+      }[];
       return variants.map((v) => ({
         type: 'clips.build',
         queue: 'ai' as const,
@@ -919,6 +936,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           baseRank: job.payload.rank,
           rank: v.rank,
           styleId: v.styleId,
+          ...(v.frozenStyle ? { frozenStyle: v.frozenStyle } : {}),
         },
       }));
     },

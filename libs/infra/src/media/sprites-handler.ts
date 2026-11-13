@@ -6,6 +6,7 @@ import type { DataSource } from 'typeorm';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { runProcess, withTempDir } from '../process/run-process.js';
+import { enqueueReferenceForSource } from '../reference/reference-store.js';
 import type { ProbeInfo } from './probe.js';
 import { loadSource, markSourceFailed } from './source-helpers.js';
 
@@ -142,6 +143,10 @@ export function spritesHandler({ ds, storage }: { ds: DataSource; storage: Stora
         [source.id, job.merchantId],
       );
       return { assetId: existing?.id ?? assetId, reused: !!existing };
+    },
+    async next(job, _result, em) {
+      await enqueueReferenceForSource(em, String(job.payload.sourceId), job.merchantId);
+      return [];
     },
     onDead: markSourceFailed,
   };

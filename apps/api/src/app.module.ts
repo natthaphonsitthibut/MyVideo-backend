@@ -14,6 +14,7 @@ import { JobsModule } from './jobs/jobs.module.js';
 import { LibraryModule } from './library/library.module.js';
 import { MusicModule } from './music/music.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
+import { ReferenceModule } from './reference/reference.controller.js';
 import { RendersModule } from './renders/renders.module.js';
 import { ReviewVideosModule } from './review-videos/review-videos.module.js';
 import { RunsModule } from './runs/runs.module.js';
@@ -56,6 +57,7 @@ export class AppModule {
         HealthModule,
         JobsModule,
         MusicModule,
+        ReferenceModule,
         RunsModule,
         StorageModule,
         SourcesModule,

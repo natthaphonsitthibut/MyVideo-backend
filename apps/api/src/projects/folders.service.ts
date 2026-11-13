@@ -2,6 +2,7 @@ import { type FolderPlanResponse, type FolderRecord, FolderSettings, STYLE_PACKS
 import { uuidv7 } from '@myvideo/domain';
 import {
   chooseFolderStyle,
+  customStyles,
   type Env,
   FolderEditUnavailableError,
   folderPlanOf,
@@ -127,7 +128,7 @@ export class FoldersService {
       if (!folder.length) throw new NotFoundException('Project folder not found');
       const ids = [...new Set(sourceIds)];
       const own: { id: string }[] = await em.query(
-        'SELECT id FROM video_sources WHERE merchant_id=$1 AND id=ANY($2::uuid[]) FOR KEY SHARE',
+        'SELECT id FROM video_sources s WHERE merchant_id=$1 AND id=ANY($2::uuid[]) AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=s.id AND r.merchant_id=s.merchant_id) FOR KEY SHARE',
         [merchantId, ids],
       );
       if (own.length !== ids.length) throw new NotFoundException('Source not found');
@@ -149,6 +150,8 @@ export class FoldersService {
     const folder = await this.get(merchantId, id); // 404 for another merchant's folder
     const { runId, styleId, plan, facts } = await folderPlanOf(this.ds, merchantId, id);
     const locked = await getStyleLock(this.ds, merchantId);
+    const custom = await customStyles(this.ds, merchantId);
+    const catalogue = [...custom.map((s) => s.pack), ...STYLE_PACKS];
     // the analysis advice of the longest speech video ranks the styles for this footage
     const speech = facts.sources.filter((s) => s.kind === 'video' && s.hasAudio).map((s) => s.id);
     const advice: {
@@ -187,8 +190,17 @@ export class FoldersService {
             reason: null,
             origin: 'catalogue',
           });
+    if (plan.needs === 'style' || styleId)
+      for (const frozen of custom)
+        proposals.unshift({
+          styleId: frozen.pack.id,
+          name: frozen.pack.name,
+          description: frozen.pack.description,
+          reason: 'วัดจากคลิปอ้างอิงของคุณ',
+          origin: 'catalogue',
+        });
     // the style step names the style the merchant knows, not its id
-    const picked = styleId ? STYLE_PACKS.find((p) => p.id === styleId) : undefined;
+    const picked = styleId ? catalogue.find((p) => p.id === styleId) : undefined;
     const steps = plan.steps.map((s) => (s.id === 'style' && picked ? { ...s, detail: picked.name } : s));
     if (locked) {
       const i = proposals.findIndex((p) => p.styleId === locked.pack.id);
@@ -208,8 +220,7 @@ export class FoldersService {
         [previewSource, merchantId],
       )) as { words: { text: string; startMs: number; endMs: number }[] }[];
       for (const p of proposals) {
-        const pack =
-          locked?.pack.id === p.styleId ? locked.pack : STYLE_PACKS.find((s) => s.id === p.styleId);
+        const pack = locked?.pack.id === p.styleId ? locked.pack : catalogue.find((s) => s.id === p.styleId);
         if (pack)
           p.preview = stylePreview(pack, previewSource, segment?.words ?? [], folder.settings.productName);
       }
@@ -230,7 +241,8 @@ export class FoldersService {
     styleId?: string,
     sourceIds?: string[],
   ): Promise<FolderPlanResponse> {
-    if (styleId && !STYLE_PACKS.some((p) => p.id === styleId))
+    const catalogue = [...STYLE_PACKS, ...(await customStyles(this.ds, merchantId)).map((s) => s.pack)];
+    if (styleId && !catalogue.some((p) => p.id === styleId))
       throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
     try {
       await requestFolderEdit(this.ds, {
@@ -259,7 +271,8 @@ export class FoldersService {
     saveLock = false,
     styleIds?: string[],
   ): Promise<FolderPlanResponse> {
-    if ([styleId, ...(styleIds ?? [])].some((id) => !STYLE_PACKS.some((p) => p.id === id)))
+    const catalogue = [...STYLE_PACKS, ...(await customStyles(this.ds, merchantId)).map((s) => s.pack)];
+    if ([styleId, ...(styleIds ?? [])].some((id) => !catalogue.some((p) => p.id === id)))
       throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
     await this.get(merchantId, id);
     const done = await chooseFolderStyle(this.ds, {

@@ -77,7 +77,7 @@ export async function requestSelectedClips(
 ) {
   return ds.transaction(async (em) => {
     const [source] = (await em.query(
-      `SELECT status, probe FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+      `SELECT status, probe FROM video_sources WHERE id = $1 AND merchant_id = $2 AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id) FOR UPDATE`,
       [input.sourceId, input.merchantId],
     )) as { status: string; probe: ProbeInfo | null }[];
     if (!source) throw new SelectedClipsError('not_found', 'ไม่พบวิดีโอนี้');

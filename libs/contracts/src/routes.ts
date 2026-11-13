@@ -23,6 +23,7 @@ import {
   restoreProjectVersion,
   saveProject,
 } from './http/projects.js';
+import { referenceStylesRoutes } from './http/reference-styles.js';
 import { getRender, getRenderFile, listProjectRenders, listRenders, requestRender } from './http/renders.js';
 import { createReviewVideo, getReviewVideo, listTemplates, swapTemplate } from './http/review-videos.js';
 import { createTestRun, getRun, listRuns, runEvents } from './http/runs.js';
@@ -50,6 +51,7 @@ import type { RouteContract } from './route.js';
 
 /** Every HTTP route the API serves. The API test suite fails if a controller route is missing here. */
 export const routes: RouteContract[] = [
+  ...referenceStylesRoutes,
   ...musicRoutes,
   ...folderRoutes,
   getHealth,

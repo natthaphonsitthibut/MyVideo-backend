@@ -183,6 +183,8 @@ export {
   runProcess,
   withTempDir,
 } from './process/run-process.js';
+export * from './reference/reference-handler.js';
+export * from './reference/reference-store.js';
 export { ChromiumRenderer, type ChromiumRendererOptions } from './render/chromium-renderer.js';
 export { cutArgs, encodeArgs, PRESET_SETTINGS } from './render/render-args.js';
 export { type RenderDeps, renderHandler } from './render/render-handler.js';

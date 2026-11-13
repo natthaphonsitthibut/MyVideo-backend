@@ -63,7 +63,7 @@ export async function requestTranscription(
 ): Promise<{ runId: string; created: boolean }> {
   return ds.transaction(async (em) => {
     const rows: { status: string }[] = await em.query(
-      `SELECT status FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+      `SELECT status FROM video_sources WHERE id = $1 AND merchant_id = $2 AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id) FOR UPDATE`,
       [input.sourceId, input.merchantId],
     );
     const source = rows[0];

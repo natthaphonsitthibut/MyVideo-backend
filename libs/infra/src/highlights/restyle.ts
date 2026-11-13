@@ -1,4 +1,4 @@
-import { STYLE_PACKS } from '@myvideo/contracts';
+import { type FrozenStyle, STYLE_PACKS } from '@myvideo/contracts';
 import type { DataSource } from 'typeorm';
 import { ClipSuggestionEntity } from '../db/entities/clip-suggestion.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
@@ -6,6 +6,7 @@ import { VideoSourceEntity } from '../db/entities/video-source.entity.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
 import type { ProbeInfo } from '../media/probe.js';
+import { customStyle } from '../reference/reference-store.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { parseClipBuildInput } from './clip-build-input.js';
 import { codeCritic, storyNote } from './director.js';
@@ -38,7 +39,9 @@ export async function requestRestyle(
   ds: DataSource,
   input: { merchantId: string; projectId: string; styleId: string; maxUnfinishedRuns?: number },
 ): Promise<{ runId: string }> {
-  if (!STYLE_IDS.has(input.styleId)) throw new RestyleUnavailableError('unknown_style', 'unknown style');
+  const frozenStyle = await customStyle(ds, input.merchantId, input.styleId);
+  if (!STYLE_IDS.has(input.styleId) && !frozenStyle)
+    throw new RestyleUnavailableError('unknown_style', 'unknown style');
   return ds.transaction(async (em) => {
     const project = await em
       .getRepository(ProjectEntity)
@@ -64,7 +67,11 @@ export async function requestRestyle(
       type: 'clips.restyle',
       queue: 'ai',
       idempotencyKey: `${run.id}:clips.restyle`,
-      payload: { projectId: input.projectId, styleId: input.styleId },
+      payload: {
+        projectId: input.projectId,
+        styleId: input.styleId,
+        ...(frozenStyle ? { frozenStyle } : {}),
+      },
       timeoutMs: 10 * 60_000,
     });
     return { runId: run.id };
@@ -86,7 +93,9 @@ export function clipsRestyleHandler({
     async run({ job }) {
       const projectId = String(job.payload.projectId ?? '');
       const styleId = String(job.payload.styleId ?? '');
-      if (!STYLE_IDS.has(styleId)) throw new FatalJobError(`unknown style ${styleId}`);
+      const frozenStyle = job.payload.frozenStyle as FrozenStyle | undefined;
+      if (!STYLE_IDS.has(styleId) && frozenStyle?.pack.id !== styleId)
+        throw new FatalJobError(`unknown style ${styleId}`);
       const s = await suggestionOf(ds, job.merchantId, projectId);
       const input = parseClipBuildInput(s?.buildInput);
       if (!s || !input) throw new FatalJobError('คลิปนี้สร้างก่อนรองรับการเปลี่ยนสไตล์ — สร้างคลิปใหม่อีกครั้ง');
@@ -112,7 +121,7 @@ export function clipsRestyleHandler({
         workflowRunId: s.workflowRunId,
         rank: s.rank,
         source: sourceInfo(source.id, probe),
-        input,
+        input: { ...input, ...(frozenStyle ? { frozenStyle } : {}) },
         styleId,
       });
       doc.meta.director = {

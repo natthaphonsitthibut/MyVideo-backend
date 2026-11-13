@@ -59,7 +59,7 @@ export class ProjectsService {
     ];
     if (sourceIds.length) {
       const own: { id: string }[] = await this.ds.query(
-        `SELECT id FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[])`,
+        `SELECT id FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[]) AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id)`,
         [merchantId, sourceIds],
       );
       const mine = new Set(own.map((x) => x.id));

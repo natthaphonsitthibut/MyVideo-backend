@@ -17,6 +17,7 @@ import {
 } from '../highlights/live-to-clips.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
+import { customStyle } from '../reference/reference-store.js';
 import { getStyleLock, lockStyle } from './style-lock.js';
 import { visualFootage } from './visual-montage.js';
 
@@ -204,7 +205,12 @@ export async function requestFolderEdit(
     if (open && !open.input.closedAt) return { runId: open.id, created: false };
     if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
     const locked = await getStyleLock(em, input.merchantId);
-    const frozenStyle = locked && (!input.styleId || input.styleId === locked.pack.id) ? locked : undefined;
+    const frozenStyle =
+      locked && (!input.styleId || input.styleId === locked.pack.id)
+        ? locked
+        : input.styleId
+          ? ((await customStyle(em, input.merchantId, input.styleId)) ?? undefined)
+          : undefined;
     const runInput: FolderEditInput = {
       folderId: input.folderId,
       sourceIds,
@@ -241,7 +247,8 @@ export async function chooseFolderStyle(
     const locked = input.lockStyle
       ? await lockStyle(em, input.merchantId, input.styleId)
       : await getStyleLock(em, input.merchantId);
-    const frozenStyle = locked?.pack.id === input.styleId ? locked : null;
+    const frozenStyle =
+      locked?.pack.id === input.styleId ? locked : await customStyle(em, input.merchantId, input.styleId);
     await em.query(
       `UPDATE workflow_runs SET input = jsonb_set(input, '{styleId}', to_jsonb($3::text)) || jsonb_build_object('frozenStyle',$4::jsonb,'styleIds',$5::jsonb), updated_at = now()
         WHERE id = $1 AND merchant_id = $2`,
@@ -318,7 +325,12 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       if (input.styleId && visualIds.length && sources.every((s) => s.ingest === 'ready'))
         await ds.transaction(async (em) => {
           const length = frame[0]?.settings?.length;
-          for (const styleId of input.styleIds ?? [input.styleId])
+          for (const styleId of input.styleIds ?? [input.styleId]) {
+            if (!styleId) continue;
+            const frozenStyle =
+              input.frozenStyle?.pack.id === styleId
+                ? input.frozenStyle
+                : await customStyle(em, merchantId, styleId);
             await enqueueInTransaction(em, {
               merchantId,
               workflowRunId: job.workflowRunId,
@@ -329,12 +341,13 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
                 sourceIds: visualIds,
                 ...(input.musicId ? { musicId: input.musicId } : {}),
                 styleId,
-                ...(input.frozenStyle?.pack.id === styleId ? { frozenStyle: input.frozenStyle } : {}),
+                ...(frozenStyle ? { frozenStyle } : {}),
                 ratio,
                 ...(length && length !== 'auto' ? { seconds: Number(length) } : {}),
               },
               timeoutMs: 60000,
             });
+          }
         });
       for (const s of sources) {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;

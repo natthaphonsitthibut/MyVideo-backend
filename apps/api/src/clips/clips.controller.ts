@@ -46,8 +46,8 @@ export class ClipsController {
   }
 
   @Get('style-packs')
-  styles(): { items: { id: string; name: string; description: string }[] } {
-    return this.clips.listStyles();
+  styles(@CurrentMerchant() merchantId: string) {
+    return this.clips.listStyles(merchantId);
   }
 
   @Post('projects/:id/restyle')

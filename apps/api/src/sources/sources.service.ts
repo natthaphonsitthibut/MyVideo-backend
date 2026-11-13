@@ -124,6 +124,9 @@ export class SourcesService {
       .orderBy('s.created_at', 'DESC')
       .addOrderBy('s.id', 'DESC')
       .limit(limit + 1);
+    qb.andWhere(
+      'NOT EXISTS (SELECT 1 FROM reference_styles r WHERE r.source_id=s.id AND r.merchant_id=s.merchant_id)',
+    );
     if (kind)
       qb.andWhere(
         `COALESCE((s.probe->>'still')::boolean, lower(s.original_filename) ~ :photoExtension) = :photo`,

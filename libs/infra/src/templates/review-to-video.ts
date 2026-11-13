@@ -76,7 +76,7 @@ export async function requestReviewVideo(
     throw new ReviewVideoUnavailableError('too_many', `choose 1–${REVIEW_MAX_SOURCES} videos`);
   return ds.transaction(async (em) => {
     const rows: { id: string; status: string }[] = await em.query(
-      `SELECT id, status FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[]) FOR UPDATE`,
+      `SELECT id, status FROM video_sources WHERE merchant_id = $1 AND id = ANY($2::uuid[]) AND NOT EXISTS(SELECT 1 FROM reference_styles r WHERE r.source_id=video_sources.id AND r.merchant_id=video_sources.merchant_id) FOR UPDATE`,
       [input.merchantId, sourceIds],
     );
     if (rows.length !== sourceIds.length)

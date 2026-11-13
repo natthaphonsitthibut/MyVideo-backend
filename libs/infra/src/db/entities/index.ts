@@ -10,6 +10,7 @@ import { MerchantEntity } from './merchant.entity.js';
 import { MusicEntity } from './music.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from './project.entity.js';
 import { ProjectFolderEntity, ProjectFolderSourceEntity } from './project-folder.entity.js';
+import { ReferenceStyleEntity } from './reference-style.entity.js';
 import { RenderEntity } from './render.entity.js';
 import { SessionEntity } from './session.entity.js';
 import { StyleLockEntity } from './style-lock.entity.js';
@@ -51,6 +52,7 @@ export {
 };
 /** Every entity, listed explicitly (no globs: ESM + bundling safe). */
 export const entities = [
+  ReferenceStyleEntity,
   MusicEntity,
   StyleLockEntity,
   MerchantEntity,

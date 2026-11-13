@@ -24,6 +24,7 @@ import { FolderSettings1794498000000 } from './1794498000000-FolderSettings.js';
 import { FolderEditRun1794499000000 } from './1794499000000-FolderEditRun.js';
 import { StyleLocks1794500000000 } from './1794500000000-StyleLocks.js';
 import { MerchantMusic1794501000000 } from './1794501000000-MerchantMusic.js';
+import { ReferenceStyles1794502000000 } from './1794502000000-ReferenceStyles.js';
 
 /** Every migration in order. A new migration file must be added here (no globs). */
 // biome-ignore lint/complexity/noBannedTypes: TypeORM takes migration classes
@@ -54,4 +55,5 @@ export const migrations: Function[] = [
   FolderEditRun1794499000000,
   StyleLocks1794500000000,
   MerchantMusic1794501000000,
+  ReferenceStyles1794502000000,
 ];

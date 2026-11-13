@@ -8,6 +8,7 @@ export * from './http/jobs.js';
 export * from './http/library.js';
 export * from './http/music.js';
 export * from './http/projects.js';
+export * from './http/reference-styles.js';
 export * from './http/renders.js';
 export * from './http/review-videos.js';
 export * from './http/runs.js';
