@@ -31,8 +31,14 @@ const speech = [
   { startMs: 14_000, endMs: 16_000 },
 ];
 
-function build(styleId: string) {
-  const style = stylePack(styleId);
+/** The pack without long-take re-frames: isolates the price punch-in / jump-cut camera rules. */
+function staticPack(styleId: string) {
+  const s = stylePack(styleId);
+  return { ...s, cuts: { ...s.cuts, maxShotMs: null } };
+}
+
+function build(styleId: string, noReframe = false) {
+  const style = noReframe ? staticPack(styleId) : stylePack(styleId);
   const cut = planJumpCuts({ startMs: plan.startMs, endMs: plan.endMs }, plan.words, speech, style.cuts);
   const frames = editFrames(source, plan, cut);
   // one caption page with every word (layout itself is covered by the stage tests)
@@ -96,7 +102,7 @@ describe('style-pack edit of a clip', () => {
   });
 
   it('the price shot 2 s in keeps the base framing (too soon after the start to re-frame)', () => {
-    const { project } = build('sale-fast');
+    const { project } = build('sale-fast', true);
     const scales = Object.values(project.elements)
       .filter((e) => e.type === 'video')
       .map((v) => (v as { transform: { scale: number } }).transform.scale);
@@ -154,7 +160,7 @@ describe('style-pack edit of a clip', () => {
   });
 
   it('camera drift is one slow push across shots of the same framing: no snap back at a cut', () => {
-    const { project, style } = build('sale-fast');
+    const { project, style } = build('sale-fast', true);
     const videos = Object.values(project.elements)
       .filter((e) => e.type === 'video')
       .sort((a, b) => a.startFrame - b.startFrame);
@@ -315,7 +321,7 @@ describe('style-pack edit of a clip', () => {
   });
 
   it('a piece shorter than a second keeps the framing before it (a re-frame that short reads as a glitch)', () => {
-    const style = stylePack('sale-fast');
+    const style = staticPack('sale-fast');
     // real case (S01a sale-fast): a 0.2-s piece between two removals, then a price 3 s later
     const segs = shotsOf([
       { frames: 84 },
@@ -367,12 +373,19 @@ describe('style-pack edit of a clip', () => {
     const at = changes(scales, segs);
     expect(at.length).toBeGreaterThan(0); // the rule limits zooms, it does not forbid them
     for (let i = 1; i < at.length; i++) expect((at[i] ?? 0) - (at[i - 1] ?? 0)).toBeGreaterThanOrEqual(hold);
-    // a continuous take split into pieces (no source jump) never changes framing
+    // a continuous take: a style without long-take re-frames never changes framing; one with them re-frames at
+    // word starts, still at most once per `hold` (merchant 2026-11-13: one static shot looked like "captions only")
     const take = shotsOf([{ frames: 90 }, { frames: 90, gap: 0 }, { frames: 90, gap: 0 }]);
-    expect(new Set(segmentScales(style, take)).size).toBe(1);
+    expect(new Set(segmentScales(stylePack('simple'), take)).size).toBe(1);
+    const reframed = segmentScales(style, take);
+    expect(new Set(reframed).size).toBe(2);
+    const taken = changes(reframed, take);
+    for (let i = 1; i < taken.length; i++)
+      expect((taken[i] ?? 0) - (taken[i - 1] ?? 0)).toBeGreaterThanOrEqual(hold);
   });
 
-  it('camera: zoomed for at most 20 % of the clip, and always back to the base framing between two zooms', () => {
+  it('camera: zoom share stays within the style energy budget, and always back to the base framing between two zooms', () => {
+    const share = { calm: 0.2, gentle: 0.3, normal: 0.35, lively: 0.4, hype: 0.45 } as const;
     for (const id of STYLE_PACKS.map((s) => s.id)) {
       const style = stylePack(id);
       const segs = shotsOf(
@@ -385,7 +398,7 @@ describe('style-pack edit of a clip', () => {
       const scales = segmentScales(style, segs);
       const total = segs.reduce((n, s) => n + s.durationFrames, 0);
       const zoomed = segs.reduce((n, s, i) => n + ((scales[i] ?? 1) > 1 ? s.durationFrames : 0), 0);
-      expect(zoomed / total, id).toBeLessThanOrEqual(0.2);
+      expect(zoomed / total, id).toBeLessThanOrEqual(style.cuts.maxShotMs === null ? 0.2 : share[style.energy ?? 'normal']);
       expect(scales[0], id).toBe(1); // the hook shot is not cropped
       for (let i = 1; i < scales.length; i++) {
         const a = scales[i - 1] ?? 1;

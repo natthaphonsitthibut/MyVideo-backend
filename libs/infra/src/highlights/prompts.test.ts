@@ -9,7 +9,7 @@ describe('merchant-facing prompt language', () => {
     expect(RERANK_SYSTEM).toContain('plain words a seller uses');
     expect(RERANK_SYSTEM).toContain('quote: a short Thai phrase copied character for character');
     expect(RERANK_SYSTEM).not.toContain('English sentence');
-    expect(RERANK_PROMPT_VERSION).toBe('rerank-highlights-v5');
+    expect(RERANK_PROMPT_VERSION).toBe('rerank-highlights-v6');
   });
 
   it('v4 ranks with an editor rubric: hook first, stand-alone, payoff, and one take per repeated pitch', () => {

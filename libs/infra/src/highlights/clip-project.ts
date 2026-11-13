@@ -199,6 +199,15 @@ export const CAMERA_RULES = {
   maxZoomShare: 0.2,
 } as const;
 
+/** Share of the clip that may be zoomed in when a style re-frames long takes, by energy (Assumption). */
+const REFRAME_ZOOM_SHARE: Record<NonNullable<StylePack['energy']>, number> = {
+  calm: 0.2,
+  gentle: 0.3,
+  normal: 0.35,
+  lively: 0.4,
+  hype: 0.45,
+};
+
 /** Scale per shot (see `segmentShots`). */
 export function segmentScales(
   style: StylePack,
@@ -233,9 +242,13 @@ export function segmentShots(
   minFrames = 30,
 ): Shot[] {
   const fpsFrames = minFrames; // callers pass one second of frames
+  // a style that re-frames long takes (`maxShotMs`) changes framing on those word-start cuts too, and holds each
+  // framing longer: a talking-head short punches in/out every few seconds instead of one static shot (merchant,
+  // 2026-11-13: "looks like captions only"). Livelier styles may spend more of the clip zoomed in (Assumption).
+  const reframes = style.cuts.maxShotMs !== null;
   const hold = Math.round(CAMERA_RULES.holdSeconds * fpsFrames);
   const total = segments.reduce((n, s) => n + s.durationFrames, 0);
-  const budget = Math.floor(total * CAMERA_RULES.maxZoomShare);
+  const budget = Math.floor(total * (reframes ? REFRAME_ZOOM_SHARE[style.energy ?? 'normal'] : CAMERA_RULES.maxZoomShare));
   const isJump = (i: number) => {
     const prev = segments[i - 1];
     const cur = segments[i];
@@ -258,10 +271,23 @@ export function segmentShots(
   return segments.map((s, i) => {
     const moment = keyMomentKind(s.words);
     const canChange =
-      i > 0 && isJump(i) && s.durationFrames >= minFrames && s.startFrame - lastChange >= hold;
+      i > 0 &&
+      (isJump(i) || reframes) &&
+      s.durationFrames >= minFrames &&
+      s.startFrame - lastChange >= hold;
     let punch: Shot['punch'] = null;
     if (canChange && scale !== 1) {
       scale = 1;
+      lastChange = s.startFrame;
+    } else if (
+      canChange &&
+      reframes &&
+      moment === null &&
+      style.zoom.punchIn !== null &&
+      zoomed + s.durationFrames <= budget
+    ) {
+      // re-frame on a long take: tighter for this piece, back to base on the next change
+      scale = style.zoom.punchIn;
       lastChange = s.startFrame;
     } else if (
       canChange &&

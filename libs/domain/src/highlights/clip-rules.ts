@@ -44,7 +44,8 @@ export type ClipRuleOptions = {
 
 export const DEFAULT_CLIP_RULES: ClipRuleOptions = {
   minMs: 15_000,
-  maxMs: 60_000,
+  // short-form sellers' clips: 15–35 s is the target (merchant, 2026-11-13); 40 s leaves room to finish a sentence
+  maxMs: 40_000,
   maxShiftMs: 4_000,
   padMs: 200,
   shotSnapMs: 500,

@@ -135,7 +135,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'pop',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#111111e6', animationIn: 'pop' },
-    cuts: { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true, removeRestarts: true, maxShotMs: 2500 },
     zoom: { punchIn: 1.2, punchGap: 3, drift: 0.012 },
     graphics: {
       priceTag: { color: '#111111', background: '#facc15', animationIn: 'pop', y: 80, maxPerClip: 2 },
@@ -170,7 +170,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'slide-up',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#000000cc', animationIn: 'slide-up' },
-    cuts: { maxPauseMs: 450, keepPauseMs: 150, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 450, keepPauseMs: 150, removeFillers: true, removeRestarts: true, maxShotMs: 3500 },
     zoom: { punchIn: 1.12, punchGap: 4, drift: 0.008 },
     graphics: {
       priceTag: { color: '#111111', background: '#ffffffee', animationIn: 'slide-up', y: 120, maxPerClip: 1 },
@@ -234,7 +234,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'bounce',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#7c3aede6', animationIn: 'bounce' },
-    cuts: { maxPauseMs: 220, keepPauseMs: 60, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 220, keepPauseMs: 60, removeFillers: true, removeRestarts: true, maxShotMs: 2500 },
     zoom: { punchIn: 1.22, punchGap: 2, drift: 0.015 },
     graphics: {
       priceTag: { color: '#ffffff', background: '#ec4899', animationIn: 'bounce', y: 100, maxPerClip: 2 },
@@ -297,7 +297,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'pop',
     },
     endCard: { seconds: 2, color: '#ffffff', background: '#dc2626e6', animationIn: 'pop' },
-    cuts: { maxPauseMs: 180, keepPauseMs: 50, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 180, keepPauseMs: 50, removeFillers: true, removeRestarts: true, maxShotMs: 2500 },
     zoom: { punchIn: 1.25, punchGap: 2, drift: 0.015 },
     graphics: {
       priceTag: { color: '#ffffff', background: '#dc2626', animationIn: 'pop', y: 60, maxPerClip: 3 },
@@ -332,8 +332,8 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'fade',
     },
     endCard: { seconds: 2.5, color: '#111111', background: '#ffffffee', animationIn: 'fade' },
-    cuts: { maxPauseMs: 550, keepPauseMs: 200, removeFillers: true, removeRestarts: true, maxShotMs: null },
-    zoom: { punchIn: null, punchGap: 0, drift: 0.01 },
+    cuts: { maxPauseMs: 550, keepPauseMs: 200, removeFillers: true, removeRestarts: true, maxShotMs: 4000 },
+    zoom: { punchIn: 1.1, punchGap: 2, drift: 0.01 },
     graphics: {
       priceTag: { color: '#111111', background: '#ffffffee', animationIn: 'fade', y: 140, maxPerClip: 1 },
       productName: { color: '#111111', background: '#ffffffd9', animationIn: 'fade', y: -330 },
@@ -358,7 +358,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'zoom-in',
     },
     endCard: { seconds: 2.5, color: '#e0f2fe', background: '#0f172ae6', animationIn: 'zoom-in' },
-    cuts: { maxPauseMs: 280, keepPauseMs: 90, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 280, keepPauseMs: 90, removeFillers: true, removeRestarts: true, maxShotMs: 3000 },
     zoom: { punchIn: 1.18, punchGap: 3, drift: 0.01 },
     graphics: {
       priceTag: { color: '#0f172a', background: '#22d3ee', animationIn: 'zoom-in', y: 100, maxPerClip: 2 },
@@ -421,7 +421,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'bounce',
     },
     endCard: { seconds: 2.5, color: '#ffffff', background: '#f472b6e6', animationIn: 'bounce' },
-    cuts: { maxPauseMs: 250, keepPauseMs: 80, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 250, keepPauseMs: 80, removeFillers: true, removeRestarts: true, maxShotMs: 2500 },
     zoom: { punchIn: 1.15, punchGap: 2, drift: 0.01 },
     graphics: {
       priceTag: { color: '#ffffff', background: '#a855f7', animationIn: 'bounce', y: 90, maxPerClip: 2 },
@@ -456,7 +456,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       animationIn: 'zoom-in',
     },
     endCard: { seconds: 2.5, color: '#facc15', background: '#991b1bf2', animationIn: 'zoom-in' },
-    cuts: { maxPauseMs: 220, keepPauseMs: 70, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    cuts: { maxPauseMs: 220, keepPauseMs: 70, removeFillers: true, removeRestarts: true, maxShotMs: 2500 },
     zoom: { punchIn: 1.22, punchGap: 2, drift: 0.012 },
     graphics: {
       priceTag: { color: '#facc15', background: '#991b1b', animationIn: 'zoom-in', y: 40, maxPerClip: 3 },
