@@ -37,6 +37,65 @@ it('rejects unknown or duplicate judge targets and never repairs high-scored ele
   expect(repaired.project.elements[e.id]?.type).toBe('caption');
 });
 
+it('captions worded differently from the heard speech are reported, not a reason to fail the clip', async () => {
+  const p = Project.parse(recorded);
+  const sourceIds = Object.values(p.assets).flatMap((a) => (a.sourceId ? [a.sourceId] : []));
+  const shot = Object.values(p.elements).find((e) => e.type === 'video');
+  if (shot?.type !== 'video') throw new Error('recorded fixture has no video');
+  const fps = p.fps.num / p.fps.den;
+  const startMs = Math.ceil(((shot.sourceInFrame + 2) * 1000) / fps);
+  // natural wording in the captions vs the raw heard word (merchant rule: not 100% the same, but natural Thai)
+  const words = [{ text: 'จา', startMs, endMs: startMs + 100 }];
+  const result = await reviewDraft({
+    project: p,
+    evidence: { sourceIds, words, product: {} },
+    hooks: [],
+    llm: new RulesOnlyLlm(),
+    context: { merchantId: p.merchantId },
+  });
+  const check = result.meta.director?.checks.find((c) => c.checkId === '07');
+  expect(check?.status).toBe('fail');
+  expect(check?.evidence[0]).toMatch(/^caption ".*" vs speech ".*" at \d+\/\d+$/);
+});
+
+it('a hook too short to read gets more time instead of being deleted, without overlapping its track', async () => {
+  const p = Project.parse(recorded);
+  const sourceIds = Object.values(p.assets).flatMap((a) => (a.sourceId ? [a.sourceId] : []));
+  const track = 'a0000000-0000-4000-8000-0000000000a1';
+  const text = (id: string, startFrame: number, content: string) => ({
+    type: 'text' as const,
+    id,
+    trackId: track,
+    startFrame,
+    durationFrames: 6,
+    origin: 'ai' as const,
+    motion: { component: 'hook-title' as const, energy: 'gentle' as const },
+    content,
+    styleRef: 'hook',
+    transform: { x: 0, y: -500, scale: 1, rotation: 0 },
+    animationIn: { presetId: 'fade', durationFrames: 4 },
+  });
+  const hook = text('a0000000-0000-4000-8000-0000000000b1', 0, 'ตัวนี้ราคาดีมาก ใช้ทนจริง');
+  const next = text('a0000000-0000-4000-8000-0000000000b2', 40, 'สนใจทักแชท');
+  const draft = Project.parse({
+    ...p,
+    tracks: [...p.tracks, { id: track, kind: 'overlay', elementIds: [hook.id, next.id] }],
+    elements: { ...p.elements, [hook.id]: hook, [next.id]: next },
+  });
+  const result = await reviewDraft({
+    project: draft,
+    evidence: { sourceIds, words: [], product: {} },
+    hooks: [],
+    llm: new RulesOnlyLlm(),
+    context: { merchantId: p.merchantId },
+  });
+  const kept = result.elements[hook.id];
+  expect(kept?.type).toBe('text');
+  expect(kept?.durationFrames).toBeGreaterThan(6);
+  expect(kept && kept.startFrame + kept.durationFrames).toBeLessThanOrEqual(40);
+  expect(result.meta.director?.codeFixes).toContain(`${hook.id}:reading-hold`);
+});
+
 it('persists honest unrun review evidence without calling a model or rendering footage', async () => {
   const p = Project.parse(recorded);
   const sourceIds = Object.values(p.assets).flatMap((a) => (a.sourceId ? [a.sourceId] : []));

@@ -131,12 +131,13 @@ export function codeCritic(p: Project, evidence: Evidence): z.infer<typeof Criti
           (w.endMs * fps) / 1000 <= s.sourceInFrame + s.durationFrames * s.playbackRate + 1,
       ),
     );
-    check(
-      7,
-      compact(caps.flatMap((c) => c.words.map((w) => w.text)).join('')) ===
-        compact(kept.map((w) => w.text).join('')),
-      caps.map((c) => c.id),
-    );
+    const shown = compact(caps.flatMap((c) => c.words.map((w) => w.text)).join(''));
+    const spoken = compact(kept.map((w) => w.text).join(''));
+    let at = 0;
+    while (at < shown.length && shown[at] === spoken[at]) at++;
+    // where the captions stop matching the kept speech, so a failure can be traced without rebuilding the clip
+    const diff = `caption "${shown.slice(Math.max(0, at - 12), at + 20)}" vs speech "${spoken.slice(Math.max(0, at - 12), at + 20)}" at ${at}/${spoken.length}`;
+    check(7, shown === spoken, shown === spoken ? caps.map((c) => c.id) : [diff, ...caps.map((c) => c.id)]);
   }
   const validation = validateProject(p);
   check(
@@ -315,9 +316,13 @@ export async function reviewDraft(a: {
         delete e.animationIn;
         delete e.animationOut;
         const hold = motionFrames(e.motion?.energy ?? 'normal', e.content.split(/\s+/u).length, p.fps).hold;
+        // too short to read: give it the reading time the clip still has after it; never delete the hook, the
+        // end card or a product/price label for it (that left clips with captions only and a hard cut ending)
         if (e.durationFrames < hold) {
-          delete p.elements[id];
-          for (const t of p.tracks) t.elementIds = t.elementIds.filter((x) => x !== id);
+          const next = Object.values(p.elements)
+            .filter((o) => o.id !== id && o.trackId === e.trackId && o.startFrame > e.startFrame)
+            .reduce((min, o) => Math.min(min, o.startFrame), p.durationFrames);
+          e.durationFrames = Math.max(e.durationFrames, Math.min(hold, next - e.startFrame));
         }
         codeFixes.push(`${id}:reading-hold`);
       } else if (['03', '04'].includes(c.checkId) && (e.type === 'text' || e.type === 'cta')) {
@@ -391,8 +396,10 @@ export async function reviewDraft(a: {
     codeFixes,
     judge,
   };
+  // 07 (captions word for word = heard speech) is reported, not blocking: captions are cleaned into natural Thai
+  // that fits the context (merchant, 2026-11-13). Numbers, prices and claims stay blocking through 03/04.
   const unsafe = p.meta.director.checks.filter(
-    (c) => c.status === 'fail' && ['01', '03', '04', '05', '07', '13', '24'].includes(c.checkId),
+    (c) => c.status === 'fail' && ['01', '03', '04', '05', '13', '24'].includes(c.checkId),
   );
   if (unsafe.length)
     throw new Error(
