@@ -47,8 +47,8 @@ export type OutputRatio = keyof typeof OUTPUT_FRAMES;
 /** Design column for laying out text on a frame (≤ 1600 so a 16:9 caption line stays readable at a glance). */
 export const layoutWidth = (ratio: OutputRatio) =>
   Math.min(1600, Math.round(OUTPUT_FRAMES[ratio].width / OUTPUT_FRAMES[ratio].textScale));
-/** Behind a picture that does not fill the frame (never stretched): a plain dark backdrop. */
-const BACKDROP = '#111111';
+/** Neutral recipe fallback; selected styles resolve their own editable background colour. */
+const BACKDROP = '#18243b';
 export const CLIP_CAPTION_STYLE = 'bold-highlight' as const;
 /** Lower safe area, same as clips the user creates by hand (E05-F07). */
 const CAPTION_Y = 520;
@@ -646,7 +646,9 @@ export function buildClipProject(input: {
     }
   }
 
-  if (backdropTrack && backdropId)
+  const backdropIds: string[] = [];
+  if (backdropTrack && backdropId) {
+    backdropIds.push(backdropId);
     elements[backdropId] = {
       type: 'shape',
       id: backdropId,
@@ -657,9 +659,33 @@ export function buildClipProject(input: {
       shape: 'rect',
       width: W,
       height: H,
-      fill: BACKDROP,
+      fill: edit?.style.hook.background ?? BACKDROP,
       transform: { x: 0, y: 0, scale: 1, rotation: 0 },
     };
+    for (const side of [-1, 1]) {
+      const id = newId();
+      backdropIds.push(id);
+      elements[id] = {
+        type: 'shape',
+        id,
+        trackId: newId(),
+        startFrame: 0,
+        durationFrames,
+        origin: 'ai',
+        shape: 'ellipse',
+        width: Math.round(W * 0.4),
+        height: Math.round(H * 1.35),
+        fill: edit?.style.hook.color ?? '#ffffff',
+        opacity: 0.12,
+        transform: {
+          x: Math.round(side * W * 0.46),
+          y: Math.round(side * H * 0.15),
+          scale: 1,
+          rotation: side * 24,
+        },
+      };
+    }
+  }
 
   // sound effects (D-026): created last so the ids above stay what they were before sounds existed
   const assets: Project['assets'] = {
@@ -740,7 +766,7 @@ export function buildClipProject(input: {
     assets,
     tracks: [
       ...(backdropTrack && backdropId
-        ? [{ id: backdropTrack, kind: 'overlay' as const, elementIds: [backdropId] }]
+        ? backdropIds.map((id) => ({ id: elements[id]!.trackId, kind: 'overlay' as const, elementIds: [id] }))
         : []),
       { id: videoTrack, kind: 'video', elementIds: videoIds },
       ...(transitionTrack && transitionIds.length

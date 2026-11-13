@@ -58,6 +58,26 @@ function build(styleId: string) {
 }
 
 describe('style-pack edit of a clip', () => {
+  it('frames portrait footage in landscape over an editable style-colour backdrop without duplicate video', () => {
+    const style = stylePack('sale-fast');
+    const doc = buildClipProject({
+      projectId: '00000000-0000-4000-8000-0000000000aa',
+      merchantId: '00000000-0000-4000-8000-0000000000bb',
+      source: { ...source, width: 1080, height: 1920 },
+      plan,
+      pages: [],
+      ratio: '16:9',
+      seed: 'landscape',
+      edit: { style, cut: planJumpCuts(plan, plan.words, speech, style.cuts) },
+    });
+    const backdrop = Object.values(doc.elements).find((e) => e.type === 'shape' && e.width === 1920);
+    expect(backdrop?.type === 'shape' && backdrop.fill).toBe(style.hook.background);
+    expect(Object.values(doc.elements).filter((e) => e.type === 'video')).toHaveLength(2);
+    expect(
+      Object.values(doc.elements).filter((e) => e.type === 'shape' && e.shape === 'ellipse'),
+    ).toHaveLength(2);
+    expect(validateProject(doc).ok).toBe(true);
+  });
   it('sale-fast: jump cut on the silence and the filler, contiguous segments, valid project', () => {
     const { project, cut } = build('sale-fast');
     // silence 12.0–14.0 keeps the measured 200-ms tail and 100-ms lead, filler 14.0–14.5 goes too
