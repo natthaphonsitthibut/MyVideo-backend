@@ -309,9 +309,20 @@ export async function loadCorrectedTranscript(
     segments: segs.map((s) => {
       type Word = TimedSegment['words'][number] & { origin?: 'ai'; asrText?: string };
       const words: Word[] = [];
-      s.words.forEach((w, i) => {
+      // start of a merchant-removed word before the first kept one (its audio still belongs to the next word)
+      let carryStart: number | null = null;
+      s.words.forEach((asr, i) => {
         const edit = byKey.get(`${s.seq}:${i}`);
         const prev = words[words.length - 1];
+        // the merchant removed the word: no caption text, but its audio span stays covered by a neighbour so
+        // word-safe cuts never cut through speech
+        if (edit?.origin === 'user' && edit.text === '') {
+          if (prev) prev.endMs = Math.max(prev.endMs, asr.endMs);
+          else carryStart ??= asr.startMs;
+          return;
+        }
+        const w = carryStart === null ? asr : { ...asr, startMs: Math.min(carryStart, asr.startMs) };
+        carryStart = null;
         // an empty AI edit continues the glossary term on the word before: one word over both audio spans
         if (edit?.origin === 'ai' && edit.text === '' && prev) {
           prev.endMs = w.endMs;

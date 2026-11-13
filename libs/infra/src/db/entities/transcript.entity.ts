@@ -162,11 +162,9 @@ export class TranscriptSegmentEntity extends BaseRow {
  * keeps its ASR timing; only the text is replaced. Deleting the row restores the original word.
  */
 @Entity({ name: 'transcript_edits' })
-// an empty text is only an AI continuation (the word was merged into the glossary term on the word before it)
-@Check(
-  'transcript_edits_text_valid',
-  `(origin = 'ai' AND text = '') OR (length(btrim(text)) > 0 AND length(text) <= 200)`,
-)
+// an empty text is an AI continuation (merged into the glossary term on the word before it) or, from the
+// merchant, a removed word
+@Check('transcript_edits_text_valid', `text = '' OR (length(btrim(text)) > 0 AND length(text) <= 200)`)
 @Check('transcript_edits_position_valid', `seq >= 0 AND word_index >= 0`)
 @Check('transcript_edits_origin_valid', `origin IN ('user', 'ai')`)
 @Index('transcript_edits_word_key', ['transcriptId', 'seq', 'wordIndex'], { unique: true })

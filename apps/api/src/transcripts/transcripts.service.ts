@@ -238,9 +238,24 @@ export class TranscriptsService {
     text: string,
   ): Promise<TranscriptSegment> {
     const { t, segment } = await this.word(merchantId, sourceId, seq, index);
+    // removing an AI-merged name removes every word of its span (else the hidden continuations would reappear)
+    const span: [number, number] =
+      text === ''
+        ? (aiSpanAt(await this.editsFor(merchantId, t.id, [seq]), seq, index, segment.words.length) ?? [
+            index,
+            index,
+          ])
+        : [index, index];
     // the merchant takes over a word the AI merged into a name: the AI merge of that span goes first
     await this.deleteAiSpan(merchantId, t.id, segment, index);
-    if (segment.words[index]?.text === text) {
+    if (text === '') {
+      for (let i = span[0]; i <= span[1]; i++)
+        await this.ds.query(
+          `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin) VALUES ($1, $2, $3, $4, '', 'user')
+           ON CONFLICT (transcript_id, seq, word_index) DO UPDATE SET text = '', origin = 'user', reviewed_at = NULL, updated_at = now()`,
+          [merchantId, t.id, seq, i],
+        );
+    } else if (segment.words[index]?.text === text) {
       // same as recognised → no correction needed
       await this.ds
         .getRepository(TranscriptEditEntity)
@@ -364,6 +379,7 @@ export function withEdits(
         heard: null,
         mergedInto: null,
         needsReview: false,
+        deleted: false,
       };
     edited = true;
     // an empty AI edit is a continuation of the name on the word before (kept for index alignment, not shown)
@@ -379,6 +395,7 @@ export function withEdits(
       heard: w.text,
       mergedInto: continuation ? head : null,
       needsReview: fix.origin === 'ai' && !continuation && fix.reviewedAt === null,
+      deleted: fix.origin === 'user' && fix.text === '',
     };
   });
   // the merged word's heard text covers its whole span

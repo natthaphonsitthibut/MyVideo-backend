@@ -165,10 +165,10 @@ describe('whole transcript correction persistence', () => {
     const words = corrected.segments[0]?.words ?? [];
     expect(words.map((w) => w.text)).toEqual(['ของ', 'Liquid Blue']);
     expect(words[1]).toMatchObject({ origin: 'ai', asrText: 'ควิก บู', endMs: Math.round(seg.end_ms) });
-    // an empty text is refused for a merchant edit (only AI continuations may be empty)
+    // whitespace-only text is still refused
     await expect(
       ds.query(
-        `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin) VALUES ($1, $2, 1, 0, '', 'user')`,
+        `INSERT INTO transcript_edits (merchant_id, transcript_id, seq, word_index, text, origin) VALUES ($1, $2, 1, 0, '  ', 'user')`,
         [merchantId, t.id],
       ),
     ).rejects.toThrow();
@@ -184,6 +184,35 @@ describe('whole transcript correction persistence', () => {
     expect((await ds.getRepository(TranscriptEntity).findOneByOrFail({ id: t.id })).aiContext).toMatchObject({
       topic: 'ไลฟ์ขายเสื้อมัดย้อม',
     });
+  });
+  it('a word the merchant removed has no caption text, but its audio stays covered by a neighbour', async () => {
+    const { t, sourceId } = await setup();
+    const seg = fixture.segments[0] as { text: string; start_ms: number; end_ms: number };
+    const q = Math.floor((seg.end_ms - seg.start_ms) / 4);
+    const at = (i: number) => seg.start_ms + i * q;
+    // recorded ASR split of "จากบริษัท" (ASR heard "บริษัติ"): the merchant keeps one word and removes the rest
+    await ds.getRepository(TranscriptSegmentEntity).update(
+      { transcriptId: t.id, seq: 0 },
+      {
+        words: ['จา', 'กบ', 'ริ', 'ษัติดง'].map((text, i) => ({
+          text,
+          kind: 'th',
+          startMs: at(i),
+          endMs: at(i + 1),
+        })),
+      },
+    );
+    await ds.getRepository(TranscriptEditEntity).insert([
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 0, text: '', origin: 'user' },
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 1, text: 'จากบริษัท', origin: 'user' },
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 2, text: '', origin: 'user' },
+      { merchantId, transcriptId: t.id, seq: 0, wordIndex: 3, text: '', origin: 'user' },
+    ]);
+    const corrected = await loadCorrectedTranscript(ds, merchantId, sourceId);
+    expect(corrected.segments[0]?.text).toBe('จากบริษัท');
+    expect(corrected.segments[0]?.words).toEqual([
+      { text: 'จากบริษัท', kind: 'th', startMs: at(0), endMs: at(4) },
+    ]);
   });
   it('rules and unavailable models leave the transcript usable without edits', async () => {
     for (const mode of ['rules', 'local-agent'] as const) {

@@ -85,6 +85,8 @@ export const TranscriptWord = named(
     mergedInto: z.number().int().nullable(),
     /** An AI correction the merchant has not checked yet (shown with a mark and in the review queue). */
     needsReview: z.boolean(),
+    /** The merchant removed this word from the transcript/captions (`text` is empty; the audio is not cut). */
+    deleted: z.boolean(),
   }),
 );
 
@@ -111,11 +113,14 @@ export const TranscriptWordParams = z.object({
 export const TranscriptWordEdit = named(
   'TranscriptWordEdit',
   z.object({
-    /** The corrected text (timing stays the word's ASR timing). */
+    /**
+     * The corrected text (timing stays the word's ASR timing). An empty text removes the word from the transcript
+     * and captions (an AI-merged name: its whole span); revert brings it back.
+     */
     text: z
       .string()
       .transform((s) => s.normalize('NFC').trim())
-      .pipe(z.string().min(1).max(200)),
+      .pipe(z.string().max(200)),
   }),
 );
 
@@ -123,7 +128,8 @@ export const editTranscriptWord = defineRoute({
   operationId: 'editTranscriptWord',
   method: 'put',
   path: '/sources/{id}/transcript/words/{seq}/{index}',
-  summary: 'Correct one word of the ready transcript (stored as a user layer; the ASR original is kept)',
+  summary:
+    'Correct or remove (empty text) one word of the ready transcript (stored as a user layer; the ASR original is kept)',
   tags: ['transcripts'],
   auth: true,
   request: { params: TranscriptWordParams, body: TranscriptWordEdit },

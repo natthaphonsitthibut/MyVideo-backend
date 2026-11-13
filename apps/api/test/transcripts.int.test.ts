@@ -176,6 +176,7 @@ describe('transcript API (real Postgres)', () => {
           heard: null,
           mergedInto: null,
           needsReview: false,
+          deleted: false,
         },
       ],
     });
@@ -295,6 +296,7 @@ describe('transcript API (real Postgres)', () => {
       heard: 'ทำไลฟสด',
       mergedInto: null,
       needsReview: false,
+      deleted: false,
     });
     expect(
       await ds
@@ -319,8 +321,8 @@ describe('transcript API (real Postgres)', () => {
     expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(1);
 
     // invalid input, unknown word, other merchant
-    expect((await put(wordPath, cookieA, '   ')).status).toBe(400);
     expect((await put(wordPath, cookieA, 'x'.repeat(201))).status).toBe(400);
+    expect((await put(wordPath, cookieA, 42)).status).toBe(400);
     expect((await put(`/sources/${id}/transcript/words/0/3`, cookieA, 'x')).status).toBe(404);
     expect((await put(`/sources/${id}/transcript/words/9/0`, cookieA, 'x')).status).toBe(404);
     expect((await put(wordPath, cookieB, 'hack')).status).toBe(404);
@@ -342,6 +344,7 @@ describe('transcript API (real Postgres)', () => {
       heard: null,
       mergedInto: null,
       needsReview: false,
+      deleted: false,
     });
     expect(await ds.getRepository(TranscriptEditEntity).countBy({ transcriptId: t.id })).toBe(0);
     // writing the recognised text itself stores no correction
@@ -388,6 +391,28 @@ describe('transcript API (real Postgres)', () => {
     expect((await put(`/sources/${id}/transcript/words/0/0`, cookieA, 'ก็คือว่า')).status).toBe(200);
     const left = await ds.getRepository(TranscriptEditEntity).findBy({ transcriptId: t.id });
     expect(left.map((e) => [e.wordIndex, e.text, e.origin])).toEqual([[0, 'ก็คือว่า', 'user']]);
+    await ds.getRepository(TranscriptEditEntity).delete({ transcriptId: t.id });
+
+    // removing a word (empty text): hidden from the text, kept for revert; an AI-merged name goes as a whole
+    await merge();
+    const removed = await put(`/sources/${id}/transcript/words/0/0`, cookieA, '  ');
+    expect(removed.status).toBe(200);
+    const removedSeg = (await removed.json()) as TranscriptSegment;
+    expect(removedSeg.words.slice(0, 2)).toMatchObject([
+      { text: '', deleted: true, original: 'ก็คือ', mergedInto: null },
+      { text: '', deleted: true, original: 'คุณ', mergedInto: null },
+    ]);
+    expect(removedSeg.words[2]).toMatchObject({ text: 'ทำไลฟสด', deleted: false });
+    expect(removedSeg.text).toBe('ทำไลฟสด');
+    expect(await (await api(`/sources/${id}/transcript`, cookieA)).json()).toMatchObject({
+      aiFixedCount: 0,
+      needsReviewCount: 0,
+    });
+    const back = await api(`/sources/${id}/transcript/words/0/0`, cookieA, { method: 'DELETE' });
+    expect(((await back.json()) as TranscriptSegment).words[0]).toMatchObject({
+      text: 'ก็คือ',
+      deleted: false,
+    });
     await ds.getRepository(TranscriptEditEntity).delete({ transcriptId: t.id });
     await storage.delete(key);
   });
