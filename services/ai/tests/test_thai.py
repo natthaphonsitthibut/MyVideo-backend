@@ -66,6 +66,13 @@ def test_numbers_units_and_repetition_mark_stay_together():
     assert "100" in words
 
 
+def test_price_word_is_not_cut_by_an_idiom_in_the_dictionary():
+    # real ASR lines of the 30-min live (L02): newmm read "ราคาที่" as รา|คาที่ (คาที่ = "on the spot")
+    for line in ["จากราคาที่ผมตั้งใจว่ารุ่นนี้จะทำราคา 9,989", "เป็นราคาที่ดีที่สุดแล้วก็เลือก"]:
+        words = [w["text"] for w in segment_words(line, 0, 6000)]
+        assert "ราคา" in words and "รา" not in words, words
+
+
 def test_kinds():
     words = segment_words("ลด 50% iPhone ครับ", 0, 4000)
     assert [w["kind"] for w in words] == ["th", "number", "latin", "th"]

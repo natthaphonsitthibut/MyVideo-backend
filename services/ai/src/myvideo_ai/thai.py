@@ -8,7 +8,14 @@ whisper.cpp's own token timestamps are unreliable for Thai (E04-F02), its segmen
 import re
 import unicodedata
 
+from pythainlp.corpus import thai_words
 from pythainlp.tokenize import word_tokenize
+from pythainlp.util import dict_trie
+
+# Dictionary entries that win a tie against a far more common reading in selling speech and cut it wrong:
+# "คาที่" (on the spot) turned every "ราคาที่" (the price that) into รา|คาที่ on a real 30-min live (2026-11-13).
+_AMBIGUOUS = {"คาที่"}
+_DICT = dict_trie(set(thai_words()) - _AMBIGUOUS)
 
 _ZERO_WIDTH = re.compile("[​‌‍⁠﻿]")
 _SPACES = re.compile(r"[\s\u00a0]+")
@@ -54,7 +61,7 @@ def _pieces(text: str) -> list[tuple[str, bool]]:
         number, latin, thai, other = m.groups()
         spaced = m.start() > 0 and t[m.start() - 1] == " "
         if thai:
-            for i, tok in enumerate(word_tokenize(thai, engine="newmm", keep_whitespace=False)):
+            for i, tok in enumerate(word_tokenize(thai, custom_dict=_DICT, engine="newmm", keep_whitespace=False)):
                 if tok == _REPEAT and words:
                     words[-1] = (words[-1][0] + tok, words[-1][1])
                 elif tok:
