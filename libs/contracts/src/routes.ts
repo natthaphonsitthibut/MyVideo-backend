@@ -12,6 +12,7 @@ import { folderRoutes } from './http/folders.js';
 import { getHealth } from './http/health.js';
 import { cancelJob, retryJob } from './http/jobs.js';
 import { getLibrarySound } from './http/library.js';
+import { musicRoutes } from './http/music.js';
 import {
   createProject,
   deleteProject,
@@ -49,6 +50,7 @@ import type { RouteContract } from './route.js';
 
 /** Every HTTP route the API serves. The API test suite fails if a controller route is missing here. */
 export const routes: RouteContract[] = [
+  ...musicRoutes,
   ...folderRoutes,
   getHealth,
   getBrandKit,

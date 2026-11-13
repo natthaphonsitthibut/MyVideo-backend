@@ -1,5 +1,7 @@
 import { type FrozenStyle, stylePack } from '@myvideo/contracts';
+import { withMusicTrack } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
+import { MusicEntity } from '../db/entities/music.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { type OutputRatio, seededIds } from '../highlights/clip-project.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
@@ -43,7 +45,7 @@ export function visualMontageHandler({ ds }: { ds: DataSource }): JobHandler {
         return { projectId, reused: true };
       const sources = await visualFootage(ds, job.merchantId, ids);
       if (sources.length !== ids.length) throw new FatalJobError('ฟุตเทจบางไฟล์ถูกลบหรือยังไม่พร้อม');
-      const project = buildVisualMontage({
+      let project = buildVisualMontage({
         projectId,
         merchantId: job.merchantId,
         seed: `${job.workflowRunId}:montage`,
@@ -55,6 +57,28 @@ export function visualMontageHandler({ ds }: { ds: DataSource }): JobHandler {
           : {}),
         ...(typeof job.payload.seconds === 'number' ? { seconds: job.payload.seconds } : {}),
       });
+      if (typeof job.payload.musicId === 'string') {
+        const music = await ds.getRepository(MusicEntity).findOneBy({
+          id: job.payload.musicId,
+          merchantId: job.merchantId,
+          status: 'ready',
+        });
+        if (!music?.durationMs || !music.analysis) throw new FatalJobError('เพลงที่เลือกยังไม่พร้อม');
+        project = withMusicTrack(
+          project,
+          {
+            musicId: music.id,
+            durationMs: music.durationMs,
+            analysis: music.analysis as {
+              bpm: number | null;
+              firstBeatSec: number | null;
+              beatsSec: number[];
+              dropsSec: number[];
+            },
+          },
+          seededIds(`${job.workflowRunId}:montage-music:${styleId}`),
+        );
+      }
       signal.throwIfAborted();
       await ds.transaction(async (em) => {
         await em

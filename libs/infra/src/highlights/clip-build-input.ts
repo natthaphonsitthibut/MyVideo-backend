@@ -18,6 +18,18 @@ const Word = z.object({
 const Span = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 
 const ClipBuildInputSchema = z.object({
+  music: z
+    .object({
+      musicId: z.uuid(),
+      durationMs: z.number().positive(),
+      analysis: z.object({
+        bpm: z.number().nullable(),
+        firstBeatSec: z.number().nullable(),
+        beatsSec: z.array(z.number()),
+        dropsSec: z.array(z.number()),
+      }),
+    })
+    .optional(),
   frozenStyle: FrozenStyle.optional(),
   version: z.literal(1),
   startMs: z.number().int().min(0),
@@ -55,10 +67,12 @@ export function clipBuildInput(input: {
   faceX?: number;
   photos?: ClipBuildInput['photos'];
   frozenStyle?: FrozenStyle;
+  music?: ClipBuildInput['music'];
 }): ClipBuildInput {
   const { plan } = input;
   return {
     version: 1,
+    ...(input.music ? { music: structuredClone(input.music) } : {}),
     ...(input.frozenStyle ? { frozenStyle: FrozenStyle.parse(input.frozenStyle) } : {}),
     startMs: plan.startMs,
     endMs: plan.endMs,

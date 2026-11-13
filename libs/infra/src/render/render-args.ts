@@ -1,6 +1,7 @@
 import {
   type AudioClip,
   audioFilterGraph,
+  duckingExpression,
   type Fps,
   LOUDNESS_TARGET,
   type MediaCut,
@@ -64,10 +65,24 @@ export function cutArgs(input: string, cut: MediaCut, fps: Fps, out: string): st
  * Audio pass 1: every clip cut from its original (inputs 0..n-1), mixed by `audioFilterGraph` to exactly the
  * project length, written as 48 kHz stereo PCM (the loudness measurement and the encoder read this file).
  */
-export function mixArgs(audio: (AudioClip & { path: string })[], totalSec: number, out: string): string[] {
+export function mixArgs(
+  audio: (AudioClip & { path: string })[],
+  totalSec: number,
+  out: string,
+  fps = { num: 30, den: 1 },
+): string[] {
   const inputs = audio.flatMap((a) => ['-ss', num(a.startSec), '-t', num(a.durationSec), '-i', a.path]);
   const graph = audioFilterGraph(
-    audio.map((a, i) => ({ input: i, rate: a.rate, volume: a.volume, delaySec: a.delaySec })),
+    audio.map((a, i) => ({
+      input: i,
+      rate: a.rate,
+      volume: a.volume,
+      delaySec: a.delaySec,
+      ...(a.ducking ? { duck: duckingExpression(a.ducking, fps) } : {}),
+      fadeInSec: a.fadeInSec,
+      fadeOutSec: a.fadeOutSec,
+      durationSec: a.durationSec,
+    })),
     totalSec,
   );
   return [

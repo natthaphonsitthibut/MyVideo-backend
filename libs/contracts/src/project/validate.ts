@@ -59,7 +59,8 @@ export function validateProject(input: unknown): ProjectValidation {
 
   for (const [key, a] of Object.entries(p.assets)) {
     const at = `assets.${key}`;
-    const refs = [a.sourceId, a.libraryId, a.brandLogo].filter((r) => r !== undefined).length;
+    const refs = [a.sourceId, a.libraryId, a.brandLogo, a.musicId].filter((r) => r !== undefined).length;
+    if (a.musicId && a.kind !== 'audio') add('asset_ref', at, 'Music assets must be audio');
     if (refs !== 1)
       add('asset_ref', at, `asset ${key} needs exactly one of sourceId, libraryId or brandLogo`);
     if (a.brandLogo && a.kind !== 'image')

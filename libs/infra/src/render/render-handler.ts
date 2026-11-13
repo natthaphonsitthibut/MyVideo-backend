@@ -12,6 +12,7 @@ import {
 import type { DataSource } from 'typeorm';
 import { BrandKitEntity } from '../db/entities/brand-kit.entity.js';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
+import { MusicEntity } from '../db/entities/music.entity.js';
 import { ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { RenderEntity } from '../db/entities/render.entity.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
@@ -85,6 +86,16 @@ export function renderHandler({
                 `library sound ${asset.libraryId} is not installed (run pnpm library:fetch)`,
               );
             media[assetId] = path;
+            continue;
+          }
+          if (asset.musicId) {
+            const music = await ds
+              .getRepository(MusicEntity)
+              .findOneBy({ id: asset.musicId, merchantId: job.merchantId, status: 'ready' });
+            if (!music) throw new FatalJobError('เพลงไม่พร้อมหรือไม่ได้อยู่ในคลังของร้านนี้');
+            const file = await storage.localPath(music.storageKey);
+            handles.push(file);
+            media[assetId] = file.path;
             continue;
           }
           // never query with an undefined column: TypeORM would match any row

@@ -11,12 +11,14 @@ import {
   type StoragePort,
   scoreWindows,
   type TimedSegment,
+  withMusicTrack,
 } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { AiServiceClient } from '../ai/ai-service.client.js';
 import { AnalysisEntity, DetectedShotEntity } from '../db/entities/analysis.entity.js';
 import { ClipSuggestionEntity } from '../db/entities/clip-suggestion.entity.js';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
+import { MusicEntity } from '../db/entities/music.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { TranscriptEntity } from '../db/entities/transcript.entity.js';
 import { addPhotoCutaways } from '../folders/photo-project.js';
@@ -154,6 +156,7 @@ export async function requestBuildClips(
     ratio?: OutputRatio;
     photos?: ClipBuildInput['photos'];
     frozenStyle?: FrozenStyle;
+    musicId?: string;
     maxUnfinishedRuns?: number;
   },
 ): Promise<{ runId: string; created: boolean }> {
@@ -192,6 +195,19 @@ export async function requestBuildClips(
       [plan.id],
     );
     const speech = planJob[0]?.result?.speechByRank ?? {};
+    let music: ClipBuildInput['music'];
+    if (input.musicId) {
+      const row = await em
+        .getRepository(MusicEntity)
+        .findOneBy({ id: input.musicId, merchantId: input.merchantId, status: 'ready' });
+      if (!row?.durationMs || !row.analysis)
+        throw new BuildClipsUnavailableError('not_found', 'เพลงที่เลือกยังไม่พร้อม');
+      music = {
+        musicId: row.id,
+        durationMs: row.durationMs,
+        analysis: row.analysis as NonNullable<ClipBuildInput['music']>['analysis'],
+      };
+    }
     if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
     const run = await createRunInTransaction(em, {
       merchantId: input.merchantId,
@@ -236,6 +252,7 @@ export async function requestBuildClips(
           product: plan.input?.product ?? {},
           speech: speech[String(s.rank)] ?? [],
           styleId: input.styleId,
+          ...(music ? { music } : {}),
           ...(variants.length ? { variants } : {}),
           ...(input.photos?.length ? { photos: input.photos } : {}),
           ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
@@ -626,7 +643,10 @@ export async function layoutClip(
       ...(a.input.ratio ? { ratio: a.input.ratio } : {}),
       ...(a.input.faceX !== undefined ? { faceX: a.input.faceX } : {}),
     });
-    return addPhotoCutaways(project, a.input.photos ?? [], seed);
+    const composition = addPhotoCutaways(project, a.input.photos ?? [], seed);
+    return a.input.music
+      ? withMusicTrack(composition, a.input.music, seededIds(`${seed}:music`))
+      : composition;
   } finally {
     await layout.close();
   }
@@ -806,6 +826,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           ? { photos: job.payload.photos as ClipBuildInput['photos'] }
           : {}),
         ...(job.payload.frozenStyle ? { frozenStyle: job.payload.frozenStyle as FrozenStyle } : {}),
+        ...(job.payload.music ? { music: job.payload.music as ClipBuildInput['music'] } : {}),
       });
       const project = await layoutClip(openLayout, {
         projectId,

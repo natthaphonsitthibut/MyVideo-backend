@@ -77,6 +77,16 @@ export class ProjectsService {
         });
       }
     }
+    const musicIds = Object.values(r.project.assets).flatMap((a) => (a.musicId ? [a.musicId] : []));
+    if (musicIds.length) {
+      const owned = (await this.ds.query(
+        "SELECT id FROM merchant_music WHERE merchant_id=$1 AND id=ANY($2::uuid[]) AND status='ready'",
+        [merchantId, musicIds],
+      )) as { id: string }[];
+      const mine = new Set(owned.map((r) => r.id));
+      if (musicIds.some((id) => !mine.has(id)))
+        throw new BadRequestException('เพลงไม่พร้อมหรือไม่ได้อยู่ในคลังของร้านนี้');
+    }
     return r.project;
   }
 

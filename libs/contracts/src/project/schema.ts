@@ -122,6 +122,8 @@ const media = {
   sourceInFrame: frame,
   playbackRate: z.number().min(0.25).max(4),
   volume: z.number().min(0).max(2),
+  fadeInFrames: frame.optional(),
+  fadeOutFrames: frame.optional(),
 };
 
 const visual = {
@@ -257,6 +259,15 @@ export const Track = named(
     /** Advanced timeline (E09): locked = its elements cannot be edited; muted = its audio is silent. */
     locked: z.boolean().optional(),
     muted: z.boolean().optional(),
+    music: z.boolean().optional(),
+    ducking: z
+      .object({
+        gainDb: z.number().min(-30).max(0),
+        attackFrames: frame,
+        releaseFrames: frame,
+        speech: z.array(z.object({ startFrame: frame, endFrame: frame })).max(2000),
+      })
+      .optional(),
   }),
 );
 export type Track = z.infer<typeof Track>;
@@ -266,6 +277,7 @@ export const ProjectAsset = named(
   z.object({
     /** A merchant source. Exactly one of `sourceId` / `libraryId` is set (validator). */
     sourceId: id.optional(),
+    musicId: id.optional(),
     /** A product library sound (`SOUND_LIBRARY`, D-026): the same for every merchant, never merchant data. */
     libraryId: z
       .string()

@@ -58,6 +58,7 @@ export {
   VideoSourceEntity,
   WorkflowRunEntity,
 } from './db/entities/index.js';
+export { MusicEntity } from './db/entities/music.entity.js';
 export { migrations } from './db/migrations/index.js';
 export { type SeedInput, seedMerchant } from './db/seed.js';
 export { TenantRepository, type TenantRow } from './db/tenant/tenant-repository.js';
@@ -173,6 +174,7 @@ export {
 export { normalizeProbe, type ProbeInfo, type ProbeOutcome, probeFile } from './media/probe.js';
 export { type ProxyDeps, proxyHandler } from './media/proxy-handler.js';
 export { SPRITES_RECIPE, sheetArgs, spritesHandler, tileHeightFor } from './media/sprites-handler.js';
+export { musicAnalysisHandler } from './music/music-analysis.js';
 export {
   ffmpegProgressParser,
   ProcessError,

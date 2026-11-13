@@ -34,6 +34,7 @@ export type FolderEditInput = {
   styleId: string | null;
   styleIds?: string[];
   frozenStyle?: FrozenStyle;
+  musicId?: string | null;
   /** Merchant-typed product name from the folder settings (never invented). */
   productName: string | null;
   /** Set when the plan is finished or failed: the run no longer reacts to child runs. */
@@ -184,7 +185,7 @@ export async function requestFolderEdit(
   },
 ): Promise<{ runId: string; created: boolean }> {
   return ds.transaction(async (em) => {
-    const folders: { settings: { productName?: string | null } }[] = await em.query(
+    const folders: { settings: { productName?: string | null; musicId?: string | null } }[] = await em.query(
       'SELECT settings FROM project_folders WHERE id = $1 AND merchant_id = $2 FOR UPDATE',
       [input.folderId, input.merchantId],
     );
@@ -210,6 +211,7 @@ export async function requestFolderEdit(
       styleId: input.styleId ?? frozenStyle?.pack.id ?? null,
       ...(frozenStyle ? { frozenStyle } : {}),
       productName: folder.settings?.productName ?? null,
+      musicId: folder.settings?.musicId ?? null,
     };
     const run = await createRunInTransaction(em, {
       merchantId: input.merchantId,
@@ -325,6 +327,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
               idempotencyKey: `${job.workflowRunId}:montage:${styleId}`,
               payload: {
                 sourceIds: visualIds,
+                ...(input.musicId ? { musicId: input.musicId } : {}),
                 styleId,
                 ...(input.frozenStyle?.pack.id === styleId ? { frozenStyle: input.frozenStyle } : {}),
                 ratio,
@@ -354,6 +357,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
               styleIds: input.styleIds,
               ratio,
               photos,
+              musicId: input.musicId ?? undefined,
               ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
             });
             started.push(`build:${s.id}`);

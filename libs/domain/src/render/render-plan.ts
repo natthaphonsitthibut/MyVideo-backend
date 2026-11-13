@@ -5,6 +5,8 @@
 
 export type Fps = { num: number; den: number };
 
+import { type SpeechDuck } from './audio-envelope.js';
+
 /** The parts of Project JSON v1 the render plan reads (structural; the contracts validator runs first). */
 export type RenderProject = {
   fps: Fps;
@@ -16,6 +18,7 @@ export type RenderProject = {
     {
       sourceId?: string;
       libraryId?: string;
+      musicId?: string;
       kind: 'video' | 'audio' | 'image';
       durationFrames: number;
       hasAudio: boolean;
@@ -48,6 +51,9 @@ export type MediaCut = {
 
 /** One sound in the mix; times in seconds, read straight from the original file. */
 export type AudioClip = {
+  ducking?: SpeechDuck;
+  fadeInSec?: number;
+  fadeOutSec?: number;
   sourceAssetId: string;
   startSec: number;
   durationSec: number;
@@ -94,8 +100,22 @@ export function planRender(input: RenderProject): RenderPlan {
     const durationSec = (sec(e.durationFrames, p.fps) * rate) as number;
     // a muted track (advanced timeline) is silent in the render exactly as in the preview
     const volume = mutedTracks.has(e.trackId as string) ? 0 : (e.volume ?? 1);
-    if (asset.hasAudio && volume > 0)
-      audio.push({ sourceAssetId, startSec, durationSec, delaySec: sec(e.startFrame, p.fps), rate, volume });
+    if (asset.hasAudio && volume > 0) {
+      const track = ((p.tracks ?? []) as { id: string; ducking?: SpeechDuck }[]).find(
+        (t) => t.id === e.trackId,
+      );
+      audio.push({
+        sourceAssetId,
+        startSec,
+        durationSec,
+        delaySec: sec(e.startFrame, p.fps),
+        rate,
+        volume,
+        ...(track?.ducking ? { ducking: track.ducking } : {}),
+        ...(typeof e.fadeInFrames === 'number' ? { fadeInSec: sec(e.fadeInFrames, p.fps) } : {}),
+        ...(typeof e.fadeOutFrames === 'number' ? { fadeOutSec: sec(e.fadeOutFrames, p.fps) } : {}),
+      });
+    }
     if (e.type === 'video') {
       cuts.push({ assetId: e.id, sourceAssetId, startSec, durationSec });
       assets[e.id] = {
@@ -140,14 +160,23 @@ function atempo(rate: number): string {
  * cuts) amix's output timestamps were seen to start late (S01a: +1.867 s), so a timestamp trim cut off the tail.
  */
 export function audioFilterGraph(
-  clips: { input: number; rate: number; volume: number; delaySec: number }[],
+  clips: {
+    input: number;
+    rate: number;
+    volume: number;
+    delaySec: number;
+    duck?: string;
+    fadeInSec?: number;
+    fadeOutSec?: number;
+    durationSec?: number;
+  }[],
   totalSec: number,
 ): string {
   const total = Math.round(totalSec * 1e6) / 1e6; // 29.97 fps lengths are long floats
   if (clips.length === 0) return `anullsrc=r=48000:cl=stereo,atrim=0:${total}[aout]`;
   const chains = clips.map(
     (c, i) =>
-      `[${c.input}:a]aresample=48000,asetpts=PTS-STARTPTS,${atempo(c.rate)}volume=${c.volume},adelay=${Math.round(c.delaySec * 1000)}:all=1[a${i}]`,
+      `[${c.input}:a]aresample=48000,asetpts=PTS-STARTPTS,${atempo(c.rate)}volume=${c.volume},adelay=${Math.round(c.delaySec * 1000)}:all=1${c.duck ? `,volume='${c.duck}':eval=frame` : ''}${c.fadeInSec ? `,afade=t=in:st=${c.delaySec}:d=${c.fadeInSec}` : ''}${c.fadeOutSec ? `,afade=t=out:st=${c.delaySec + Math.max(0, (c.durationSec ?? 0) / c.rate - c.fadeOutSec)}:d=${c.fadeOutSec}` : ''}[a${i}]`,
   );
   const labels = clips.map((_, i) => `[a${i}]`).join('');
   return `${chains.join(';')};${labels}amix=inputs=${clips.length}:normalize=0:duration=longest,asetpts=N/SR/TB,apad,atrim=0:${total},asetpts=PTS-STARTPTS[aout]`;

@@ -14,6 +14,7 @@ import {
   JobRunner,
   liveToClipsHandlers,
   loadStageBundle,
+  musicAnalysisHandler,
   purgeHandler,
   QueueSet,
   QueueWorkers,
@@ -130,6 +131,7 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
     proxySegmentSeconds: env.PROXY_SEGMENT_SECONDS,
   });
   for (const h of ingest) registry.register(h);
+  registry.register(musicAnalysisHandler({ ds, storage: createStorage(env) }));
   const transcribe = transcribeHandlers({
     ds,
     llm: createLlm(env, new DbLlmCallStore(ds)),

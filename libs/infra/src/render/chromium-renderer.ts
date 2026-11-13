@@ -103,7 +103,7 @@ export class ChromiumRenderer implements VideoRenderer {
           return { ...a, path };
         });
         const wav = join(dir, 'mix.wav');
-        await runProcess('ffmpeg', mixArgs(clips, plan.totalSec, wav), { signal });
+        await runProcess('ffmpeg', mixArgs(clips, plan.totalSec, wav, plan.project.fps), { signal });
         const measured = await runProcess('ffmpeg', measureArgs(wav), { signal });
         mixed = { path: wav, loudnorm: loudnormFilter(parseLoudnorm(measured.stderrTail)) };
       }

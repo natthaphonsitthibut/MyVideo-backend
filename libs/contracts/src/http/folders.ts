@@ -23,6 +23,7 @@ export const FolderSettings = named(
     productName: z.string().trim().max(120).nullable().default(null),
     /** Exactly as the merchant typed it (e.g. "199 บาท"); never generated or reformatted. */
     productPrice: z.string().trim().max(40).nullable().default(null),
+    musicId: z.uuid().nullable().default(null),
   }),
 );
 export type FolderSettings = z.infer<typeof FolderSettings>;
