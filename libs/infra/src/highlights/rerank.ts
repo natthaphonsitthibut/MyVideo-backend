@@ -256,7 +256,8 @@ export async function rerankCandidates(
         prompt: batch.map(({ id, c }) => candidateBlock(id, c, segments)).join('\n\n'),
         promptVersion: RERANK_PROMPT_VERSION,
         tier: opts.tier ?? 'fast',
-        maxOutputTokens: 400 * batch.length + 500,
+        // Thai reasons/quotes are token-heavy: 400/candidate was cut off at max_tokens on a real 30-min live
+        maxOutputTokens: 1000 * batch.length + 1000,
       },
       ctx,
     );
