@@ -18,6 +18,7 @@ export type StructuredSchema<T> = {
 };
 
 export type LlmRequest<T> = {
+  images?: readonly { mediaType: 'image/jpeg' | 'image/png' | 'image/webp'; data: string }[];
   schema: StructuredSchema<T>;
   /** Stable instructions (cacheable prefix). */
   system?: string;

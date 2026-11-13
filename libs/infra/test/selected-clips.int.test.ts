@@ -7,6 +7,7 @@ import { requestSelectedClips } from '../src/ai/selected-clips.js';
 import { saveSelectedSource } from '../src/ai/selected-source.js';
 import { requestTranscription } from '../src/ai/transcribe-handlers.js';
 import { seedMerchant } from '../src/db/seed.js';
+import { requestLiveToClips } from '../src/highlights/live-to-clips.js';
 
 // Database/queue planning only. Never opens media, calls ASR or calls an LLM.
 let ds: DataSource;
@@ -149,4 +150,17 @@ it('rejects foreign sources and out-of-bounds/overlapping ranges before enqueuei
       requestSelectedClips(ds, { merchantId, sourceId, requestId: uuidv7(), ranges }),
     ).rejects.toMatchObject({ reason: 'invalid_range' });
   expect(await ds.query(`SELECT count(*)::int AS n FROM workflow_runs`)).toEqual(before);
+});
+
+it('starts long-video analysis from the complete transcript before scheduling image work', async () => {
+  await ds.query(`UPDATE video_sources SET probe=probe||'{"durationMs":600000}'::jsonb WHERE id=$1`, [
+    sourceId,
+  ]);
+  await ds.query(
+    `INSERT INTO transcripts(merchant_id,source_id,audio_sha256,model,engine,recipe_version,status,duration_ms) VALUES($1,$2,'ready-hash','recorded','recorded',1,'ready',600000)`,
+    [merchantId, sourceId],
+  );
+  const run = await requestLiveToClips(ds, { merchantId, sourceId });
+  const jobs = await ds.query('SELECT type FROM jobs WHERE workflow_run_id=$1', [run.runId]);
+  expect(jobs).toEqual([{ type: 'clips.plan' }]);
 });

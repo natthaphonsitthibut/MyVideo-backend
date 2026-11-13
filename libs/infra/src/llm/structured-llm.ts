@@ -92,6 +92,7 @@ export function llmCacheKey(mode: LlmMode, model: string, req: LlmRequest<unknow
       req.prompt,
     ]),
   );
+  if (req.images?.length) h.update(JSON.stringify(req.images));
   return h.digest('hex');
 }
 
@@ -112,6 +113,11 @@ export class StructuredLlm implements LlmPort {
 
   async generateStructured<T>(req: LlmRequest<T>, ctx: LlmCallContext): Promise<LlmResult<T>> {
     ctx.signal?.throwIfAborted();
+    if (
+      (req.images?.length ?? 0) > 6 ||
+      (req.images ?? []).reduce((n, i) => n + i.data.length, 0) > 5_500_000
+    )
+      throw new Error('Vision input exceeds the bounded image budget');
     const started = performance.now();
     const model = this.adapter.modelFor(req.tier ?? 'fast');
     const key = llmCacheKey(this.mode, model, req as LlmRequest<unknown>);
@@ -153,6 +159,7 @@ export class StructuredLlm implements LlmPort {
           jsonSchema: req.schema.jsonSchema,
           model,
           maxOutputTokens: req.maxOutputTokens ?? 4096,
+          ...(req.images?.length ? { images: req.images } : {}),
         });
       } catch (err) {
         await this.store.record({

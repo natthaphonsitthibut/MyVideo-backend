@@ -35,6 +35,7 @@ import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { keyMomentKind } from './jump-cuts.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
 import { adviseStyles, type StyleAdvice } from './style-advice.js';
+import { inspectMoments } from './targeted-vision.js';
 
 /**
  * The `live_to_clips` workflow (E07-F08, ARCHITECTURE §9): `shots.detect` → `clips.plan` → one `clips.build` per
@@ -75,8 +76,8 @@ export async function requestLiveToClips(
   },
 ): Promise<{ runId: string; created: boolean }> {
   return ds.transaction(async (em) => {
-    const rows: { status: string }[] = await em.query(
-      `SELECT status FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
+    const rows: { status: string; probe: ProbeInfo | null }[] = await em.query(
+      `SELECT status,probe FROM video_sources WHERE id = $1 AND merchant_id = $2 FOR UPDATE`,
       [input.sourceId, input.merchantId],
     );
     if (!rows[0]) throw new LiveToClipsUnavailableError('not_found', 'source not found');
@@ -108,12 +109,13 @@ export async function requestLiveToClips(
       subjectId: input.sourceId,
       input: { product: input.product ?? {}, ...(input.styleId ? { styleId: input.styleId } : {}) },
     });
+    const transcriptFirst = (rows[0].probe?.durationMs ?? 0) > 180000;
     await enqueueInTransaction(em, {
       merchantId: input.merchantId,
       workflowRunId: run.id,
-      type: 'shots.detect',
+      type: transcriptFirst ? 'clips.plan' : 'shots.detect',
       queue: 'ai',
-      idempotencyKey: `${run.id}:shots.detect`,
+      idempotencyKey: `${run.id}:${transcriptFirst ? 'clips.plan' : 'shots.detect'}`,
       payload: {
         sourceId: input.sourceId,
         nextStep: 'clips.plan',
@@ -330,7 +332,7 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
     type: 'clips.plan',
     queue: 'ai',
     async run({ job, signal, progress }) {
-      const { source } = await loadSource(ds, job);
+      const { source, original } = await loadSource(ds, job);
       const probe = source.probe as ProbeInfo | null;
       if (!probe) throw new FatalJobError('source has no probe result');
       const product = (job.payload.product ?? {}) as ProductInfo;
@@ -392,6 +394,24 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
       );
       const pool = pickTopCandidates(windows, LIVE_TO_CLIPS_POOL);
       const words = flattenWords(segments);
+      const vision =
+        probe.durationMs > 180000
+          ? await inspectMoments({
+              storage,
+              originalKey: original.storageKey,
+              sourceId: source.id,
+              contentHash: source.sha256,
+              durationMs: probe.durationMs,
+              candidates: pool.map((c, i) => ({
+                id: `c${i + 1}`,
+                startMs: words[c.firstWord]?.startMs ?? 0,
+                endMs: words[c.lastWord]?.endMs ?? probe.durationMs,
+                score: c.score,
+              })),
+              llm,
+              context: { merchantId: job.merchantId, workflowRunId: runId, signal },
+            })
+          : { frames: 0, sheets: 0, tags: [], calls: 0 };
       type Proposal = {
         id: string;
         startWord: number;
@@ -435,6 +455,11 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
           }));
       }
       await progress(0.8);
+      for (const p of proposals) {
+        const t = vision.tags.find((t) => t.candidateId === p.id);
+        if (t && t.confidence >= 0.7)
+          p.score = Math.min(100, p.score + (t.productInHand ? 3 : 0) + (t.closeUp ? 2 : 0));
+      }
       const final = finalizeClips(
         proposals,
         { words: flattenTranscript(segments), speech, shotCutsMs, durationMs: probe.durationMs },
@@ -515,6 +540,7 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
         clips: final.length,
         ranks: final.map((c) => c.rank),
         shotCuts: shotCutsMs.length,
+        vision,
         speechByRank,
         ...(advice ? { advice } : {}),
       };

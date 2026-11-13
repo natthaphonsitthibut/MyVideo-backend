@@ -17,11 +17,24 @@ export type CliExec = (
   cwd: string,
   timeoutMs: number,
   signal?: AbortSignal,
+  stdin?: string,
 ) => Promise<{ code: number; stdout: string; stderrTail: string }>;
 
-export const realCliExec: CliExec = async (command, args, cwd, timeoutMs, signal) => {
+export const realCliExec: CliExec = async (command, args, cwd, timeoutMs, signal, stdin) => {
   const chunks: Buffer[] = [];
-  const r = await runProcess(command, args, { cwd, timeoutMs, signal, onStdoutData: (c) => chunks.push(c) });
+  const r = await runProcess(command, args, {
+    cwd,
+    timeoutMs,
+    signal,
+    onStdoutData: (c) => chunks.push(c),
+    ...(stdin
+      ? {
+          onStdin: (s) => {
+            s.end(stdin);
+          },
+        }
+      : {}),
+  });
   return { code: r.code, stdout: Buffer.concat(chunks).toString('utf8'), stderrTail: r.stderrTail };
 };
 
@@ -53,7 +66,8 @@ export function claudeCliArgs(c: AdapterCall, effort: string): string[] {
   const prompt = c.system ? `${c.system}\n\n${c.prompt}` : c.prompt;
   return [
     '-p',
-    prompt,
+    ...(c.images?.length ? [] : [prompt]),
+    ...(c.images?.length ? ['--input-format', 'stream-json'] : []),
     '--model',
     c.model,
     '--effort',
@@ -137,7 +151,17 @@ export class ClaudeCliAdapter implements LlmAdapter {
         if ((await readdir(dir)).length !== 0) throw new Error('local agent work dir must be empty');
         let r: Awaited<ReturnType<CliExec>>;
         try {
-          r = await this.exec(this.command, claudeCliArgs(c, this.effort), dir, this.timeoutMs, c.signal);
+          const stdin = c.images?.length
+            ? `${JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'text', text: c.system ? `${c.system}\n\n${c.prompt}` : c.prompt }, ...c.images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mediaType, data: i.data } }))] } })}\n`
+            : undefined;
+          r = await this.exec(
+            this.command,
+            claudeCliArgs(c, this.effort),
+            dir,
+            this.timeoutMs,
+            c.signal,
+            stdin,
+          );
         } catch (err) {
           throw new LlmCallError(`local agent did not run: ${(err as Error).message}`, true);
         }

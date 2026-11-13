@@ -1,7 +1,8 @@
-import type { LlmMode, LlmTier, LlmUsage } from '@myvideo/domain';
+import type { LlmMode, LlmRequest, LlmTier, LlmUsage } from '@myvideo/domain';
 
 /** One raw model call, already turned into plain data. Adapters do no validation and no caching. */
 export type AdapterCall = {
+  images?: LlmRequest<unknown>['images'];
   signal?: AbortSignal;
   system?: string;
   prompt: string;

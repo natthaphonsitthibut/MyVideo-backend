@@ -22,6 +22,8 @@ export type OpenRouterOptions = {
 };
 
 type ChatResponse = {
+  status?: string;
+  output?: { type?: string; content?: { type?: string; text?: string }[] }[];
   error?: { code?: number; message?: string };
   choices?: Array<{
     finish_reason?: string | null;
@@ -29,6 +31,8 @@ type ChatResponse = {
     error?: { code?: number; message?: string };
   }>;
   usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
     prompt_tokens?: number;
     completion_tokens?: number;
     prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
@@ -38,6 +42,28 @@ type ChatResponse = {
 
 /** The request body for one call (exported for tests). */
 export function openRouterBody(c: AdapterCall): Record<string, unknown> {
+  if (c.images?.length)
+    return {
+      model: c.model,
+      max_output_tokens: c.maxOutputTokens,
+      stream: false,
+      ...(c.system ? { instructions: c.system } : {}),
+      input: [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_text', text: c.prompt },
+            ...c.images.map((i) => ({
+              type: 'input_image',
+              image_url: `data:${i.mediaType};base64,${i.data}`,
+              detail: 'auto',
+            })),
+          ],
+        },
+      ],
+      text: { format: { type: 'json_schema', name: 'answer', strict: true, schema: c.jsonSchema } },
+      provider: { require_parameters: true },
+    };
   return {
     model: c.model,
     max_tokens: c.maxOutputTokens,
@@ -58,6 +84,24 @@ export function parseOpenRouterResponse(body: ChatResponse): AdapterResult {
   if (body.error) {
     const code = body.error.code ?? 0;
     throw new LlmCallError(`LLM API error ${code}: ${body.error.message ?? ''}`, code === 429 || code >= 500);
+  }
+  if (body.output) {
+    const text = body.output
+      .flatMap((o) => o.content ?? [])
+      .filter((c) => c.type === 'output_text')
+      .map((c) => c.text ?? '')
+      .join('');
+    body = {
+      ...body,
+      choices: [
+        { finish_reason: body.status === 'incomplete' ? 'length' : 'stop', message: { content: text } },
+      ],
+      usage: {
+        ...body.usage,
+        prompt_tokens: body.usage?.input_tokens ?? 0,
+        completion_tokens: body.usage?.output_tokens ?? 0,
+      },
+    };
   }
   const choice = body.choices?.[0];
   if (!choice) throw new LlmCallError('LLM API returned no choices', true);
@@ -134,7 +178,7 @@ export class OpenRouterApiAdapter implements LlmAdapter {
     const signal = c.signal ? AbortSignal.any([c.signal, timeout]) : timeout;
     let res: Response;
     try {
-      res = await this.fetchFn(`${this.baseURL}/chat/completions`, {
+      res = await this.fetchFn(`${this.baseURL}/${c.images?.length ? 'responses' : 'chat/completions'}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.opts.apiKey}`,

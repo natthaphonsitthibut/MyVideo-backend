@@ -75,7 +75,20 @@ export class AnthropicApiAdapter implements LlmAdapter {
           ...(c.system
             ? { system: [{ type: 'text' as const, text: c.system, cache_control: { type: 'ephemeral' } }] }
             : {}),
-          messages: [{ role: 'user', content: c.prompt }],
+          messages: [
+            {
+              role: 'user',
+              content: c.images?.length
+                ? [
+                    { type: 'text', text: c.prompt },
+                    ...c.images.map((i) => ({
+                      type: 'image' as const,
+                      source: { type: 'base64' as const, media_type: i.mediaType, data: i.data },
+                    })),
+                  ]
+                : c.prompt,
+            },
+          ],
           output_config: { effort: this.effort, format: { type: 'json_schema', schema: c.jsonSchema } },
         },
         { signal: c.signal },
