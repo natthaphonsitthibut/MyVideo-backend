@@ -52,6 +52,7 @@ export class StageTextLayout {
     private readonly browser: Browser,
     private readonly page: Page,
     private readonly server: StaticServer,
+    private readonly files: Map<string, string>,
   ) {}
 
   static async open(bundle: StageBundle): Promise<StageTextLayout> {
@@ -63,7 +64,7 @@ export class StageTextLayout {
     try {
       const page = await browser.newPage();
       await page.goto(`${server.url}/index.html`);
-      return new StageTextLayout(browser, page, server);
+      return new StageTextLayout(browser, page, server, files);
     } catch (err) {
       await browser.close();
       await server.close();
@@ -140,5 +141,59 @@ export class StageTextLayout {
   async close(): Promise<void> {
     await this.browser.close().catch(() => undefined);
     await this.server.close();
+  }
+
+  /** Sparse captures from the very same render host; no MP4 or second compositor. */
+  async capture(
+    project: import('@myvideo/contracts').Project,
+    media: Record<string, string>,
+    signal?: AbortSignal,
+  ) {
+    const p = structuredClone(project);
+    for (const [id, e] of Object.entries(p.elements)) {
+      if (e.type === 'audio') delete p.elements[id];
+      else if (e.type === 'video') e.volume = 0;
+    }
+    p.tracks = p.tracks.filter((t) => t.kind !== 'audio');
+    const urls: Record<string, string> = {};
+    for (const [id, path] of Object.entries(media)) {
+      const url = `/critic/${id}`;
+      this.files.set(url, path);
+      urls[id] = url;
+    }
+    await this.page.setViewportSize({ width: p.width, height: p.height });
+    await this.page.evaluate(
+      async ([doc, u]) => {
+        const host = (
+          globalThis as unknown as {
+            MyVideoStage: { render: { load(p: unknown, u: unknown): Promise<unknown> } };
+          }
+        ).MyVideoStage;
+        await host.render.load(doc, u);
+      },
+      [p, urls] as const,
+    );
+    const fps = p.fps.num / p.fps.den;
+    const frames = [
+      ...new Set([
+        Math.min(p.durationFrames - 1, Math.round(0.7 * fps)),
+        Math.floor(p.durationFrames / 2),
+        Math.max(0, p.durationFrames - Math.round(fps)),
+      ]),
+    ];
+    const images: { mediaType: 'image/jpeg'; data: string }[] = [];
+    for (const frame of frames) {
+      signal?.throwIfAborted();
+      await this.page.evaluate(async (f) => {
+        await (
+          globalThis as unknown as { MyVideoStage: { render: { seek(f: number): Promise<void> } } }
+        ).MyVideoStage.render.seek(f);
+      }, frame);
+      images.push({
+        mediaType: 'image/jpeg',
+        data: (await this.page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'),
+      });
+    }
+    return { frames, images };
   }
 }

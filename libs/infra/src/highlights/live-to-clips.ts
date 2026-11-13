@@ -33,6 +33,8 @@ import { clipCaptionWords, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
 import { clipEndWithTail, normalizeThaiSpelling } from './clip-ending.js';
 import { layoutClipProject, OUTPUT_FRAMES, type OutputRatio, seededIds } from './clip-project.js';
+import { chooseStory, reviewDraft } from './director.js';
+import { captureDraft } from './draft-capture.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { keyMomentKind } from './jump-cuts.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
@@ -705,10 +707,31 @@ export async function measureFaceX(
 }
 
 export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToClipsDeps): JobHandler {
+  const review = (
+    p: import('@myvideo/contracts').Project,
+    input: ClipBuildInput,
+    job: import('../db/entities/job.entity.js').JobEntity,
+    signal: AbortSignal,
+  ) =>
+    reviewDraft({
+      project: p,
+      evidence: {
+        sourceIds: [String(job.payload.sourceId), ...(input.photos ?? []).map((p) => p.sourceId)],
+        words: input.words,
+        product: input.productName ? { name: input.productName } : {},
+      },
+      hooks: input.hookVariants ?? (input.hook ? [input.hook.text] : []),
+      ...(input.directorChoice
+        ? { structure: input.directorChoice.structure, selectedHook: input.directorChoice.hookIndex }
+        : {}),
+      llm,
+      context: { merchantId: job.merchantId, workflowRunId: job.workflowRunId, signal },
+      capture: (project) => captureDraft(ds, storage, openLayout, project, signal),
+    });
   return {
     type: 'clips.build',
     queue: 'ai',
-    async run({ job }) {
+    async run({ job, signal }) {
       const { source, original } = await loadSource(ds, job);
       const probe = source.probe as ProbeInfo | null;
       if (!probe) throw new FatalJobError('source has no probe result');
@@ -730,7 +753,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           merchantId: job.merchantId,
         });
         if (!base.buildInput) throw new FatalJobError('ยังไม่มีข้อมูลคลิปต้นแบบสำหรับสไตล์นี้');
-        const project = await layoutClip(openLayout, {
+        const draft = await layoutClip(openLayout, {
           projectId: clipProjectId(planRunId, rank),
           merchantId: job.merchantId,
           workflowRunId: planRunId,
@@ -739,6 +762,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           input: base.buildInput,
           styleId: String(job.payload.styleId),
         });
+        const project = await review(draft, base.buildInput, job, signal);
         await ds.transaction(async (em) => {
           if (
             !(await em.getRepository(ProjectEntity).existsBy({ id: project.id, merchantId: job.merchantId }))
@@ -788,7 +812,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         suggestions = suggestHooksRules(clip, product);
         hookFallback = true;
       }
-      const hook = suggestions.find((x) => x.kind === 'hook');
+      const hookSuggestions = suggestions.filter((x) => x.kind === 'hook');
       const title = normalizeThaiSpelling(suggestions.find((x) => x.kind === 'title')?.text ?? source.title);
       const clipWords = await clipCaptionWords(
         llm,
@@ -797,6 +821,14 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
         aiFixed,
       );
+      const directorChoice = await chooseStory(
+        llm,
+        hookSuggestions.map((h) => h.text),
+        clipWords,
+        product,
+        { merchantId: job.merchantId, workflowRunId: job.workflowRunId, signal },
+      );
+      const hook = hookSuggestions[directorChoice.hookIndex];
       let projectId = clipProjectId(planRunId, rank);
       const endMs = clipEndWithTail(s.endMs, words[s.endWord + 1]?.startMs, probe.durationMs);
       const ratio: OutputRatio =
@@ -810,6 +842,8 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
           ? await measureFaceX(ai, storage, original.storageKey, s.startMs, endMs)
           : undefined;
       const buildInput = clipBuildInput({
+        directorChoice,
+        hookVariants: suggestions.filter((h) => h.kind === 'hook').map((h) => h.text),
         plan: {
           startMs: s.startMs,
           endMs,
@@ -828,7 +862,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         ...(job.payload.frozenStyle ? { frozenStyle: job.payload.frozenStyle as FrozenStyle } : {}),
         ...(job.payload.music ? { music: job.payload.music as ClipBuildInput['music'] } : {}),
       });
-      const project = await layoutClip(openLayout, {
+      const draft = await layoutClip(openLayout, {
         projectId,
         merchantId: job.merchantId,
         workflowRunId: planRunId,
@@ -837,6 +871,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         input: buildInput,
         styleId: typeof job.payload.styleId === 'string' ? job.payload.styleId : undefined,
       });
+      const project = await review(draft, buildInput, job, signal);
       projectId = project.id;
       await ds.transaction(async (em) => {
         const exists = await em.getRepository(ProjectEntity).existsBy({ id: projectId });

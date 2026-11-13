@@ -8,6 +8,7 @@ import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from 
 import type { ProbeInfo } from '../media/probe.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { parseClipBuildInput } from './clip-build-input.js';
+import { codeCritic, storyNote } from './director.js';
 import { layoutClip, sourceInfo } from './live-to-clips.js';
 
 /**
@@ -114,6 +115,25 @@ export function clipsRestyleHandler({
         input,
         styleId,
       });
+      doc.meta.director = {
+        version: 1,
+        story: storyNote(
+          doc,
+          input.words,
+          input.hookVariants ?? (input.hook ? [input.hook.text] : []),
+          input.directorChoice?.structure ?? 'live-offer',
+        ),
+        checks: codeCritic(doc, {
+          sourceIds: [source.id, ...(input.photos ?? []).map((p) => p.sourceId)],
+          words: input.words,
+          product: input.productName ? { name: input.productName } : {},
+        }),
+        judge: {
+          status: 'not_run',
+          reason: 'Restyle reuses stored decisions; new visual layout needs review',
+          rounds: [],
+        },
+      };
 
       const version = await ds.transaction(async (em) => {
         const rows: { current_version: number }[] = await em.query(

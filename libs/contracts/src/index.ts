@@ -15,6 +15,7 @@ export * from './http/sources.js';
 export * from './http/timings.js';
 export * from './http/transcripts.js';
 export { buildOpenApi } from './openapi.js';
+export * from './project/director.js';
 export { FrozenStyle, StylePackSnapshot } from './project/frozen-style.js';
 export * from './project/migrate.js';
 export * from './project/motion.js';

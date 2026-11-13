@@ -1,4 +1,4 @@
-import { FrozenStyle } from '@myvideo/contracts';
+import { FrozenStyle, STRUCTURES } from '@myvideo/contracts';
 import type { SpanMs } from '@myvideo/domain';
 import { z } from 'zod';
 import type { ClipPlan, OutputRatio } from './clip-project.js';
@@ -31,6 +31,10 @@ const ClipBuildInputSchema = z.object({
     })
     .optional(),
   frozenStyle: FrozenStyle.optional(),
+  hookVariants: z.array(z.string().max(200)).max(3).optional(),
+  directorChoice: z
+    .object({ structure: z.enum(STRUCTURES), hookIndex: z.number().int().min(0).max(2) })
+    .optional(),
   version: z.literal(1),
   startMs: z.number().int().min(0),
   endMs: z.number().int().min(1),
@@ -68,10 +72,14 @@ export function clipBuildInput(input: {
   photos?: ClipBuildInput['photos'];
   frozenStyle?: FrozenStyle;
   music?: ClipBuildInput['music'];
+  hookVariants?: string[];
+  directorChoice?: ClipBuildInput['directorChoice'];
 }): ClipBuildInput {
   const { plan } = input;
   return {
     version: 1,
+    ...(input.directorChoice ? { directorChoice: input.directorChoice } : {}),
+    ...(input.hookVariants ? { hookVariants: [...new Set(input.hookVariants)].slice(0, 3) } : {}),
     ...(input.music ? { music: structuredClone(input.music) } : {}),
     ...(input.frozenStyle ? { frozenStyle: FrozenStyle.parse(input.frozenStyle) } : {}),
     startMs: plan.startMs,

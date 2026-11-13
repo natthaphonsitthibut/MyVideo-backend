@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { named } from '../registry.js';
+import { DirectorReport } from './director.js';
 import { ENERGY_IDS, GRAPHIC_IDS } from './motion.js';
 
 /**
@@ -313,6 +314,7 @@ export const Project = named(
     tracks: z.array(Track),
     elements: z.record(id, ProjectElement),
     meta: z.object({
+      director: DirectorReport.optional(),
       createdBy: z.enum(['ai', 'user']),
       workflowRunId: id.optional(),
       title: z.string().max(200).optional(),
