@@ -27,6 +27,10 @@ const CONTENT_TYPES: Record<string, string> = {
   mov: 'video/quicktime',
   webm: 'video/webm',
   mkv: 'video/x-matroska',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
 };
 
 @Injectable()
@@ -75,6 +79,7 @@ export class SourcesService {
           durationFrames?: number;
         };
         audio?: unknown;
+        still?: boolean;
       } | null;
       return {
         id: source.id,
@@ -87,6 +92,7 @@ export class SourcesService {
         ingestRunId: run?.id ?? null,
         createdAt: source.createdAt.toISOString(),
         durationMs: probe?.durationMs ?? null,
+        kind: probe ? (probe.still ? 'photo' : 'video') : null,
         width: probe?.video?.width ?? null,
         height: probe?.video?.height ?? null,
         hasAudio: probe ? !!probe.audio : null,

@@ -20,6 +20,24 @@ describe('planSegments', () => {
 });
 
 describe('ffmpeg argument builders', () => {
+  it('loops a photo into a still proxy of the given length (no seek, same filter and GOP)', () => {
+    const a = segmentArgs('/in/p.jpg', { index: 0, start: 0, duration: 5 }, '/out/p0.mp4', 'libx264', true);
+    const i = a.indexOf('-i');
+    expect(a.slice(i - 6, i + 2)).toEqual([
+      '-loop',
+      '1',
+      '-framerate',
+      '30',
+      '-t',
+      '5.000',
+      '-i',
+      '/in/p.jpg',
+    ]);
+    expect(a).not.toContain('-ss');
+    expect(a[a.indexOf('-vf') + 1]).toBe(proxyVideoFilter);
+    expect(a[a.indexOf('-g') + 1]).toBe('15');
+  });
+
   it('never use a shell string and keep the proxy contract (30 fps, GOP 15, faststart)', () => {
     const a = segmentArgs('/in/a b.mp4', { index: 0, start: 300, duration: 300 }, '/out/p0.mp4', 'libx264');
     expect(a).toContain('/in/a b.mp4'); // spaces stay inside one argument

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { normalizeProbe } from './probe.js';
+import { normalizeProbe, STILL_MS } from './probe.js';
 
 const fx = (name: string) => {
   const raw = readFileSync(new URL(`../../test/fixtures/probe/${name}.json`, import.meta.url), 'utf8');
@@ -8,6 +8,27 @@ const fx = (name: string) => {
 };
 
 describe('normalizeProbe (recorded ffprobe output of real footage)', () => {
+  it.each([
+    ['photo-jpg', 'mjpeg', 1920, 1080, 'landscape'],
+    ['photo-webp', 'webp', 1920, 1080, 'landscape'],
+    ['photo-png', 'png', 1920, 1080, 'landscape'],
+  ] as const)('reads a %s photo as a 5 s still at 30 fps without audio', (name, codec, w, h, orientation) => {
+    const r = normalizeProbe(fx(name));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.info.still).toBe(true);
+    expect(r.info.durationMs).toBe(STILL_MS);
+    expect(r.info.video).toMatchObject({ codec, width: w, height: h, fps: { num: 30, den: 1 }, vfr: false });
+    expect(r.info.video.durationFrames).toBe((STILL_MS / 1000) * 30);
+    expect(r.info.audio).toBeNull();
+    expect(r.info.orientation).toBe(orientation);
+  });
+
+  it('does not mark a video as a still', () => {
+    const r = normalizeProbe(fx('vertical'));
+    expect(r.ok && r.info.still).toBe(false);
+  });
+
   it('reads a vertical live clip', () => {
     const r = normalizeProbe(fx('vertical'));
     expect(r.ok).toBe(true);

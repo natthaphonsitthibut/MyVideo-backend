@@ -123,6 +123,33 @@ describe.skipIf(!has)('media.proxy on real footage', { timeout: 120_000 }, () =>
     expect(Number(asset.meta.reusedSegments)).toBeGreaterThanOrEqual(kept);
   });
 
+  it.each([
+    ['photos/P01-yarn-product.jpg', 960, 540],
+    ['photos/P03-yarn-hands.webp', 960, 540],
+    ['photos/P04-tiedye-shirt-portrait.jpg', 406, 720],
+  ])('turns the real photo %s into a 5 s silent still proxy', async (file, w, h) => {
+    const runner = new JobRunner(ds, registry(300), { workerId: 'w-photo', progressThrottleMs: 0 });
+    const s = await seedSourceFromFile(ds, storage, merchantId, `${FOOTAGE_DIR}/${file}`);
+    expect(await run(runner, s.jobId)).toBe('succeeded');
+    const [row]: { probe: { still: boolean; durationMs: number } }[] = await ds.query(
+      'SELECT probe FROM video_sources WHERE id = $1',
+      [s.sourceId],
+    );
+    expect(row?.probe).toMatchObject({ still: true, durationMs: 5000 });
+    const proxyJob = await nextJob(s.runId, 'media.proxy');
+    expect(await run(runner, proxyJob.id)).toBe('succeeded');
+    const asset = await ds
+      .getRepository(MediaAssetEntity)
+      .findOneByOrFail({ sourceId: s.sourceId, kind: 'proxy' });
+    expect(asset.meta).toMatchObject({ width: w, height: h, fps: { num: 30, den: 1 } });
+    const out = await storage.localPath(asset.storageKey);
+    const p = await probeFile(out.path);
+    await out.release();
+    expect(p.ok && Math.abs(p.info.durationMs - 5000)).toBeLessThan(100);
+    expect(p.ok && p.info.audio).toBeNull();
+    expect(p.ok && p.info.still).toBe(false); // the proxy is a real video
+  });
+
   it('is idempotent: a second run reuses the existing proxy', async () => {
     const runner = new JobRunner(ds, registry(300), { workerId: 'w3' });
     const s = await seedSourceFromFile(

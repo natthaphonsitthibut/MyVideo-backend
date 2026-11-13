@@ -52,7 +52,7 @@ export function createTusMiddleware(
       const filename = String(upload.metadata?.filename ?? '');
       const ext = extensionOf(filename);
       if (!(UPLOAD_EXTENSIONS as readonly string[]).includes(ext)) {
-        throw fail(415, `ไฟล์นี้ไม่ใช่วิดีโอที่รองรับ (รองรับ: ${UPLOAD_EXTENSIONS.join(', ')})`);
+        throw fail(415, `ไฟล์นี้ไม่ใช่วิดีโอหรือรูปที่รองรับ (รองรับ: ${UPLOAD_EXTENSIONS.join(', ')})`);
       }
       // at most UPLOADS_PER_HOUR new uploads per merchant (E11-F02); resuming an upload is not counted
       if (!starts.hit(merchantId)) throw fail(429, 'อัปโหลดบ่อยเกินไป รอสักครู่แล้วลองใหม่');

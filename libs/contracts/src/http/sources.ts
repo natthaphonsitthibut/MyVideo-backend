@@ -18,6 +18,8 @@ export const SourceSummary = named(
     createdAt: z.iso.datetime({ offset: true }),
     /** From the probe step (null until probed). */
     durationMs: z.number().int().nullable(),
+    /** `photo` = a still picture (JPG/PNG/WebP), shown as a still scene; null until probed. */
+    kind: z.enum(['video', 'photo']).nullable(),
     width: z.number().int().nullable(),
     height: z.number().int().nullable(),
     hasAudio: z.boolean().nullable(),

@@ -59,7 +59,7 @@ export function proxyHandler({ ds, storage, encoder, segmentSeconds }: ProxyDeps
               continue;
             }
             const out = join(dir, `part-${seg.index}.mp4`);
-            await runProcess('ffmpeg', segmentArgs(input.path, seg, out, encoder), {
+            await runProcess('ffmpeg', segmentArgs(input.path, seg, out, encoder, probe.still === true), {
               signal,
               onStdoutLine: ffmpegProgressParser(
                 (s) => void progress((0.85 * (seg.start + Math.min(s, seg.duration))) / duration),

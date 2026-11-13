@@ -4,6 +4,8 @@ export type Rational = { num: number; den: number };
 
 export type ProbeInfo = {
   container: string;
+  /** A photo (JPG/PNG/WebP): one picture, used as a still scene of STILL_MS on the timeline. */
+  still: boolean;
   durationMs: number;
   sizeBytes: number | null;
   orientation: 'portrait' | 'landscape' | 'square';
@@ -54,7 +56,54 @@ const reject = (reason: ProbeRejection['reason']): ProbeRejection => ({
 
 const MAX_SECONDS = 4 * 3600;
 const MAX_PIXELS = 4096 * 2304;
+/** Photos may be larger than video (phone cameras): up to 50 MP; the proxy scales them down. */
+const MAX_STILL_PIXELS = 50_000_000;
 const DEFAULT_FPS: Rational = { num: 30, den: 1 };
+/** How long a photo lasts as footage (an editor trims it); 5 s at 30 fps = 150 frames. */
+export const STILL_MS = 5000;
+const STILL_CODECS = new Set(['mjpeg', 'png', 'webp']);
+
+/** One picture in an image container (ffprobe's image2 / *_pipe demuxers), not a one-frame video. */
+function isStill(format: Record<string, unknown>, v: FfStream): boolean {
+  const name = String(format.format_name ?? '');
+  const imageContainer = name === 'image2' || name.endsWith('_pipe');
+  const packets = Number(v.nb_read_packets ?? Number.NaN);
+  return imageContainer && STILL_CODECS.has(String(v.codec_name ?? '')) && packets === 1;
+}
+
+function stillInfo(format: Record<string, unknown>, v: FfStream, sizeBytes: number | null): ProbeOutcome {
+  const width = Number(v.width ?? 0);
+  const height = Number(v.height ?? 0);
+  if (!width || !height) return reject('unreadable');
+  if (width * height > MAX_STILL_PIXELS) return reject('too_large');
+  const pixFmt = String(v.pix_fmt ?? '');
+  return {
+    ok: true,
+    info: {
+      container: String(format.format_name ?? ''),
+      still: true,
+      durationMs: STILL_MS,
+      sizeBytes: sizeBytes ?? (format.size ? Number(format.size) : null),
+      orientation: width === height ? 'square' : height > width ? 'portrait' : 'landscape',
+      video: {
+        codec: String(v.codec_name ?? ''),
+        width,
+        height,
+        codedWidth: width,
+        codedHeight: height,
+        rotation: 0,
+        fps: DEFAULT_FPS,
+        avgFps: DEFAULT_FPS,
+        vfr: false,
+        durationFrames: (STILL_MS / 1000) * DEFAULT_FPS.num,
+        pixFmt,
+        bitDepth: 8,
+        hdr: false,
+      },
+      audio: null,
+    },
+  };
+}
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
@@ -96,6 +145,7 @@ export function normalizeProbe(raw: FfProbe, sizeBytes: number | null = null): P
       s.codec_type === 'video' && (s.disposition as Record<string, number> | undefined)?.attached_pic !== 1,
   );
   if (!v) return streams.some((s) => s.codec_type === 'audio') ? reject('no_video') : reject('unreadable');
+  if (isStill(format, v)) return stillInfo(format, v, sizeBytes);
   const a = streams.find((s) => s.codec_type === 'audio');
 
   const duration = Number(format.duration ?? v.duration ?? 0);
@@ -138,6 +188,7 @@ export function normalizeProbe(raw: FfProbe, sizeBytes: number | null = null): P
     ok: true,
     info: {
       container: String(format.format_name ?? ''),
+      still: false,
       durationMs: Math.round(duration * 1000),
       sizeBytes: sizeBytes ?? (format.size ? Number(format.size) : null),
       orientation: width === height ? 'square' : height > width ? 'portrait' : 'landscape',

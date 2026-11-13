@@ -33,19 +33,26 @@ const encoderArgs = (enc: ProxyEncoder) =>
     ? ['-c:v', 'h264_videotoolbox', '-b:v', '1500k', '-realtime', 'false']
     : ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26'];
 
-/** One video-only part (frame-accurate: -ss before -i with re-encode, keyframe every 15 frames). */
-export function segmentArgs(input: string, seg: Segment, out: string, enc: ProxyEncoder): string[] {
+/**
+ * One video-only part (frame-accurate: -ss before -i with re-encode, keyframe every 15 frames). A photo
+ * (`still`) is looped into a still clip of `seg.duration` instead.
+ */
+export function segmentArgs(
+  input: string,
+  seg: Segment,
+  out: string,
+  enc: ProxyEncoder,
+  still = false,
+): string[] {
+  const source = still
+    ? ['-loop', '1', '-framerate', String(PROXY_FPS), '-t', seg.duration.toFixed(3), '-i', input]
+    : ['-ss', seg.start.toFixed(3), '-t', seg.duration.toFixed(3), '-i', input];
   return [
     '-v',
     'error',
     '-y',
     '-nostdin',
-    '-ss',
-    seg.start.toFixed(3),
-    '-t',
-    seg.duration.toFixed(3),
-    '-i',
-    input,
+    ...source,
     '-map',
     '0:v:0',
     '-an',
