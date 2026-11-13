@@ -29,6 +29,13 @@ const MIN_REMOVAL_MS = 120;
 /** A kept piece shorter than this between two removals would only flash. */
 const MIN_KEEP_MS = 150;
 
+/** A cut may touch a word boundary, but must never split a word that remains audible. */
+export function wordCutViolations(segments: readonly SpanMs[], words: readonly ClipWordMs[]): number[] {
+  return [...new Set(segments.flatMap((s) => [s.startMs, s.endMs]))].filter((edge) =>
+    words.some((w) => w.startMs < edge && edge < w.endMs),
+  );
+}
+
 /** Hesitation sounds only. Particles (อ่ะ นะ ค่ะ) and "เออ" (= yes) carry meaning and stay. */
 const FILLERS = new Set(['เอ่อ', 'อ่า', 'อืม', 'เอิ่ม', 'อ้า']);
 export const isFiller = (text: string) => FILLERS.has(text.trim().replace(/[.…,]+$/u, ''));
@@ -159,7 +166,12 @@ export function planJumpCuts(
     const gapStart = Math.max((sp[i] as SpanMs).endMs, clip.startMs);
     const gapEnd = Math.min((sp[i + 1] as SpanMs).startMs, clip.endMs);
     if (gapEnd - gapStart > rules.maxPauseMs) {
-      removals.push({ startMs: gapStart + rules.keepPauseMs / 2, endMs: gapEnd - rules.keepPauseMs / 2 });
+      // Minimum speech handles take priority over a style's aggressive pause budget.
+      const tail = Math.max(200, Math.min(300, (rules.keepPauseMs * 2) / 3));
+      const lead = Math.max(100, Math.min(150, rules.keepPauseMs / 3));
+      const removal = { startMs: gapStart + tail, endMs: gapEnd - lead };
+      // Disagreement between VAD and ASR is uncertainty, not permission to cut speech.
+      if (!words.some((w) => w.startMs < removal.endMs && w.endMs > removal.startMs)) removals.push(removal);
     }
   }
   const fillers = new Set<ClipWordMs>();
@@ -185,11 +197,15 @@ export function planJumpCuts(
   const merged = removals
     .map((r) => ({ startMs: Math.round(r.startMs), endMs: Math.round(r.endMs) }))
     .filter((r) => r.endMs - r.startMs >= MIN_REMOVAL_MS)
+    .filter((r) => !words.some((w) => !fillers.has(w) && w.startMs < r.endMs && w.endMs > r.startMs))
     .sort((a, b) => a.startMs - b.startMs)
     .reduce<SpanMs[]>((acc, r) => {
       const last = acc[acc.length - 1];
       // join removals that touch or leave only a flash of picture between them
-      if (last && r.startMs - last.endMs < MIN_KEEP_MS) last.endMs = Math.max(last.endMs, r.endMs);
+      const bridgeHasWord =
+        last && words.some((w) => !fillers.has(w) && w.startMs < r.startMs && w.endMs > last.endMs);
+      if (last && r.startMs - last.endMs < MIN_KEEP_MS && !bridgeHasWord)
+        last.endMs = Math.max(last.endMs, r.endMs);
       else acc.push({ ...r });
       return acc;
     }, []);
@@ -209,7 +225,11 @@ export function planJumpCuts(
   };
   return {
     segments,
-    words: fallback ? [...words] : words.filter((w) => !fillers.has(w)),
+    words: fallback
+      ? [...words]
+      : words.filter(
+          (w) => !fillers.has(w) || !merged.some((r) => r.startMs <= w.startMs && r.endMs >= w.endMs),
+        ),
     durationMs,
     toOutputMs,
   };

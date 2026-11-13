@@ -9,7 +9,14 @@ import {
 } from '@myvideo/contracts';
 import type { LaidOutText, LayoutWord, StageTextLayout } from '../render/text-layout.js';
 import { type EmphasisPage, markEmphasis, priceMentions } from './clip-graphics.js';
-import { type JumpCutPlan, keyMomentKind, planJumpCuts, type SpanMs, splitLongShots } from './jump-cuts.js';
+import {
+  type JumpCutPlan,
+  keyMomentKind,
+  planJumpCuts,
+  type SpanMs,
+  splitLongShots,
+  wordCutViolations,
+} from './jump-cuts.js';
 import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.js';
 import { planTransitions } from './transitions.js';
 
@@ -820,6 +827,9 @@ export async function layoutClipProject(
     );
     // zoom cuts only re-frame: the kept time (and so the output mapping) is unchanged
     const cut = { ...jump, segments: splitLongShots(jump.segments, jump.words, style.cuts.maxShotMs) };
+    const invalidEdges = wordCutViolations(cut.segments, jump.words);
+    if (invalidEdges.length)
+      throw new Error(`Speech cuts split retained words at ${invalidEdges.join(',')} ms`);
     edit = { style, cut };
   }
   const words = edit

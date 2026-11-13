@@ -1,10 +1,47 @@
 import { describe, expect, it } from 'vitest';
-import { findRestarts, isFiller, isKeyMoment, planJumpCuts, splitLongShots } from './jump-cuts.js';
+import recorded from '../../../domain/src/highlights/fixtures/s01-0400-0800.json' with { type: 'json' };
+import {
+  findRestarts,
+  isFiller,
+  isKeyMoment,
+  planJumpCuts,
+  splitLongShots,
+  wordCutViolations,
+} from './jump-cuts.js';
 
 const cuts = { maxPauseMs: 300, keepPauseMs: 100, removeFillers: true };
 const w = (text: string, startMs: number, endMs: number) => ({ text, startMs, endMs });
 
 describe('planJumpCuts', () => {
+  it('validates every cut against recorded S01 word timings without opening media', () => {
+    const words = recorded.segments.flatMap((s) => s.words);
+    const plan = planJumpCuts(
+      { startMs: words[0]!.startMs, endMs: words.at(-1)!.endMs },
+      words,
+      recorded.segments.map((s) => ({ startMs: s.startMs, endMs: s.endMs })),
+      { ...cuts, removeRestarts: true },
+    );
+    expect(wordCutViolations(plan.segments, plan.words)).toEqual([]);
+    expect(plan.segments.length).toBeGreaterThan(1);
+  });
+
+  it('reports an edge inside a retained word and permits exact word boundaries', () => {
+    expect(wordCutViolations([{ startMs: 0, endMs: 450 }], [w('จริง', 0, 500)])).toEqual([450]);
+    expect(wordCutViolations([{ startMs: 0, endMs: 500 }], [w('จริง', 0, 500)])).toEqual([]);
+  });
+
+  it('does not merge removals across a short meaningful word', () => {
+    const words = [
+      w('ก่อน', 0, 400),
+      w('เอ่อ', 400, 800),
+      w('ไม่', 800, 900),
+      w('อ่า', 900, 1300),
+      w('หลัง', 1300, 1700),
+    ];
+    const r = planJumpCuts({ startMs: 0, endMs: 1700 }, words, [], cuts);
+    expect(r.words.map((w) => w.text)).toEqual(['ก่อน', 'ไม่', 'หลัง']);
+    expect(r.segments).toContainEqual({ startMs: 800, endMs: 900 });
+  });
   it('keeps the whole clip when there is no long pause and no filler', () => {
     const words = [w('ตัว', 0, 400), w('นี้', 400, 900), w('80', 900, 1300), w('บาท', 1300, 1800)];
     const r = planJumpCuts({ startMs: 0, endMs: 1800 }, words, [{ startMs: 0, endMs: 1800 }], cuts);
@@ -12,7 +49,7 @@ describe('planJumpCuts', () => {
     expect(r.words.map((x) => x.text)).toEqual(['ตัว', 'นี้', '80', 'บาท']);
   });
 
-  it('shrinks a long silence between speech spans to keepPauseMs', () => {
+  it('keeps audio when ASR words conflict with the measured silence rather than cutting through a word', () => {
     const words = [w('รับ', 0, 500), w('พิมพ์', 500, 2000), w('กลับ', 2000, 2400), w('มา', 2400, 3000)];
     // VAD: speech 0–1000 ms, silence 1000–2000 ms, speech 2000–3000 ms
     const speech = [
@@ -20,14 +57,34 @@ describe('planJumpCuts', () => {
       { startMs: 2000, endMs: 3000 },
     ];
     const r = planJumpCuts({ startMs: 0, endMs: 3000 }, words, speech, cuts);
-    expect(r.segments).toEqual([
-      { startMs: 0, endMs: 1050 },
-      { startMs: 1950, endMs: 3000 },
-    ]);
-    expect(r.durationMs).toBe(2100);
-    // a word that straddles the cut keeps its start; times map onto the output timeline
-    expect(r.toOutputMs(2000)).toBe(1100);
+    expect(r.segments).toEqual([{ startMs: 0, endMs: 3000 }]);
+    expect(r.durationMs).toBe(3000);
+    expect(r.toOutputMs(2000)).toBe(2000);
     expect(r.toOutputMs(500)).toBe(500);
+  });
+
+  it('keeps a measured 200-ms tail and 100-ms lead around a real word-free silence', () => {
+    const words = [w('ก่อน', 0, 1000), w('หลัง', 2000, 3000)];
+    const r = planJumpCuts(
+      { startMs: 0, endMs: 3000 },
+      words,
+      [
+        { startMs: 0, endMs: 1000 },
+        { startMs: 2000, endMs: 3000 },
+      ],
+      cuts,
+    );
+    expect(r.segments).toEqual([
+      { startMs: 0, endMs: 1200 },
+      { startMs: 1900, endMs: 3000 },
+    ]);
+    expect(r.durationMs).toBe(2300);
+  });
+
+  it('does not remove a short filler from captions when its audio is kept', () => {
+    const words = [w('ก่อน', 0, 500), w('เอ่อ', 500, 550), w('หลัง', 550, 1200)];
+    const r = planJumpCuts({ startMs: 0, endMs: 1200 }, words, [{ startMs: 0, endMs: 1200 }], cuts);
+    expect(r.words).toEqual(words);
   });
 
   it('keeps a pause shorter than maxPauseMs', () => {
