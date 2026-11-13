@@ -298,6 +298,9 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       if (input.closedAt) return { closed: true };
       const merchantId = job.merchantId;
       const started: string[] = [];
+      // the first step of a new edit ("ตัดต่อใหม่") retries what failed in an earlier one; later steps of the same
+      // edit never do, so a failure ends this edit instead of looping
+      const fresh = job.idempotencyKey === `${job.workflowRunId}:folder.advance:start`;
       const sources = await folderSourceFacts(ds, merchantId, input.folderId, input.sourceIds);
       // the frame the clips are edited for: the folder's setting now ("auto" = most of the footage's shape)
       const frame: {
@@ -352,14 +355,18 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;
         try {
           // Starting an edit never authorizes whole-source ASR. The merchant chooses full/ranges separately.
-          if (s.transcript === 'ready' && s.analysis === 'none') {
+          if (s.transcript === 'ready' && (s.analysis === 'none' || (fresh && s.analysis === 'failed'))) {
             await requestLiveToClips(ds, {
               merchantId,
               sourceId: s.id,
               product: input.productName ? { name: input.productName } : {},
             });
             started.push(`analyse:${s.id}`);
-          } else if (input.styleId && s.analysis === 'succeeded' && s.build === 'none') {
+          } else if (
+            input.styleId &&
+            s.analysis === 'succeeded' &&
+            (s.build === 'none' || (fresh && s.build === 'failed'))
+          ) {
             await requestBuildClips(ds, {
               merchantId,
               sourceId: s.id,

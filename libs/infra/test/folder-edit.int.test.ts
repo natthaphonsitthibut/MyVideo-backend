@@ -247,6 +247,31 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(plan.steps[2]?.state).toBe('pending');
   });
 
+  it('a failed analysis ends that edit once; "ตัดต่อใหม่" starts the analysis again', async () => {
+    const f3 = uuidv7();
+    await ds.query(`INSERT INTO project_folders (id, merchant_id, title) VALUES ($1, $2, 'ลองใหม่')`, [f3, m]);
+    const prev = folder;
+    folder = f3;
+    const s = await source({ audio: true, transcript: true });
+    folder = prev;
+    const first = await requestFolderEdit(ds, { merchantId: m, folderId: f3 });
+    await runAdvance(first.runId);
+    const failed = await childRun('live_to_clips', s);
+    await finishRun(failed, 'dead');
+    await runAdvance(first.runId);
+    // the same edit does not loop on the failure
+    expect(await childRun('live_to_clips', s)).toBe(failed);
+    expect((await folderPlanOf(ds, m, f3)).plan.failed).toBe(true);
+    // the merchant presses "ตัดต่อใหม่": a new edit retries the failed analysis
+    const again = await requestFolderEdit(ds, { merchantId: m, folderId: f3 });
+    expect(again.created).toBe(true);
+    await runAdvance(again.runId);
+    const retried = await childRun('live_to_clips', s);
+    expect(retried).not.toBe(failed);
+    const plan = (await folderPlanOf(ds, m, f3)).plan;
+    expect(plan.failed).toBe(false);
+  });
+
   it('snapshots selected footage and waits for explicit transcription without starting ASR for any upload', async () => {
     const prev = folder;
     folder = uuidv7();
