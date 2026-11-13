@@ -51,6 +51,56 @@ function align(a: string[], b: string[]): number[] {
 
 const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
 
+/** A following/above/below vowel or mark: it cannot start a word. */
+const STARTS_DEPENDENT = /^[ะ-ฺๅ็-๎]/;
+/** Ends with a vowel that cannot close a syllable (คื, กั): the next consonant belongs to it. */
+const NEEDS_FINAL = /[ัื็][่-๋]?$/;
+const isThai = (ch: string | undefined) => !!ch && ch >= '฀' && ch <= '๿';
+const words = (t: string) => [...segmenter.segment(t)].map((s) => s.segment);
+
+/** The piece a slot may give back to the slot before: its leading dependent marks, or its first lone consonant. */
+function headPiece(b: string): string | null {
+  const dep = /^[ะ-ฺๅ็-๎]+/.exec(b);
+  if (dep) return dep[0];
+  const lone = /^[ก-ฮ][่-์]*/.exec(b);
+  if (!lone) return null;
+  const rest = b.slice(lone[0].length);
+  return rest === '' || !STARTS_DEPENDENT.test(rest) ? lone[0] : null;
+}
+
+/**
+ * A heard boundary that cut a word mid-syllable (จา|กบริษัท, คื|น, เฉ|ล|ย): the slot's first lone consonant or
+ * dangling mark moves back to the slot before when both slots then read as fewer words (จา + กบ|ริ|ษัท → จาก +
+ * บริษัท). Judged on each slot's own text — the word cutter misreads run-on text across slots (โอเคสำหรับ →
+ * โอ|เคส|…). A slot emptied this way is a continuation of the slot before (its audio stays there).
+ */
+function rejoinBrokenHeads(out: string[]): void {
+  const count = (t: string) => (t ? words(t).length : 0);
+  let prev = 0;
+  for (let i = 1; i < out.length; i++) {
+    const b = out[i] ?? '';
+    const a = out[prev] ?? '';
+    if (!b) continue;
+    const head = a && isThai(a.at(-1)) && isThai(b[0]) ? headPiece(b) : null;
+    if (head) {
+      const rest = b.slice(head.length);
+      // a dangling mark always goes back; a whole slot only to a syllable left open (คื + น), since the word cutter
+      // reads any unknown run-on as one word (มัน + ข); a split head only when what is left reads as fewer words
+      const move = STARTS_DEPENDENT.test(head)
+        ? true
+        : rest === ''
+          ? NEEDS_FINAL.test(a)
+          : count(rest) < count(b) && count(a + head) + count(rest) < count(a) + count(b);
+      if (move) {
+        out[prev] = a + head;
+        out[i] = rest;
+        if (!rest) continue;
+      }
+    }
+    prev = i;
+  }
+}
+
 /** The corrected sentence as one text per heard word slot; null when it cannot be aligned. */
 /** `units`: names kept whole in one slot (glossary terms such as an English brand). */
 export function alignSentence(
@@ -119,6 +169,7 @@ export function alignSentence(
     k++;
   }
   const out = slots.map((s) => s.trim().replace(/\s+/g, ' '));
+  rejoinBrokenHeads(out);
   // a slot cannot be a continuation with no head: move the first text to slot 0
   if (out[0] === '') {
     const k = out.findIndex((s) => s !== '');

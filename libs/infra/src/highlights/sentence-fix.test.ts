@@ -39,6 +39,25 @@ describe('alignSentence: a corrected sentence back onto the heard word slots', (
     ]);
   });
 
+  it('never cuts a word mid-syllable at an old heard boundary (recorded C-30min lines)', () => {
+    // heard "จากบริษัติ" as จา|กบ|ริ|ษัติดง: the "ก" of จาก belongs with จา, not with บริษัท
+    expect(alignSentence(['จา', 'กบ', 'ริ', 'ษัติดง', 'เครื่อง'], 'จากบริษัทเครื่อง')).toEqual([
+      'จาก',
+      'บริษัท',
+      '',
+      '',
+      'เครื่อง',
+    ]);
+    // heard คือ|น|นี้ for "คืนนี้": not คื|น|นี้
+    expect(alignSentence(['คือ', 'น', 'นี้', 'กับ'], 'คืนนี้กับ')).toEqual(['คืน', '', 'นี้', 'กับ']);
+    // whole words at a heard boundary stay as they are (the word cutter misreads the run-on text)
+    expect(alignSentence(['โอเค', 'สำหรับ', 'รุ่น'], 'โอเคสำหรับรุ่น')).toEqual(['โอเค', 'สำหรับ', 'รุ่น']);
+    expect(alignSentence(['มา', 'สอบถาม'], 'มาสอบถาม')).toEqual(['มา', 'สอบถาม']);
+    expect(alignSentence(['พี่', 'เค', 'ยา'], 'พี่เคยา')).toEqual(['พี่', 'เค', 'ยา']);
+    expect(alignSentence(['เลย', 'มัน', 'ข', 'อยาก'], 'เลยมันขอยาก')).toEqual(['เลย', 'มัน', 'ข', 'อยาก']);
+    expect(alignSentence(['โมง', 'เย', '็'], 'โมงเย็')).toEqual(['โมง', 'เย็', '']);
+  });
+
   it('a dropped first token gives its slot to the next text (never a continuation with no head)', () => {
     const slots = alignSentence(['เอ่อ', 'ตัว', 'นี้'], 'ตัวนี้');
     expect(slots?.[0]).not.toBe('');
