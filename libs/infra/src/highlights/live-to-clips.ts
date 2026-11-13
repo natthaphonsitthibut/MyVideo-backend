@@ -610,6 +610,25 @@ async function ranksOf(ds: DataSource, runId: string): Promise<number[]> {
   return rows.map((r) => r.rank);
 }
 
+/** How far past the chosen end a clip may run to finish the spoken line it stops in. */
+const SENTENCE_TAIL_MS = 6000;
+
+/**
+ * The last word of the spoken line (ASR segment) that `endWord` is in, when that line ends within
+ * `SENTENCE_TAIL_MS` of the chosen end; otherwise `endWord` itself.
+ */
+export function sentenceEndWord(
+  words: readonly { segment: number; endMs: number }[],
+  endWord: number,
+  endMs: number,
+): number {
+  const seg = words[endWord]?.segment;
+  if (seg === undefined) return endWord;
+  let last = endWord;
+  while (words[last + 1]?.segment === seg) last++;
+  return (words[last]?.endMs ?? endMs) - endMs <= SENTENCE_TAIL_MS ? last : endWord;
+}
+
 /** The project id of the clip at `rank` of a run — the same on rebuilds and restyles. */
 export function clipProjectId(workflowRunId: string, rank: number): string {
   return seededIds(`${workflowRunId}:${rank}:project`)();
@@ -840,7 +859,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
       const title = normalizeThaiSpelling(suggestions.find((x) => x.kind === 'title')?.text ?? source.title);
       const clipWords = await clipCaptionWords(
         llm,
-        selectCaptionSegments(segments, s.startWord, s.endWord),
+        selectCaptionSegments(segments, s.startWord, sentenceEndWord(words, s.endWord, s.endMs)),
         product.name ? [product.name] : [],
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
         aiFixed,
@@ -854,7 +873,13 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
       );
       const hook = hookSuggestions[directorChoice.hookIndex];
       let projectId = clipProjectId(planRunId, rank);
-      const endMs = clipEndWithTail(s.endMs, words[s.endWord + 1]?.startMs, probe.durationMs);
+      // never stop mid-sentence ("…ได้ภายใน" | "15 วัน"): finish the spoken line the clip ends in, when it is close
+      const endWord = sentenceEndWord(words, s.endWord, s.endMs);
+      const endMs = clipEndWithTail(
+        Math.max(s.endMs, words[endWord]?.endMs ?? s.endMs),
+        words[endWord + 1]?.startMs,
+        probe.durationMs,
+      );
       const ratio: OutputRatio =
         typeof job.payload.ratio === 'string' && job.payload.ratio in OUTPUT_FRAMES
           ? (job.payload.ratio as OutputRatio)

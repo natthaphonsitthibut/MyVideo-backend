@@ -17,6 +17,19 @@ import { transitionViolations } from './transitions.js';
 type Word = { text: string; startMs: number; endMs: number };
 type Evidence = { sourceIds: string[]; words: Word[]; product: ProductInfo };
 const compact = (s: string) => s.replace(/\s+/gu, '');
+const numbersIn = (s: string) => (s.replace(/,/g, '').match(/\d+(?:\.\d+)?/g) ?? []).join(',');
+function editDistance(a: string, b: string): number {
+  const x = [...a];
+  const y = [...b];
+  let row = Array.from({ length: y.length + 1 }, (_, j) => j);
+  for (let i = 0; i < x.length; i++) {
+    const next = [i + 1];
+    for (let j = 0; j < y.length; j++)
+      next.push(Math.min((next[j] ?? 0) + 1, (row[j + 1] ?? 0) + 1, (row[j] ?? 0) + (x[i] === y[j] ? 0 : 1)));
+    row = next;
+  }
+  return row[y.length] ?? 0;
+}
 const videos = (p: Project) =>
   Object.values(p.elements)
     .filter((e) => e.type === 'video')
@@ -137,7 +150,12 @@ export function codeCritic(p: Project, evidence: Evidence): z.infer<typeof Criti
     while (at < shown.length && shown[at] === spoken[at]) at++;
     // where the captions stop matching the kept speech, so a failure can be traced without rebuilding the clip
     const diff = `caption "${shown.slice(Math.max(0, at - 12), at + 20)}" vs speech "${spoken.slice(Math.max(0, at - 12), at + 20)}" at ${at}/${spoken.length}`;
-    check(7, shown === spoken, shown === spoken ? caps.map((c) => c.id) : [diff, ...caps.map((c) => c.id)]);
+    // natural cleanup (a dropped "ทำ", a fixed spelling) is fine; a changed number or a rewrite is not
+    const close =
+      shown === spoken ||
+      (numbersIn(shown) === numbersIn(spoken) &&
+        editDistance(shown, spoken) <= Math.max(4, Math.ceil(spoken.length * 0.1)));
+    check(7, close, shown === spoken ? caps.map((c) => c.id) : [diff, ...caps.map((c) => c.id)]);
   }
   const validation = validateProject(p);
   check(
@@ -325,6 +343,15 @@ export async function reviewDraft(a: {
           e.durationFrames = Math.max(e.durationFrames, Math.min(hold, next - e.startFrame));
         }
         codeFixes.push(`${id}:reading-hold`);
+      } else if (
+        ['03', '04'].includes(c.checkId) &&
+        e.type === 'text' &&
+        e.startFrame > 0 &&
+        e.startFrame + e.durationFrames === p.durationFrames
+      ) {
+        // the closing card carried an untraced claim (a title with a price): keep a neutral close, never a hard cut
+        e.content = 'ขอบคุณที่รับชม';
+        codeFixes.push(`${id}:end-card-neutral`);
       } else if (['03', '04'].includes(c.checkId) && (e.type === 'text' || e.type === 'cta')) {
         delete p.elements[id];
         for (const t of p.tracks) t.elementIds = t.elementIds.filter((x) => x !== id);

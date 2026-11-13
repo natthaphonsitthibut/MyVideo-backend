@@ -141,6 +141,26 @@ export function splitLongShots(
   return out;
 }
 
+/** Kept ranges grown so no edge falls inside one of `words`; ranges that then touch are joined. */
+export function widenToWords(segments: readonly SpanMs[], words: readonly ClipWordMs[]): SpanMs[] {
+  const grown = segments.map((s) => {
+    let { startMs, endMs } = s;
+    for (const w of words) {
+      if (w.startMs < startMs && startMs < w.endMs) startMs = w.startMs;
+      if (w.startMs < endMs && endMs < w.endMs) endMs = w.endMs;
+    }
+    return { startMs, endMs };
+  });
+  return grown
+    .sort((a, b) => a.startMs - b.startMs)
+    .reduce<SpanMs[]>((acc, s) => {
+      const last = acc[acc.length - 1];
+      if (last && s.startMs <= last.endMs) last.endMs = Math.max(last.endMs, s.endMs);
+      else acc.push({ ...s });
+      return acc;
+    }, []);
+}
+
 function subtract(range: SpanMs, removals: SpanMs[]): SpanMs[] {
   const out: SpanMs[] = [];
   let cursor = range.startMs;
@@ -213,6 +233,10 @@ export function planJumpCuts(
   // everything would go (a clip of only hesitation): keep the original range rather than an empty clip
   const fallback = segments.length === 0;
   if (fallback) segments = [{ ...clip }];
+  // ASR and VAD disagree by a few hundred ms at a sentence start: an edge that still lands inside a kept word
+  // (the clip's own edge included) grows to that word's edge, so a kept word is always heard whole
+  const kept = fallback ? words : words.filter((w) => !fillers.has(w));
+  segments = widenToWords(segments, kept);
   const durationMs = segments.reduce((n, s) => n + s.endMs - s.startMs, 0);
   const toOutputMs = (t: number) => {
     let out = 0;
