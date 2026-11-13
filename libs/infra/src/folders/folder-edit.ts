@@ -162,7 +162,11 @@ export async function folderPlanOf(
   const plan = folderPlan(facts);
   // a closed edit that neither finished nor failed (its footage was deleted, or it was stopped) is not running:
   // show the folder as not started, so the merchant can start again
-  if (edit?.input.closedAt && !plan.finished && !plan.failed) {
+  // …unless its footage is still being worked on (a rebuild): then it shows that work, not "not started"
+  const working = facts.sources.some(
+    (s) => s.transcript === 'running' || s.analysis === 'running' || s.build === 'running',
+  );
+  if (edit?.input.closedAt && !plan.finished && !plan.failed && !working) {
     const fresh: FolderFacts = {
       started: false,
       styleId: null,
