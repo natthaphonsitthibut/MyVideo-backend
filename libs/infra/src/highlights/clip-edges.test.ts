@@ -49,3 +49,17 @@ it('a clip finishes the spoken line it stops in, when the line ends soon after',
   // a line still going on long after the chosen end is not followed
   expect(sentenceEndWord([...flat.slice(0, 3), { segment: 1, endMs: 9000 }], 1, 2000)).toBe(1);
 });
+
+it('a clip never ends on a set-up question: it takes the answer, or stops before the question', () => {
+  // real L02 line: "แต่ต้องบอกเลยว่ารอบ 2 ที่ต้องทำ 7998 เพราะอะไร"
+  const q = [
+    { segment: 0, endMs: 1000, text: 'ราคา' },
+    { segment: 1, endMs: 2000, text: '7998' },
+    { segment: 1, endMs: 2500, text: 'เพราะอะไร' },
+    { segment: 2, endMs: 6000, text: 'เพราะหนังหายาก' },
+  ];
+  expect(sentenceEndWord(q, 2, 2500)).toBe(3);
+  // the answer is too far away: stop before the question
+  const far = [...q.slice(0, 3), { segment: 2, endMs: 20_000, text: 'เพราะหนังหายาก' }];
+  expect(sentenceEndWord(far, 2, 2500)).toBe(0);
+});

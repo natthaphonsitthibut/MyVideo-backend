@@ -618,15 +618,47 @@ const SENTENCE_TAIL_MS = 6000;
  * `SENTENCE_TAIL_MS` of the chosen end; otherwise `endWord` itself.
  */
 export function sentenceEndWord(
-  words: readonly { segment: number; endMs: number }[],
+  words: readonly { segment: number; endMs: number; text?: string }[],
   endWord: number,
   endMs: number,
 ): number {
-  const seg = words[endWord]?.segment;
-  if (seg === undefined) return endWord;
-  let last = endWord;
-  while (words[last + 1]?.segment === seg) last++;
-  return (words[last]?.endMs ?? endMs) - endMs <= SENTENCE_TAIL_MS ? last : endWord;
+  const lastOf = (i: number) => {
+    const seg = words[i]?.segment;
+    let last = i;
+    while (seg !== undefined && words[last + 1]?.segment === seg) last++;
+    return last;
+  };
+  if (words[endWord]?.segment === undefined) return endWord;
+  let last = lastOf(endWord);
+  if ((words[last]?.endMs ?? endMs) - endMs > SENTENCE_TAIL_MS) last = endWord;
+  // a line that only sets up an answer ("7998 เพราะอะไร") is no ending: take the answer when it follows soon,
+  // otherwise stop before the question
+  if (asksAndStops(words, last)) {
+    const answer = lastOf(last + 1);
+    if (words[last + 1] && (words[answer]?.endMs ?? 0) - endMs <= ANSWER_TAIL_MS) return answer;
+    let before = last;
+    const seg = words[last]?.segment;
+    while (before > 0 && words[before]?.segment === seg) before--;
+    if (words[before] && words[before]?.segment !== seg) return before;
+  }
+  return last;
+}
+
+/** How far past the chosen end a clip may run to include the answer to a question it ends on. */
+const ANSWER_TAIL_MS = 10_000;
+const SETUP_QUESTION = /(เพราะอะไร|ทำไม|ยังไง|อย่างไร|รู้ไหม|รู้มั้ย|รู้มั๊ย|อะไรรู้ไหม)(ครับ|ค่ะ|คะ|นะ|ล่ะ|อ่ะ|อะ)*$/u;
+
+/** The spoken line that ends at word `i` is a set-up question. */
+function asksAndStops(words: readonly { segment: number; text?: string }[], i: number): boolean {
+  const seg = words[i]?.segment;
+  let first = i;
+  while (first > 0 && words[first - 1]?.segment === seg) first--;
+  const line = words
+    .slice(first, i + 1)
+    .map((w) => w.text ?? '')
+    .join('')
+    .replace(/\s+/gu, '');
+  return SETUP_QUESTION.test(line);
 }
 
 /** The project id of the clip at `rank` of a run — the same on rebuilds and restyles. */
