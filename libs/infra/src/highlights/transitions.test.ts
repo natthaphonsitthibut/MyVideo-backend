@@ -1,8 +1,8 @@
-import { stylePack, validateProject } from '@myvideo/contracts';
+import { stylePack, TRANSITION_KINDS, type TransitionKind, validateProject } from '@myvideo/contracts';
 import { describe, expect, it } from 'vitest';
 import { buildClipProject } from './clip-project.js';
 import { planJumpCuts } from './jump-cuts.js';
-import { LOUD_TRANSITIONS, planTransitions } from './transitions.js';
+import { LOUD_TRANSITIONS, planTransitions, transitionViolations } from './transitions.js';
 
 const fps = 30;
 /** n shots, one every `every` seconds; `moments` marks price / CTA shots by index. */
@@ -27,8 +27,9 @@ describe('transitions in a built clip', () => {
     durationFrames: 3000,
     hasAudio: true,
   };
-  const build = (id: string) => {
-    const style = stylePack(id);
+  const build = (id: string, kind?: TransitionKind) => {
+    const style = structuredClone(stylePack(id));
+    if (kind) style.transitions = { kinds: [kind], onMoment: kind, maxShare: 0.25, minGapMs: 3000 };
     const cut = planJumpCuts({ startMs: plan.startMs, endMs: plan.endMs }, plan.words, speech, style.cuts);
     return buildClipProject({
       projectId: '00000000-0000-4000-8000-0000000000aa',
@@ -40,6 +41,21 @@ describe('transitions in a built clip', () => {
       seed: 't',
     });
   };
+  it.each(TRANSITION_KINDS)('builds editable %s transitions with motivation and a valid budget', (kind) => {
+    const doc = build('sale-fast', kind);
+    const transitions = Object.values(doc.elements).flatMap((e) =>
+      e.transition ? [{ kind: e.transition.kind, startFrame: e.startFrame }] : [],
+    );
+    expect(transitions.length).toBeGreaterThan(0);
+    expect(
+      transitionViolations(
+        transitions,
+        Object.values(doc.elements).filter((e) => e.type === 'video').length - 1,
+        30,
+      ),
+    ).toEqual([]);
+    expect(validateProject(doc).ok).toBe(true);
+  });
 
   it('sale-fast: flash shapes / zoom punches on cuts, valid, within budget; simple: none', () => {
     const p = build('sale-fast');

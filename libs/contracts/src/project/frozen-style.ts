@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ENERGY_IDS } from './motion.js';
 import { CAPTION_STYLE_IDS } from './schema.js';
 import { type StylePack, TRANSITION_KINDS } from './style-packs.js';
 
@@ -7,6 +8,7 @@ const Graphic = z.object({ color: Color, background: Color, animationIn: z.strin
 /** Full recipe frozen by the server, not an ID that can change when the catalogue is updated. */
 export const StylePackSnapshot: z.ZodType<StylePack> = z.object({
   id: z.string(),
+  energy: z.enum(ENERGY_IDS).optional(),
   name: z.string(),
   description: z.string(),
   suits: z.string(),

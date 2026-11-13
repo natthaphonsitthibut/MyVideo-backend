@@ -1,3 +1,4 @@
+import type { Energy } from './motion.js';
 import type { CaptionStyleId } from './schema.js';
 
 /**
@@ -14,11 +15,24 @@ import type { CaptionStyleId } from './schema.js';
  * `dip` = a short dip to black across the cut, `zoom-punch` = the next shot starts 18 % closer and settles,
  * `slide-push` = the next shot slides in from the side. `flash` and `slide-push` are "loud".
  */
-export const TRANSITION_KINDS = ['flash', 'dip', 'zoom-punch', 'slide-push'] as const;
+export const TRANSITION_KINDS = [
+  'hard',
+  'match',
+  'whip',
+  'flash',
+  'dip',
+  'zoom-punch',
+  'slide-push',
+  'iris',
+  'flood',
+  'light-leak',
+  'glitch',
+] as const;
 export type TransitionKind = (typeof TRANSITION_KINDS)[number];
 
 export type StylePack = {
   id: string;
+  energy?: Energy;
   /** Shown to the merchant (Thai). */
   name: string;
   description: string;
@@ -107,6 +121,7 @@ export type StylePack = {
 export const STYLE_PACKS: readonly StylePack[] = [
   {
     id: 'sale-fast',
+    energy: 'hype',
     name: 'ขายไว ไฟลุก',
     description: 'ตัดกระชับ ซับทีละ 2–3 คำกลางจอ ป้ายราคาเด้งตอนพูดราคา ปิดด้วยปุ่มสั่งซื้อ',
     suits: 'ไลฟ์ขายของที่พูดราคา/โปรบ่อย อยากให้ปิดการขายไว',
@@ -141,6 +156,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'friendly',
+    energy: 'normal',
     name: 'เล่าเป็นกันเอง',
     description: 'จังหวะพูดธรรมชาติ ซับในกล่องทีละประโยคสั้น ชื่อสินค้าขึ้นมุมล่าง ไม่หวือหวา',
     suits: 'รีวิว/เล่าเรื่องสินค้า พูดช้า ๆ อธิบายรายละเอียด',
@@ -175,6 +191,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'premium',
+    energy: 'calm',
     name: 'เรียบหรู',
     description: 'ภาพนิ่งนาน ค่อย ๆ ดันกล้องช้า ๆ ซับบางด้านล่าง ไม่มีป้ายเด้ง เปิด–ปิดแบบจาง',
     suits: 'สินค้าราคาสูง/แบรนด์ อยากให้ดูแพง สงบ',
@@ -199,10 +216,11 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-minimal-short',
       gainDb: -8,
     },
-    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
+    transitions: { kinds: ['dip', 'light-leak'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
   },
   {
     id: 'fun',
+    energy: 'lively',
     name: 'สนุก มีสีสัน',
     description: 'ตัดเร็ว ซับทีละ 1–2 คำตัวใหญ่ ซูมเน้นบ่อยขึ้น ป้ายราคาเด้งสีจัด',
     suits: 'คนขายพลังเยอะ พูดเร็ว สินค้าแฟชั่น/ของเล่น/ขนม',
@@ -234,7 +252,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       gainDb: -4,
     },
     transitions: {
-      kinds: ['slide-push', 'zoom-punch'],
+      kinds: ['whip', 'iris', 'glitch'],
       onMoment: 'zoom-punch',
       maxShare: 0.25,
       minGapMs: 2000,
@@ -242,6 +260,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'simple',
+    energy: 'gentle',
     name: 'มินิมอล',
     description: 'ตัดเฉพาะเงียบนาน ๆ ไม่ซูม ไม่มีกราฟิก/เสียงเพิ่ม ซับเรียบ 2 บรรทัด',
     suits: 'อยากได้คลิปดิบ ๆ เป็นธรรมชาติ ไปแต่งต่อเอง',
@@ -264,6 +283,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   // ---- E13-F08: seven more packs (our own design for Thai online selling) ----
   {
     id: 'live-hype',
+    energy: 'hype',
     name: 'แม่ค้าไลฟ์ไฟลุก',
     description: 'ตัดถี่มาก ซับทีละ 2 คำ ซูมเน้นทุกจังหวะราคา แฟลชตอนบอกราคา สไลด์ภาพเปลี่ยนช็อต',
     suits: 'ไลฟ์ขายของพลังสูง พูดเร็ว บอกราคาบ่อย อยากได้คลิปเร้าใจ',
@@ -294,10 +314,11 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-bright-short',
       gainDb: -3,
     },
-    transitions: { kinds: ['slide-push', 'zoom-punch'], onMoment: 'flash', maxShare: 0.25, minGapMs: 2000 },
+    transitions: { kinds: ['whip', 'iris', 'glitch'], onMoment: 'flash', maxShare: 0.25, minGapMs: 2000 },
   },
   {
     id: 'honest-review',
+    energy: 'gentle',
     name: 'รีวิวจริงใจ',
     description: 'จังหวะคนเล่าจริง เก็บช่วงหายใจไว้นิดหน่อย ซับกล่องล่างทีละประโยค ราคาขึ้นเรียบ ๆ ไม่มีเอฟเฟกต์ตัด',
     suits: 'รีวิวใช้จริง เล่าข้อดีข้อเสีย อยากให้คนดูเชื่อใจ',
@@ -319,10 +340,11 @@ export const STYLE_PACKS: readonly StylePack[] = [
       cta: null,
     },
     sfx: null,
-    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.1, minGapMs: 8000 },
+    transitions: { kinds: ['dip', 'light-leak'], onMoment: null, maxShare: 0.1, minGapMs: 8000 },
   },
   {
     id: 'gadget-spec',
+    energy: 'normal',
     name: 'สเปกแกดเจ็ต',
     description: 'ภาพคม ตัดเงียบสั้น ซูมเข้าตอนบอกสเปก/ราคา ภาพสไลด์เปลี่ยนช็อต เสียงฟึ่บเบา ๆ ป้ายราคาโทนเทคโนโลยี',
     suits: 'มือถือ หูฟัง อุปกรณ์ไอที โชว์ฟีเจอร์ทีละข้อ',
@@ -357,6 +379,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'skincare-premium',
+    energy: 'calm',
     name: 'พรีเมียมสกินแคร์',
     description: 'ช้า นุ่ม ภาพค่อย ๆ ดันเข้า ซับบางสีอ่อน จางเข้า–ออกระหว่างช็อต ไม่มีป้ายเด้ง',
     suits: 'เครื่องสำอาง สกินแคร์ น้ำหอม อยากให้ดูหรูแต่อบอุ่น',
@@ -380,10 +403,11 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'shimmer-short-bright',
       gainDb: -9,
     },
-    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.2, minGapMs: 5000 },
+    transitions: { kinds: ['dip', 'light-leak'], onMoment: null, maxShare: 0.2, minGapMs: 5000 },
   },
   {
     id: 'cute-sticker',
+    energy: 'lively',
     name: 'น่ารักสติกเกอร์',
     description: 'ซับตัวหนาขอบชมพูทีละ 1–2 คำ ทุกอย่างเด้งดึ๋ง ซูมเน้นตอนพูดราคา เสียงป๊อปฟองสบู่',
     suits: 'ของน่ารัก ของเล่น เครื่องเขียน กิ๊ฟช็อป กลุ่มลูกค้าวัยรุ่น',
@@ -418,6 +442,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'flash-sale',
+    energy: 'hype',
     name: 'แฟลชเซล',
     description: 'จังหวะเร็ว ป้ายราคาแดงเด้งใหญ่ แฟลชตอนบอกราคา ซับไฮไลต์คำสำคัญ ปิดด้วยปุ่มสั่งซื้อ',
     suits: 'โปรลดราคา ของแถม วันเซล อยากให้รีบตัดสินใจ (ใช้ราคาที่พูดจริงเท่านั้น)',
@@ -452,6 +477,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
   },
   {
     id: 'minimal-brand',
+    energy: 'gentle',
     name: 'มินิมอลแบรนด์',
     description: 'สะอาด เว้นจังหวะ ไม่ซูมแรง ซับบรรทัดเดียวล่างจอ จางดำระหว่างช่วง ปิดด้วยชื่อสินค้า',
     suits: 'แบรนด์เสื้อผ้า ของแต่งบ้าน สินค้าที่ภาพสวยอยู่แล้ว',
@@ -475,7 +501,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-minimal-short',
       gainDb: -8,
     },
-    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
+    transitions: { kinds: ['dip', 'light-leak'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
   },
 ];
 

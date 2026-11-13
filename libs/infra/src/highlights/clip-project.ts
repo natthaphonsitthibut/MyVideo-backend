@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   type LibrarySound,
   librarySound,
+  motionFrames,
   type Project,
   type StylePack,
   stylePack,
@@ -18,7 +19,7 @@ import {
   wordCutViolations,
 } from './jump-cuts.js';
 import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.js';
-import { planTransitions } from './transitions.js';
+import { planTransitions, transitionViolations } from './transitions.js';
 
 /**
  * Clip plan → Project JSON (E07-F07): deterministic. One 9:16 `cover` video element (centre crop; the reframe
@@ -438,6 +439,8 @@ export function buildClipProject(input: {
     });
   const overlayIds: string[] = [];
   const fps = source.fps.num / source.fps.den;
+  const energy = edit?.style.energy ?? 'normal';
+  const motion = motionFrames(energy, 1, source.fps);
   let hookEnd = 0;
   if (input.plan.hook && hook) {
     const id = newId();
@@ -460,7 +463,8 @@ export function buildClipProject(input: {
         align: 'center',
       },
       transform: transform(h?.y ?? HOOK_Y),
-      animationIn: { presetId: h?.animationIn ?? 'pop', durationFrames: Math.min(12, hookEnd) },
+      animationIn: { presetId: h?.animationIn ?? 'pop', durationFrames: Math.min(motion.enter, hookEnd) },
+      motion: { component: 'hook-title', energy },
     };
     overlayIds.push(id);
   }
@@ -491,7 +495,11 @@ export function buildClipProject(input: {
         },
         // a call-to-action pill sits under the card: lift the card so the two never overlap
         transform: transform(edit?.style.graphics.cta && input.graphics?.cta ? END_CARD_LIFT : 0),
-        animationIn: { presetId: end.animationIn, durationFrames: Math.min(12, durationFrames - startFrame) },
+        animationIn: {
+          presetId: end.animationIn,
+          durationFrames: Math.min(motion.enter, durationFrames - startFrame),
+        },
+        motion: { component: 'cta-card', energy },
       };
       overlayIds.push(id);
     }
@@ -527,8 +535,12 @@ export function buildClipProject(input: {
         align: 'center',
       },
       transform: transform(look.y),
-      animationIn: { presetId: look.animationIn, durationFrames: Math.min(9, frames) },
-      animationOut: { presetId: 'fade', durationFrames: Math.min(6, frames) },
+      animationIn: { presetId: look.animationIn, durationFrames: Math.min(motion.enter, frames) },
+      animationOut: { presetId: 'fade', durationFrames: Math.min(motion.exit, frames) },
+      motion: {
+        component: fontWeight === 900 ? 'price-tag' : fontWeight === 700 ? 'lower-third' : 'cta-card',
+        energy,
+      },
     };
     graphicIds.push(id);
   };
@@ -592,12 +604,19 @@ export function buildClipProject(input: {
       const vid = videoIds[t.index];
       const v = vid ? elements[vid] : undefined;
       if (!seg || !v || v.type !== 'video') continue;
-      if (t.kind === 'flash' || t.kind === 'dip') {
+      if (t.kind === 'hard' || t.kind === 'match') {
+        elements[vid as string] = { ...v, transition: { kind: t.kind, motivation: t.why } };
+        continue;
+      }
+      if (['flash', 'dip', 'flood', 'light-leak'].includes(t.kind)) {
         // a white frame that fades out / a short dip to black across the cut: plain shapes, editable like any layer
         const id = newId();
         const dip = t.kind === 'dip';
         const startFrame = dip ? Math.max(0, seg.startFrame - 3) : seg.startFrame;
-        const frames = Math.min(dip ? 6 : 5, durationFrames - startFrame);
+        const frames = Math.min(
+          dip ? 6 : t.kind === 'light-leak' ? 12 : t.kind === 'flood' ? 10 : 5,
+          durationFrames - startFrame,
+        );
         if (frames < 2) continue;
         elements[id] = {
           type: 'shape',
@@ -606,14 +625,31 @@ export function buildClipProject(input: {
           startFrame,
           durationFrames: frames,
           origin: 'ai',
+          transition: { kind: t.kind, motivation: t.why },
           shape: 'rect',
           width: W,
           height: H,
-          fill: dip ? '#000000' : '#ffffff',
-          opacity: dip ? 1 : 0.85,
+          fill: dip
+            ? '#000000'
+            : t.kind === 'flood'
+              ? (edit.style.hook.background ?? '#111111')
+              : t.kind === 'light-leak'
+                ? '#fb923c'
+                : '#ffffff',
+          opacity: dip ? 1 : t.kind === 'light-leak' ? 0.45 : 0.85,
           transform: { x: 0, y: 0, scale: 1, rotation: 0 },
           ...(dip ? { animationIn: { presetId: 'fade', durationFrames: Math.floor(frames / 2) } } : {}),
           animationOut: { presetId: 'fade', durationFrames: dip ? Math.ceil(frames / 2) : frames },
+          ...(t.kind === 'flood'
+            ? {
+                keyframes: {
+                  reveal: [
+                    { frame: 0, value: 0, easing: 'ease-out' as const },
+                    { frame: Math.floor(frames / 2), value: 1, easing: 'hold' as const },
+                  ],
+                },
+              }
+            : {}),
         };
         transitionIds.push(id);
         continue;
@@ -636,14 +672,38 @@ export function buildClipProject(input: {
           { frame: settle, value: at, easing: 'linear' },
           ...(end.frame > settle ? [end] : []),
         ];
+      } else if (t.kind === 'iris') {
+        kf.reveal = [
+          { frame: 0, value: 0, easing: 'ease-out' },
+          { frame: settle, value: 1, easing: 'hold' },
+        ];
+      } else if (t.kind === 'glitch') {
+        kf['transform.x'] = [
+          { frame: 0, value: base.x - W * 0.02, easing: 'hold' },
+          { frame: 2, value: base.x + W * 0.02, easing: 'hold' },
+          { frame: 4, value: base.x, easing: 'hold' },
+        ];
+        kf.glitch = [
+          { frame: 0, value: 1, easing: 'hold' },
+          { frame: 4, value: 0, easing: 'hold' },
+        ];
       } else {
         kf['transform.x'] = [
-          { frame: 0, value: base.x + side * Math.round(W * 0.18), easing: 'ease-out' },
+          {
+            frame: 0,
+            value: base.x + side * Math.round(W * (t.kind === 'whip' ? 0.6 : 0.18)),
+            easing: 'ease-out',
+          },
           { frame: settle, value: base.x, easing: 'linear' },
         ];
         side = -side;
+        if (t.kind === 'whip')
+          kf.blur = [
+            { frame: 0, value: 16, easing: 'ease-out' },
+            { frame: settle, value: 0, easing: 'hold' },
+          ];
       }
-      elements[vid as string] = { ...v, keyframes: kf };
+      elements[vid as string] = { ...v, keyframes: kf, transition: { kind: t.kind, motivation: t.why } };
     }
   }
 
@@ -756,6 +816,14 @@ export function buildClipProject(input: {
       if (tid) audioTracks.push({ id: tid, kind: 'audio', elementIds: trackElements[i] ?? [] });
     });
   }
+  const budgetErrors = transitionViolations(
+    Object.values(elements).flatMap((e) =>
+      e.transition ? [{ kind: e.transition.kind, startFrame: e.startFrame }] : [],
+    ),
+    Math.max(0, segments.length - 1),
+    fps,
+  );
+  if (budgetErrors.length) throw new Error(`Invalid transition plan: ${budgetErrors.join(',')}`);
   return {
     schemaVersion: 1,
     id: input.projectId,

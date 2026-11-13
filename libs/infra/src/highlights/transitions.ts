@@ -1,7 +1,7 @@
 import type { StylePack, TransitionKind } from '@myvideo/contracts';
 
 /** Transitions that draw attention; a clip gets at most two of them. */
-export const LOUD_TRANSITIONS: readonly TransitionKind[] = ['flash', 'slide-push'];
+export const LOUD_TRANSITIONS: readonly TransitionKind[] = ['flash', 'slide-push', 'whip', 'glitch', 'flood'];
 const MAX_LOUD = 2;
 
 export type PlannedTransition = { index: number; kind: TransitionKind; why: 'price' | 'cta' | 'cut' };
@@ -27,6 +27,11 @@ export function planTransitions(
   const fits = (i: number, kind: TransitionKind) => {
     const at = shots[i]?.startFrame ?? 0;
     if (LOUD_TRANSITIONS.includes(kind) && loud >= MAX_LOUD) return false;
+    if (
+      kind === 'flash' &&
+      [...chosen].some(([j, t]) => t.kind === 'flash' && Math.abs((shots[j]?.startFrame ?? 0) - at) < fps * 3)
+    )
+      return false;
     for (const j of chosen.keys()) if (Math.abs((shots[j]?.startFrame ?? 0) - at) < gapFrames) return false;
     return true;
   };
@@ -54,4 +59,29 @@ export function planTransitions(
     }
   }
   return [...chosen.values()].sort((a, b) => a.index - b.index);
+}
+
+export function transitionViolations(
+  transitions: readonly { kind: string; startFrame: number }[],
+  cutCount: number,
+  fps: number,
+): string[] {
+  const special = transitions.filter((t) => t.kind !== 'hard' && t.kind !== 'match');
+  const errors: string[] = [];
+  if (special.length > Math.floor(cutCount / 4)) errors.push('transition-share');
+  if (special.filter((t) => LOUD_TRANSITIONS.includes(t.kind as TransitionKind)).length > 2)
+    errors.push('loud-moves');
+  const flashes = special
+    .filter((t) => t.kind === 'flash')
+    .map((t) => t.startFrame)
+    .sort((a, b) => a - b);
+  if (
+    flashes.some(
+      (f, i) =>
+        flashes.filter((t) => t >= f && t < f + fps).length > 3 ||
+        (i > 0 && f - (flashes[i - 1] ?? 0) < fps * 3),
+    )
+  )
+    errors.push('flash-rate');
+  return errors;
 }

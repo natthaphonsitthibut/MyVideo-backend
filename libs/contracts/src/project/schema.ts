@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { named } from '../registry.js';
+import { ENERGY_IDS, GRAPHIC_IDS } from './motion.js';
 
 /**
  * Project JSON v1 — the editable timeline (ARCHITECTURE §6). Every time is an integer frame in the project's
@@ -79,6 +80,38 @@ const common = {
   durationFrames: frames,
   origin: Origin,
   locked: z.boolean().optional(),
+  motion: z
+    .object({
+      component: z.enum(GRAPHIC_IDS),
+      energy: z.enum(ENERGY_IDS),
+      evidence: z
+        .object({
+          kind: z.enum(['merchant', 'transcript', 'chat']),
+          quote: z.string().min(1).max(1000),
+          sourceId: z.uuid().optional(),
+          sourceFrame: frame.optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  transition: z
+    .object({
+      kind: z.enum([
+        'hard',
+        'match',
+        'whip',
+        'flash',
+        'dip',
+        'zoom-punch',
+        'slide-push',
+        'iris',
+        'flood',
+        'light-leak',
+        'glitch',
+      ]),
+      motivation: z.string().min(1).max(200),
+    })
+    .optional(),
   /** Advanced mode only: animated numeric properties (`transform.x`, `opacity` …). */
   keyframes: z.record(z.string().min(1).max(64), z.array(Keyframe).min(1)).optional(),
 };
