@@ -15,7 +15,7 @@ from .settings import PathNotAllowed, Settings, checked_dir, checked_path
 from .shots import ENGINE as SHOTS_ENGINE
 from .shots import RECIPE as SHOTS_RECIPE
 from .shots import detect_shots, extract_keyframes
-from .thai import segment_words
+from .thai import numbers_to_digits, segment_words
 from .vad import VadOptions, run_vad
 
 
@@ -232,7 +232,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 AsrSegmentOut(
                     start_ms=s.start_ms,
                     end_ms=s.end_ms,
-                    text=s.text,
+                    text=numbers_to_digits(s.text),
                     avg_logprob=s.avg_logprob,
                     no_speech_prob=s.no_speech_prob,
                     words=[WordOut(**w) for w in segment_words(s.text, s.start_ms, s.end_ms, s.tokens)],
