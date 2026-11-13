@@ -52,6 +52,7 @@ export const SourceList = named(
 export type SourceList = z.infer<typeof SourceList>;
 
 export const ListSourcesQuery = z.object({
+  kind: z.enum(['video', 'photo']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(30),
   before: z.string().max(200).optional(),
 });

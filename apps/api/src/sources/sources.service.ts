@@ -92,7 +92,13 @@ export class SourcesService {
         ingestRunId: run?.id ?? null,
         createdAt: source.createdAt.toISOString(),
         durationMs: probe?.durationMs ?? null,
-        kind: probe ? (probe.still ? 'photo' : 'video') : null,
+        kind: probe
+          ? probe.still
+            ? 'photo'
+            : 'video'
+          : /\.(jpg|jpeg|png|webp)$/i.test(source.originalFilename)
+            ? 'photo'
+            : 'video',
         width: probe?.video?.width ?? null,
         height: probe?.video?.height ?? null,
         hasAudio: probe ? !!probe.audio : null,
@@ -105,7 +111,12 @@ export class SourcesService {
     });
   }
 
-  async list(merchantId: string, limit: number, before?: string): Promise<SourceList> {
+  async list(
+    merchantId: string,
+    limit: number,
+    before?: string,
+    kind?: 'video' | 'photo',
+  ): Promise<SourceList> {
     const qb = this.ds
       .getRepository(VideoSourceEntity)
       .createQueryBuilder('s')
@@ -113,6 +124,11 @@ export class SourcesService {
       .orderBy('s.created_at', 'DESC')
       .addOrderBy('s.id', 'DESC')
       .limit(limit + 1);
+    if (kind)
+      qb.andWhere(
+        `COALESCE((s.probe->>'still')::boolean, lower(s.original_filename) ~ :photoExtension) = :photo`,
+        { photoExtension: '\\.(jpg|jpeg|png|webp)$', photo: kind === 'photo' },
+      );
     if (before) {
       const [at, id] = before.split('|');
       if (at && id && !Number.isNaN(Date.parse(at)))

@@ -54,9 +54,9 @@ export class SourcesController {
   @Get()
   list(
     @CurrentMerchant() merchantId: string,
-    @Query(new ZodPipe(ListSourcesQuery)) q: { limit: number; before?: string },
+    @Query(new ZodPipe(ListSourcesQuery)) q: { limit: number; before?: string; kind?: 'video' | 'photo' },
   ): Promise<SourceList> {
-    return this.sources.list(merchantId, q.limit, q.before);
+    return this.sources.list(merchantId, q.limit, q.before, q.kind);
   }
 
   @Get('by-upload/:uploadId')
