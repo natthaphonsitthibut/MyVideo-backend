@@ -1,4 +1,4 @@
-import { type Project, type ProjectElement, validateProject } from '@myvideo/contracts';
+import { type Project, type ProjectElement, type StylePack, validateProject } from '@myvideo/contracts';
 import { OUTPUT_FRAMES, type OutputRatio, seededIds } from '../highlights/clip-project.js';
 
 export type VisualFootage = {
@@ -20,6 +20,7 @@ function picture(
   assetId: string,
   startFrame: number,
   durationFrames: number,
+  drift = 0.08,
 ): ProjectElement {
   return {
     type: 'image',
@@ -35,7 +36,7 @@ function picture(
     keyframes: {
       'transform.scale': [
         { frame: 0, value: 1, easing: 'ease-in-out' },
-        { frame: durationFrames - 1, value: 1.08, easing: 'ease-in-out' },
+        { frame: durationFrames - 1, value: 1 + Math.min(0.15, Math.max(0, drift)), easing: 'ease-in-out' },
       ],
     },
   };
@@ -83,12 +84,14 @@ export function buildVisualMontage(input: {
   sources: readonly VisualFootage[];
   seconds?: number;
   workflowRunId?: string;
+  style?: StylePack;
 }): Project {
   if (!input.sources.length) throw new Error('Select at least one picture or silent video');
   const ids = seededIds(input.seed);
   const trackId = ids();
   const frame = OUTPUT_FRAMES[input.ratio];
-  const target = Math.round((input.seconds ?? input.sources.length * 5) * 30);
+  const hold = input.style ? Math.max(3, Math.min(6, input.style.cuts.maxPauseMs / 200 + 2)) : 5;
+  const target = Math.round((input.seconds ?? input.sources.length * hold) * 30);
   const per = Math.max(1, Math.floor(target / input.sources.length));
   const project: Project = {
     schemaVersion: 1,
@@ -104,6 +107,7 @@ export function buildVisualMontage(input: {
     meta: {
       createdBy: 'ai',
       title: 'ภาพสินค้า',
+      ...(input.style ? { styleId: input.style.id } : {}),
       ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
     },
   };
@@ -120,7 +124,7 @@ export function buildVisualMontage(input: {
     project.assets[assetId] = { ...source, hasAudio: false };
     project.elements[id] =
       source.kind === 'image'
-        ? picture(id, trackId, assetId, cursor, durationFrames)
+        ? picture(id, trackId, assetId, cursor, durationFrames, input.style ? input.style.zoom.drift : 0.08)
         : {
             type: 'video',
             id,

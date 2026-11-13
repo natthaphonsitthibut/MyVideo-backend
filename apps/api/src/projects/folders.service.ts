@@ -6,7 +6,6 @@ import {
   FolderEditUnavailableError,
   folderPlanOf,
   getStyleLock,
-  lockStyle,
   requestFolderEdit,
   stylePreview,
   unlockStyle,
@@ -258,12 +257,18 @@ export class FoldersService {
     id: string,
     styleId: string,
     saveLock = false,
+    styleIds?: string[],
   ): Promise<FolderPlanResponse> {
-    if (!STYLE_PACKS.some((p) => p.id === styleId))
+    if ([styleId, ...(styleIds ?? [])].some((id) => !STYLE_PACKS.some((p) => p.id === id)))
       throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
     await this.get(merchantId, id);
-    if (saveLock) await lockStyle(this.ds, merchantId, styleId);
-    const done = await chooseFolderStyle(this.ds, { merchantId, folderId: id, styleId });
+    const done = await chooseFolderStyle(this.ds, {
+      merchantId,
+      folderId: id,
+      styleId,
+      styleIds,
+      lockStyle: saveLock,
+    });
     if (!done) throw new ConflictException('ยังไม่ได้เริ่มตัดต่อโปรเจกต์นี้ กด "เริ่มตัดต่อ" ก่อน');
     return this.plan(merchantId, id);
   }

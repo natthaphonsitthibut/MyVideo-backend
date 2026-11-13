@@ -17,7 +17,7 @@ import {
 } from '../highlights/live-to-clips.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
-import { getStyleLock } from './style-lock.js';
+import { getStyleLock, lockStyle } from './style-lock.js';
 import { visualFootage } from './visual-montage.js';
 
 /**
@@ -32,6 +32,7 @@ export type FolderEditInput = {
   sourceIds?: string[];
   /** Chosen (or locked) style; null until the merchant picks. */
   styleId: string | null;
+  styleIds?: string[];
   frozenStyle?: FrozenStyle;
   /** Merchant-typed product name from the folder settings (never invented). */
   productName: string | null;
@@ -138,10 +139,16 @@ export async function folderPlanOf(
   const visuals = facts.sources.filter((s) => s.kind === 'photo' || !s.hasAudio);
   if (edit && visuals.length) {
     const jobs = (await db.query(
-      `SELECT status FROM jobs WHERE workflow_run_id=$1 AND merchant_id=$2 AND type='folder.montage' LIMIT 1`,
+      `SELECT status FROM jobs WHERE workflow_run_id=$1 AND merchant_id=$2 AND type='folder.montage'`,
       [edit.id, merchantId],
     )) as { status: string }[];
-    const status = jobs[0]?.status;
+    const status = jobs.some((j) => j.status === 'dead' || j.status === 'cancelled')
+      ? 'dead'
+      : jobs.length && jobs.every((j) => j.status === 'succeeded')
+        ? 'succeeded'
+        : jobs[0]?.status === 'succeeded'
+          ? 'pending'
+          : jobs[0]?.status;
     facts.visualBuild =
       status === 'succeeded'
         ? 'succeeded'
@@ -219,17 +226,30 @@ export async function requestFolderEdit(
 /** The merchant picked a style for the open folder edit: record it and advance (builds start). */
 export async function chooseFolderStyle(
   ds: DataSource,
-  input: { merchantId: string; folderId: string; styleId: string },
+  input: { merchantId: string; folderId: string; styleId: string; styleIds?: string[]; lockStyle?: boolean },
 ): Promise<{ runId: string } | null> {
   return ds.transaction(async (em) => {
+    await em.query('SELECT id FROM project_folders WHERE id=$1 AND merchant_id=$2 FOR UPDATE', [
+      input.folderId,
+      input.merchantId,
+    ]);
     const open = await latestFolderEdit(em, input.merchantId, input.folderId);
     if (!open || open.input.closedAt) return null;
-    const locked = await getStyleLock(em, input.merchantId);
+    if (open.input.styleId) return { runId: open.id };
+    const locked = input.lockStyle
+      ? await lockStyle(em, input.merchantId, input.styleId)
+      : await getStyleLock(em, input.merchantId);
     const frozenStyle = locked?.pack.id === input.styleId ? locked : null;
     await em.query(
-      `UPDATE workflow_runs SET input = jsonb_set(input, '{styleId}', to_jsonb($3::text)) || jsonb_build_object('frozenStyle',$4::jsonb), updated_at = now()
+      `UPDATE workflow_runs SET input = jsonb_set(input, '{styleId}', to_jsonb($3::text)) || jsonb_build_object('frozenStyle',$4::jsonb,'styleIds',$5::jsonb), updated_at = now()
         WHERE id = $1 AND merchant_id = $2`,
-      [open.id, input.merchantId, input.styleId, JSON.stringify(frozenStyle)],
+      [
+        open.id,
+        input.merchantId,
+        input.styleId,
+        JSON.stringify(frozenStyle),
+        JSON.stringify([...new Set([input.styleId, ...(input.styleIds ?? [])])]),
+      ],
     );
     await enqueueInTransaction(em, advanceStep(input.merchantId, open.id, `style:${input.styleId}`));
     return { runId: open.id };
@@ -296,19 +316,22 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       if (input.styleId && visualIds.length && sources.every((s) => s.ingest === 'ready'))
         await ds.transaction(async (em) => {
           const length = frame[0]?.settings?.length;
-          await enqueueInTransaction(em, {
-            merchantId,
-            workflowRunId: job.workflowRunId,
-            type: 'folder.montage',
-            queue: 'ai',
-            idempotencyKey: `${job.workflowRunId}:montage`,
-            payload: {
-              sourceIds: visualIds,
-              ratio,
-              ...(length && length !== 'auto' ? { seconds: Number(length) } : {}),
-            },
-            timeoutMs: 60000,
-          });
+          for (const styleId of input.styleIds ?? [input.styleId])
+            await enqueueInTransaction(em, {
+              merchantId,
+              workflowRunId: job.workflowRunId,
+              type: 'folder.montage',
+              queue: 'ai',
+              idempotencyKey: `${job.workflowRunId}:montage:${styleId}`,
+              payload: {
+                sourceIds: visualIds,
+                styleId,
+                ...(input.frozenStyle?.pack.id === styleId ? { frozenStyle: input.frozenStyle } : {}),
+                ratio,
+                ...(length && length !== 'auto' ? { seconds: Number(length) } : {}),
+              },
+              timeoutMs: 60000,
+            });
         });
       for (const s of sources) {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;
@@ -328,6 +351,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
               merchantId,
               sourceId: s.id,
               styleId: input.styleId,
+              styleIds: input.styleIds,
               ratio,
               photos,
               ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),

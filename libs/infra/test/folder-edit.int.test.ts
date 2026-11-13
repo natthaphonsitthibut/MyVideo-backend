@@ -163,7 +163,14 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(plan.steps[3]?.state).toBe('waiting');
 
     // merchant picks a style → edit starts only where there is something to edit
-    expect(await chooseFolderStyle(ds, { merchantId: m, folderId: folder, styleId: 'sale-fast' })).toEqual({
+    expect(
+      await chooseFolderStyle(ds, {
+        merchantId: m,
+        folderId: folder,
+        styleId: 'sale-fast',
+        styleIds: ['sale-fast', 'premium'],
+      }),
+    ).toEqual({
       runId,
     });
     await runAdvance(runId);
@@ -173,6 +180,13 @@ describe('folder edit orchestration (real Postgres)', () => {
       input: { ratio?: string };
     }[];
     expect(b?.input.ratio).toBe('16:9');
+    const [selection] = await ds.query('SELECT input FROM workflow_runs WHERE id=$1', [build]);
+    expect(selection.input.styleIds).toEqual(['sale-fast', 'premium']);
+    const variants = await ds.query(
+      'SELECT rank FROM clip_suggestions WHERE workflow_run_id=$1 ORDER BY rank',
+      [analysis],
+    );
+    expect(variants).toHaveLength(2);
     const jobs = (await ds.query(
       `SELECT payload FROM jobs WHERE workflow_run_id = $1 AND type = 'clips.build'`,
       [build],
@@ -193,7 +207,7 @@ describe('folder edit orchestration (real Postgres)', () => {
       `SELECT id FROM jobs WHERE workflow_run_id=$1 AND type='folder.montage'`,
       [runId],
     )) as { id: string }[];
-    expect(montageJobs).toHaveLength(1);
+    expect(montageJobs).toHaveLength(2);
     for (const j of montageJobs) {
       await ds.query(`UPDATE jobs SET status='queued' WHERE id=$1`, [j.id]);
       expect(await runner().run(j.id)).toBe('succeeded');

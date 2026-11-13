@@ -72,6 +72,7 @@ export const FolderPlanResponse = named(
     /** The newest folder edit (null = never started). */
     runId: z.uuid().nullable(),
     styleId: z.string().nullable(),
+    styleIds: z.array(z.string()).optional(),
     lockedStyle: z.object({ styleId: z.string(), name: z.string() }).nullable(),
     steps: z.array(FolderPlanStep),
     done: z.number().int(),
@@ -118,7 +119,13 @@ export const StartFolderEditBody = named(
 );
 export const ChooseFolderStyleBody = named(
   'ChooseFolderStyleBody',
-  z.object({ styleId: z.string().min(1).max(64), lockStyle: z.boolean().optional() }),
+  z
+    .object({
+      styleId: z.string().min(1).max(64),
+      styleIds: z.array(z.string().min(1).max(64)).min(1).max(3).optional(),
+      lockStyle: z.boolean().optional(),
+    })
+    .refine((b) => !b.styleIds || b.styleIds.includes(b.styleId), 'The primary style must be selected'),
 );
 const missing = { description: 'No such folder or source for this merchant', schema: ApiErrorBody };
 export const folderRoutes = [

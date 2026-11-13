@@ -1,4 +1,4 @@
-import { validateProject } from '@myvideo/contracts';
+import { stylePack, validateProject } from '@myvideo/contracts';
 import { describe, expect, it } from 'vitest';
 import { addPhotoCutaways, buildVisualMontage } from './photo-project.js';
 
@@ -16,6 +16,15 @@ const base = {
   ratio: '9:16' as const,
 };
 describe('selected photos as editable footage (project JSON only)', () => {
+  it('selected photo styles change hold duration and drift rather than creating identical copies', () => {
+    const calm = buildVisualMontage({ ...base, sources: photos, style: stylePack('premium') });
+    const fast = buildVisualMontage({ ...base, sources: photos, style: stylePack('sale-fast') });
+    expect(calm.durationFrames).toBeGreaterThan(fast.durationFrames);
+    expect(Object.values(calm.elements)[0]?.keyframes).not.toEqual(
+      Object.values(fast.elements)[0]?.keyframes,
+    );
+    expect(fast.meta.styleId).toBe('sale-fast');
+  });
   it('builds a deterministic montage with four photos and a silent video without stretching', () => {
     const input = {
       ...base,

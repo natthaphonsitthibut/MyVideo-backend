@@ -15,7 +15,11 @@ export async function getStyleLock(
   ])) as { snapshot: unknown }[];
   return row ? FrozenStyle.parse(row.snapshot) : null;
 }
-export async function lockStyle(ds: DataSource, merchantId: string, styleId: string): Promise<FrozenStyle> {
+export async function lockStyle(
+  ds: DataSource | EntityManager,
+  merchantId: string,
+  styleId: string,
+): Promise<FrozenStyle> {
   return ds.transaction(async (em) => {
     await em.query(`SELECT id FROM merchants WHERE id=$1 FOR UPDATE`, [merchantId]);
     const existing = await getStyleLock(em, merchantId);

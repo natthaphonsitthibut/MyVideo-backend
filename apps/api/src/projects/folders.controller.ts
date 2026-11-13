@@ -62,9 +62,13 @@ export class FoldersController {
   chooseStyle(
     @CurrentMerchant() m: string,
     @Param(new ZodPipe(FolderParams)) p: { id: string },
-    @Body(new ZodPipe(ChooseFolderStyleBody)) b: { styleId: string; lockStyle?: boolean },
+    @Body(new ZodPipe(ChooseFolderStyleBody)) b: {
+      styleId: string;
+      styleIds?: string[];
+      lockStyle?: boolean;
+    },
   ) {
-    return this.folders.chooseStyle(m, p.id, b.styleId, b.lockStyle);
+    return this.folders.chooseStyle(m, p.id, b.styleId, b.lockStyle, b.styleIds);
   }
   @Post(':id/sources')
   @HttpCode(200)

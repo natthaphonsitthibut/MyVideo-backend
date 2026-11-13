@@ -1,3 +1,4 @@
+import { type FrozenStyle, stylePack } from '@myvideo/contracts';
 import type { DataSource } from 'typeorm';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { type OutputRatio, seededIds } from '../highlights/clip-project.js';
@@ -36,7 +37,8 @@ export function visualMontageHandler({ ds }: { ds: DataSource }): JobHandler {
     queue: 'ai',
     async run({ job, signal }) {
       const ids = job.payload.sourceIds as string[];
-      const projectId = seededIds(`${job.workflowRunId}:montage`)();
+      const styleId = typeof job.payload.styleId === 'string' ? job.payload.styleId : undefined;
+      const projectId = seededIds(`${job.workflowRunId}:montage:${styleId ?? 'plain'}`)();
       if (await ds.getRepository(ProjectEntity).existsBy({ id: projectId, merchantId: job.merchantId }))
         return { projectId, reused: true };
       const sources = await visualFootage(ds, job.merchantId, ids);
@@ -48,6 +50,9 @@ export function visualMontageHandler({ ds }: { ds: DataSource }): JobHandler {
         workflowRunId: job.workflowRunId,
         ratio: job.payload.ratio as OutputRatio,
         sources,
+        ...(styleId
+          ? { style: (job.payload.frozenStyle as FrozenStyle | undefined)?.pack ?? stylePack(styleId) }
+          : {}),
         ...(typeof job.payload.seconds === 'number' ? { seconds: job.payload.seconds } : {}),
       });
       signal.throwIfAborted();

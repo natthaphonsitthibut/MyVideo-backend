@@ -147,6 +147,7 @@ export async function requestBuildClips(
     merchantId: string;
     sourceId: string;
     styleId: string;
+    styleIds?: string[];
     /** Output frame of the edited clips (default 9:16). */
     ratio?: OutputRatio;
     photos?: ClipBuildInput['photos'];
@@ -154,7 +155,11 @@ export async function requestBuildClips(
     maxUnfinishedRuns?: number;
   },
 ): Promise<{ runId: string; created: boolean }> {
-  if (!STYLE_PACKS.some((p) => p.id === input.styleId))
+  const styles = [...new Set([input.styleId, ...(input.styleIds ?? [])])];
+  if (
+    styles.length > 3 ||
+    styles.some((id) => !STYLE_PACKS.some((p) => p.id === id) && input.frozenStyle?.pack.id !== id)
+  )
     throw new BuildClipsUnavailableError('unknown_style', 'unknown style');
   return ds.transaction(async (em) => {
     const src: unknown[] = await em.query(
@@ -191,9 +196,31 @@ export async function requestBuildClips(
       kind: 'build_clips',
       subjectType: 'source',
       subjectId: input.sourceId,
-      input: { planRunId: plan.id, styleId: input.styleId, ...(input.ratio ? { ratio: input.ratio } : {}) },
+      input: {
+        planRunId: plan.id,
+        styleId: input.styleId,
+        styleIds: styles,
+        ...(input.ratio ? { ratio: input.ratio } : {}),
+      },
     });
     for (const s of planned) {
+      const variants: { styleId: string; rank: number }[] = [];
+      for (const [i, styleId] of styles.slice(1).entries()) {
+        const rank = Math.max(...planned.map((s) => s.rank)) * (i + 1) + s.rank;
+        const {
+          id: _id,
+          createdAt: _created,
+          updatedAt: _updated,
+          merchant: _merchant,
+          source: _source,
+          workflowRun: _run,
+          project: _project,
+          buildInput: _buildInput,
+          ...copy
+        } = s;
+        await em.getRepository(ClipSuggestionEntity).insert({ ...copy, rank });
+        variants.push({ styleId, rank });
+      }
       await enqueueInTransaction(em, {
         merchantId: input.merchantId,
         workflowRunId: run.id,
@@ -207,6 +234,7 @@ export async function requestBuildClips(
           product: plan.input?.product ?? {},
           speech: speech[String(s.rank)] ?? [],
           styleId: input.styleId,
+          ...(variants.length ? { variants } : {}),
           ...(input.photos?.length ? { photos: input.photos } : {}),
           ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
           ...(input.ratio ? { ratio: input.ratio } : {}),
@@ -648,6 +676,53 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         merchantId: job.merchantId,
       });
       if (s.status === 'ready' || s.status === 'discarded') return { suggestionId: s.id, reused: true };
+      // A second style reuses the completed first draft's words/hooks; editing never calls AI again.
+      if (typeof job.payload.baseRank === 'number') {
+        const base = await repo.findOneByOrFail({
+          workflowRunId: planRunId,
+          rank: job.payload.baseRank,
+          merchantId: job.merchantId,
+        });
+        if (!base.buildInput) throw new FatalJobError('ยังไม่มีข้อมูลคลิปต้นแบบสำหรับสไตล์นี้');
+        const project = await layoutClip(openLayout, {
+          projectId: clipProjectId(planRunId, rank),
+          merchantId: job.merchantId,
+          workflowRunId: planRunId,
+          rank,
+          source: sourceInfo(source.id, probe),
+          input: base.buildInput,
+          styleId: String(job.payload.styleId),
+        });
+        await ds.transaction(async (em) => {
+          if (
+            !(await em.getRepository(ProjectEntity).existsBy({ id: project.id, merchantId: job.merchantId }))
+          ) {
+            await em
+              .getRepository(ProjectEntity)
+              .insert({ id: project.id, merchantId: job.merchantId, title: base.title, currentVersion: 1 });
+            await em.getRepository(ProjectVersionEntity).insert({
+              merchantId: job.merchantId,
+              projectId: project.id,
+              version: 1,
+              doc: project as never,
+              reason: 'create',
+              restoredFrom: null,
+            });
+          }
+          await em.getRepository(ClipSuggestionEntity).update(
+            { id: s.id, merchantId: job.merchantId, status: 'planned' },
+            {
+              status: 'ready',
+              projectId: project.id,
+              hook: base.hook,
+              title: base.title,
+              buildInput: base.buildInput,
+              error: null,
+            },
+          );
+        });
+        return { suggestionId: s.id, projectId: project.id, reusedAnalysis: true };
+      }
       const product = (job.payload.product ?? {}) as ProductInfo;
 
       const { segments, aiFixed } = await loadCorrectedTranscript(ds, job.merchantId, source.id);
@@ -747,6 +822,23 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         );
       });
       return { suggestionId: s.id, projectId, hookFallback };
+    },
+    next(job) {
+      const variants = (job.payload.variants ?? []) as { rank: number; styleId: string }[];
+      return variants.map((v) => ({
+        type: 'clips.build',
+        queue: 'ai' as const,
+        key: `variant:${v.rank}`,
+        maxAttempts: 3,
+        timeoutMs: 10 * 60_000,
+        payload: {
+          sourceId: job.payload.sourceId,
+          planRunId: job.payload.planRunId ?? job.workflowRunId,
+          baseRank: job.payload.rank,
+          rank: v.rank,
+          styleId: v.styleId,
+        },
+      }));
     },
     async onDead(em, job, error) {
       await em.query(
