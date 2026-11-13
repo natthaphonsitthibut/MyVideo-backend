@@ -2,6 +2,7 @@ import { uuidv7 } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { freshTestDb } from '../../../test/test-db.js';
+import { requestTranscription } from '../src/ai/transcribe-handlers.js';
 import { seedMerchant } from '../src/db/seed.js';
 import {
   chooseFolderStyle,
@@ -114,17 +115,19 @@ describe('folder edit orchestration (real Postgres)', () => {
     await ds.destroy();
   });
 
-  it('runs transcribe → analyse → (style) → edit by waking on child runs, then closes', async () => {
+  it('runs explicitly requested transcription → analyse → (style) → edit by waking on child runs, then closes', async () => {
     const live = await source({ audio: true, transcript: true });
     const raw = await source({ audio: true });
     await source({ audio: false, still: true }); // a photo: prepared, never transcribed
+    // The merchant explicitly chose whole-source transcription before submitting this source to the edit.
+    await requestTranscription(ds, { merchantId: m, sourceId: raw });
 
     expect((await folderPlanOf(ds, m, folder)).plan.steps[1]?.state).toBe('pending');
     const { runId, created } = await requestFolderEdit(ds, { merchantId: m, folderId: folder });
     expect(created).toBe(true);
     expect((await requestFolderEdit(ds, { merchantId: m, folderId: folder })).runId).toBe(runId); // joins
 
-    // 1st advance: the transcribed video goes to analysis (with the merchant's product name), the other to ASR
+    // 1st advance starts analysis; the raw video's separately requested ASR is already running.
     expect(await runAdvance(runId)).toBe(1);
     const analysis = await childRun('live_to_clips', live);
     const [a] = (await ds.query('SELECT input FROM workflow_runs WHERE id = $1', [analysis])) as {
@@ -233,6 +236,7 @@ describe('folder edit orchestration (real Postgres)', () => {
     folder = f2;
     const s = await source({ audio: true });
     folder = prev;
+    await requestTranscription(ds, { merchantId: m, sourceId: s });
     const { runId } = await requestFolderEdit(ds, { merchantId: m, folderId: f2 });
     await runAdvance(runId);
     await finishRun(await childRun('transcribe', s), 'dead');
@@ -243,7 +247,7 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(plan.steps[2]?.state).toBe('pending');
   });
 
-  it('snapshots only selected folder footage and ignores later uploads when advancing', async () => {
+  it('snapshots selected footage and waits for explicit transcription without starting ASR for any upload', async () => {
     const prev = folder;
     folder = uuidv7();
     await ds.query(`INSERT INTO project_folders (id, merchant_id, title) VALUES ($1, $2, 'เลือก')`, [
@@ -260,7 +264,14 @@ describe('folder edit orchestration (real Postgres)', () => {
       `SELECT subject_id FROM workflow_runs WHERE kind = 'transcribe' AND subject_id = ANY($1::uuid[])`,
       [[selected, excluded]],
     );
-    expect(children).toEqual([{ subject_id: selected }]);
+    expect(children).toEqual([]);
+    expect((await folderPlanOf(ds, m, folder)).plan.needs).toBe('transcript');
+    await requestTranscription(ds, { merchantId: m, sourceId: selected });
+    const chosen = await ds.query(
+      `SELECT subject_id FROM workflow_runs WHERE kind='transcribe' AND subject_id=ANY($1::uuid[])`,
+      [[selected, excluded]],
+    );
+    expect(chosen).toEqual([{ subject_id: selected }]);
     folder = prev;
   });
 

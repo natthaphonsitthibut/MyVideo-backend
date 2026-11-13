@@ -20,6 +20,11 @@ const facts = (sources: FolderSourceFacts[], over: Partial<FolderFacts> = {}): F
 const states = (f: FolderFacts) => folderPlan(f).steps.map((s) => `${s.id}:${s.state}`);
 
 describe('folderPlan (ordered steps of a project edit, from real run states)', () => {
+  it('waits for an explicit transcription choice rather than implying speech work started', () => {
+    const p = folderPlan(facts([video()]));
+    expect(p.needs).toBe('transcript');
+    expect(p.steps[1]).toMatchObject({ state: 'waiting' });
+  });
   it('lists the steps in order; before start only the footage step reflects real upload state', () => {
     const p = folderPlan(facts([video({ ingest: 'processing' })], { started: false }));
     expect(p.steps.map((s) => s.id)).toEqual(['prepare', 'transcribe', 'analyse', 'style', 'edit']);

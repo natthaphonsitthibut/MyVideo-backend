@@ -47,12 +47,12 @@ export type FolderPlan = {
   finished: boolean;
   failed: boolean;
   /** What the merchant must do for the plan to continue. */
-  needs: 'style' | null;
+  needs: 'transcript' | 'style' | null;
 };
 
 const LABELS: Record<PlanStepId, string> = {
   prepare: 'ดูฟุตเทจ',
-  transcribe: 'ถอดเสียงทุกคำ',
+  transcribe: 'เตรียมคำถอดเสียงจากคลิปที่เลือก',
   analyse: 'หาช่วงที่ดีที่สุด + เสนอสไตล์',
   style: 'เลือกสไตล์',
   edit: 'ตัดเทคที่ดีที่สุด + ซับ + กราฟิก + เสียง',
@@ -120,6 +120,10 @@ export function folderPlan(f: FolderFacts): FolderPlan {
         'วิดีโอ',
         'ถอดเสียงไม่สำเร็จ',
       );
+      if (speech.some((s) => s.transcript === 'none') && out.transcribe.state !== 'failed') {
+        out.transcribe.state = 'waiting';
+        out.transcribe.detail = 'เลือกถอดทั้งคลิป หรือสร้างคลิปใหม่จากช่วงที่ต้องการก่อน';
+      }
       out.analyse = aggregate(
         speech.map((s) => ({ s: run(s.analysis) })),
         'วิดีโอ',
@@ -161,6 +165,10 @@ export function folderPlan(f: FolderFacts): FolderPlan {
     total: steps.length,
     finished: steps.every((s) => s.state === 'done' || s.state === 'skipped'),
     failed: steps.some((s) => s.state === 'failed'),
-    needs: steps.some((s) => s.id === 'style' && s.state === 'waiting') ? 'style' : null,
+    needs: steps.some((s) => s.id === 'transcribe' && s.state === 'waiting')
+      ? 'transcript'
+      : steps.some((s) => s.id === 'style' && s.state === 'waiting')
+        ? 'style'
+        : null,
   };
 }

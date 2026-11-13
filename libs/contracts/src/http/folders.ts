@@ -81,7 +81,8 @@ export const FolderPlanResponse = named(
     finished: z.boolean(),
     failed: z.boolean(),
     /** What the merchant must do for the plan to continue. */
-    needs: z.enum(['style']).nullable(),
+    needs: z.enum(['transcript', 'style']).nullable(),
+    transcriptionNeeded: z.array(z.uuid()).optional(),
     /** Styles ranked for this footage (best first, Thai reason); empty until the analysis is in. */
     proposals: z.array(
       z.object({

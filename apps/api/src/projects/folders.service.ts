@@ -231,6 +231,9 @@ export class FoldersService {
       ...plan,
       steps,
       proposals: proposals.slice(0, 3),
+      transcriptionNeeded: facts.sources
+        .filter((s) => s.kind === 'video' && s.hasAudio && s.transcript !== 'ready')
+        .map((s) => s.id),
       lockedStyle: locked ? { styleId: locked.pack.id, name: locked.pack.name } : null,
     };
   }

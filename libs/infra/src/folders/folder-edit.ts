@@ -8,7 +8,6 @@ import {
   resolveOutputRatio,
 } from '@myvideo/domain';
 import type { DataSource, EntityManager } from 'typeorm';
-import { requestTranscription, TranscriptionUnavailableError } from '../ai/transcribe-handlers.js';
 import {
   BuildClipsUnavailableError,
   LiveToClipsUnavailableError,
@@ -24,7 +23,7 @@ import { visualFootage } from './visual-montage.js';
 /**
  * Project folder edit (E12-F05): ONE run per "start" press. It owns no media work itself — its `folder.advance`
  * step looks at the real state of every footage item and starts the next existing workflow that is due
- * (transcribe → live-to-clips analysis → [merchant picks a style] → build clips). It runs again whenever one of
+ * (explicitly prepared transcript → live-to-clips analysis → [merchant picks a style] → build clips). It runs again whenever one of
  * those child runs finishes (hook in `refreshRunStatus`) or the merchant picks a style, so nothing polls.
  */
 export type FolderEditInput = {
@@ -352,10 +351,8 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       for (const s of sources) {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;
         try {
-          if (s.transcript === 'none') {
-            await requestTranscription(ds, { merchantId, sourceId: s.id });
-            started.push(`transcribe:${s.id}`);
-          } else if (s.transcript === 'ready' && s.analysis === 'none') {
+          // Starting an edit never authorizes whole-source ASR. The merchant chooses full/ranges separately.
+          if (s.transcript === 'ready' && s.analysis === 'none') {
             await requestLiveToClips(ds, {
               merchantId,
               sourceId: s.id,
@@ -377,11 +374,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
           }
         } catch (err) {
           // a source that cannot go further (no audio, nothing to edit) shows in the plan; others continue
-          if (
-            !(err instanceof TranscriptionUnavailableError) &&
-            !(err instanceof LiveToClipsUnavailableError) &&
-            !(err instanceof BuildClipsUnavailableError)
-          )
+          if (!(err instanceof LiveToClipsUnavailableError) && !(err instanceof BuildClipsUnavailableError))
             throw err;
           started.push(`unavailable:${s.id}:${err.reason}`);
         }
