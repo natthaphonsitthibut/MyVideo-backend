@@ -93,7 +93,10 @@ export const FolderPlanResponse = named(
 export type FolderPlanResponse = z.infer<typeof FolderPlanResponse>;
 export const StartFolderEditBody = named(
   'StartFolderEditBody',
-  z.object({ styleId: z.string().min(1).max(64).optional() }),
+  z.object({
+    styleId: z.string().min(1).max(64).optional(),
+    sourceIds: z.array(z.uuid()).min(1).max(100).optional(),
+  }),
 );
 export const ChooseFolderStyleBody = named(
   'ChooseFolderStyleBody',

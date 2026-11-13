@@ -189,19 +189,27 @@ export class FoldersService {
     return { runId, styleId, ...plan, steps, proposals: proposals.slice(0, 3) };
   }
 
-  async startEdit(merchantId: string, id: string, styleId?: string): Promise<FolderPlanResponse> {
+  async startEdit(
+    merchantId: string,
+    id: string,
+    styleId?: string,
+    sourceIds?: string[],
+  ): Promise<FolderPlanResponse> {
     if (styleId && !STYLE_PACKS.some((p) => p.id === styleId))
       throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
     try {
       await requestFolderEdit(this.ds, {
         merchantId,
         folderId: id,
+        sourceIds,
         styleId: styleId ?? null,
         maxUnfinishedRuns: this.env.MERCHANT_MAX_ACTIVE_RUNS,
       });
     } catch (err) {
       if (err instanceof FolderEditUnavailableError) {
         if (err.reason === 'not_found') throw new NotFoundException('Project folder not found');
+        if (err.reason === 'invalid_selection')
+          throw new BadRequestException('เลือกฟุตเทจในโปรเจกต์นี้อย่างน้อย 1 ไฟล์');
         throw new ConflictException('ยังไม่มีฟุตเทจในโปรเจกต์นี้ อัปโหลดวิดีโอหรือรูปก่อน');
       }
       throw err;

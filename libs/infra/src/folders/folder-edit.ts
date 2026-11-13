@@ -25,6 +25,8 @@ import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from 
  */
 export type FolderEditInput = {
   folderId: string;
+  /** Immutable footage selection for this edit; absent only on legacy runs. */
+  sourceIds?: string[];
   /** Chosen (or locked) style; null until the merchant picks. */
   styleId: string | null;
   /** Merchant-typed product name from the folder settings (never invented). */
@@ -35,7 +37,7 @@ export type FolderEditInput = {
 
 export class FolderEditUnavailableError extends Error {
   constructor(
-    readonly reason: 'not_found' | 'empty',
+    readonly reason: 'not_found' | 'empty' | 'invalid_selection',
     message: string,
   ) {
     super(message);
@@ -53,6 +55,7 @@ export async function folderSourceFacts(
   db: Db,
   merchantId: string,
   folderId: string,
+  sourceIds?: readonly string[],
 ): Promise<FolderSourceFacts[]> {
   const rows: {
     id: string;
@@ -78,9 +81,9 @@ export async function folderSourceFacts(
       JOIN video_sources s ON s.id = fs.source_id AND s.merchant_id = $1
       LEFT JOIN LATERAL (SELECT r.id, r.status FROM workflow_runs r WHERE r.merchant_id = $1 AND r.kind = 'live_to_clips'
           AND r.subject_type = 'source' AND r.subject_id = s.id ORDER BY r.created_at DESC LIMIT 1) a ON true
-      WHERE fs.folder_id = $2 AND fs.merchant_id = $1
+      WHERE fs.folder_id = $2 AND fs.merchant_id = $1 AND ($3::uuid[] IS NULL OR s.id = ANY($3::uuid[]))
       ORDER BY fs.created_at, fs.id`,
-    [merchantId, folderId],
+    [merchantId, folderId, sourceIds ?? null],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -126,7 +129,7 @@ export async function folderPlanOf(
   const facts: FolderFacts = {
     started: !!edit,
     styleId: edit?.input.styleId ?? null,
-    sources: await folderSourceFacts(db, merchantId, folderId),
+    sources: await folderSourceFacts(db, merchantId, folderId, edit?.input.sourceIds),
   };
   return { runId: edit?.id ?? null, styleId: facts.styleId, plan: folderPlan(facts), facts };
 }
@@ -145,7 +148,13 @@ const advanceStep = (merchantId: string, runId: string, key: string) => ({
 /** "Start" on a folder: a new folder edit (an unfinished one is reused). */
 export async function requestFolderEdit(
   ds: DataSource,
-  input: { merchantId: string; folderId: string; styleId?: string | null; maxUnfinishedRuns?: number },
+  input: {
+    merchantId: string;
+    folderId: string;
+    sourceIds?: string[];
+    styleId?: string | null;
+    maxUnfinishedRuns?: number;
+  },
 ): Promise<{ runId: string; created: boolean }> {
   return ds.transaction(async (em) => {
     const folders: { settings: { productName?: string | null } }[] = await em.query(
@@ -154,16 +163,21 @@ export async function requestFolderEdit(
     );
     const folder = folders[0];
     if (!folder) throw new FolderEditUnavailableError('not_found', 'folder not found');
-    const n: { n: number }[] = await em.query(
-      'SELECT count(*)::int AS n FROM project_folder_sources WHERE folder_id = $1 AND merchant_id = $2',
+    const members: { source_id: string }[] = await em.query(
+      'SELECT source_id FROM project_folder_sources WHERE folder_id = $1 AND merchant_id = $2 ORDER BY created_at, id FOR KEY SHARE',
       [input.folderId, input.merchantId],
     );
-    if (!n[0]?.n) throw new FolderEditUnavailableError('empty', 'folder has no footage');
+    const memberIds = new Set(members.map((s) => s.source_id));
+    const sourceIds = input.sourceIds === undefined ? [...memberIds] : [...new Set(input.sourceIds)];
+    if (input.sourceIds !== undefined && (!sourceIds.length || sourceIds.some((id) => !memberIds.has(id))))
+      throw new FolderEditUnavailableError('invalid_selection', 'select footage belonging to this folder');
+    if (!sourceIds.length) throw new FolderEditUnavailableError('empty', 'folder has no footage');
     const open = await latestFolderEdit(em, input.merchantId, input.folderId);
     if (open && !open.input.closedAt) return { runId: open.id, created: false };
     if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
     const runInput: FolderEditInput = {
       folderId: input.folderId,
+      sourceIds,
       styleId: input.styleId ?? null,
       productName: folder.settings?.productName ?? null,
     };
@@ -208,7 +222,8 @@ export async function wakeFolderEdits(em: EntityManager, childRunId: string): Pr
        JOIN project_folder_sources fs ON fs.source_id = c.subject_id AND fs.merchant_id = c.merchant_id
        JOIN workflow_runs fe ON fe.kind = 'folder_edit' AND fe.merchant_id = c.merchant_id
          AND fe.input->>'folderId' = fs.folder_id::text AND fe.input->>'closedAt' IS NULL
-      WHERE c.id = $1 AND c.kind <> 'folder_edit' AND c.subject_type = 'source'`,
+      WHERE c.id = $1 AND c.kind <> 'folder_edit' AND c.subject_type = 'source'
+        AND (NOT (fe.input ? 'sourceIds') OR fe.input->'sourceIds' ? c.subject_id::text)`,
     [childRunId],
   );
   for (const r of rows)
@@ -230,16 +245,17 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       if (input.closedAt) return { closed: true };
       const merchantId = job.merchantId;
       const started: string[] = [];
-      const sources = await folderSourceFacts(ds, merchantId, input.folderId);
+      const sources = await folderSourceFacts(ds, merchantId, input.folderId, input.sourceIds);
       // the frame the clips are edited for: the folder's setting now ("auto" = most of the footage's shape)
       const frame: { settings: { ratio?: string } | null; sizes: { width: number; height: number }[] }[] =
         await ds.query(
           `SELECT f.settings,
              ARRAY(SELECT json_build_object('width', (s.probe->'video'->>'width')::int, 'height', (s.probe->'video'->>'height')::int)
                FROM project_folder_sources fs JOIN video_sources s ON s.id = fs.source_id AND s.merchant_id = fs.merchant_id
-              WHERE fs.folder_id = f.id AND fs.merchant_id = $1 AND s.probe IS NOT NULL) AS sizes
+              WHERE fs.folder_id = f.id AND fs.merchant_id = $1 AND s.probe IS NOT NULL
+                AND ($3::uuid[] IS NULL OR s.id = ANY($3::uuid[]))) AS sizes
            FROM project_folders f WHERE f.id = $2 AND f.merchant_id = $1`,
-          [merchantId, input.folderId],
+          [merchantId, input.folderId, input.sourceIds ?? null],
         );
       const ratio = resolveOutputRatio(frame[0]?.settings?.ratio, frame[0]?.sizes ?? []);
       for (const s of sources) {

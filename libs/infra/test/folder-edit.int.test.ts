@@ -206,4 +206,38 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(plan.steps[1]).toMatchObject({ state: 'failed', error: 'ถอดเสียงไม่สำเร็จ 1 วิดีโอ' });
     expect(plan.steps[2]?.state).toBe('pending');
   });
+
+  it('snapshots only selected folder footage and ignores later uploads when advancing', async () => {
+    const prev = folder;
+    folder = uuidv7();
+    await ds.query(`INSERT INTO project_folders (id, merchant_id, title) VALUES ($1, $2, 'เลือก')`, [
+      folder,
+      m,
+    ]);
+    const selected = await source({ audio: true });
+    const excluded = await source({ audio: true });
+    const { runId } = await requestFolderEdit(ds, { merchantId: m, folderId: folder, sourceIds: [selected] });
+    await source({ audio: true });
+    expect((await folderPlanOf(ds, m, folder)).facts.sources.map((s) => s.id)).toEqual([selected]);
+    await runAdvance(runId);
+    const children = await ds.query(
+      `SELECT subject_id FROM workflow_runs WHERE kind = 'transcribe' AND subject_id = ANY($1::uuid[])`,
+      [[selected, excluded]],
+    );
+    expect(children).toEqual([{ subject_id: selected }]);
+    folder = prev;
+  });
+
+  it('rejects empty, missing and non-member selections without creating a run', async () => {
+    const f = uuidv7();
+    await ds.query(`INSERT INTO project_folders (id, merchant_id, title) VALUES ($1, $2, 'เลือก')`, [f, m]);
+    const outside = await source({ audio: true });
+    for (const sourceIds of [[], [uuidv7()], [outside]])
+      await expect(requestFolderEdit(ds, { merchantId: m, folderId: f, sourceIds })).rejects.toMatchObject({
+        reason: 'invalid_selection',
+      });
+    expect(
+      await ds.query(`SELECT id FROM workflow_runs WHERE kind = 'folder_edit' AND subject_id = $1`, [f]),
+    ).toEqual([]);
+  });
 });

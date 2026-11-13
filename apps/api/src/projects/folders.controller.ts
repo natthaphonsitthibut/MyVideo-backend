@@ -48,9 +48,9 @@ export class FoldersController {
   startEdit(
     @CurrentMerchant() m: string,
     @Param(new ZodPipe(FolderParams)) p: { id: string },
-    @Body(new ZodPipe(StartFolderEditBody)) b: { styleId?: string },
+    @Body(new ZodPipe(StartFolderEditBody)) b: { styleId?: string; sourceIds?: string[] },
   ) {
-    return this.folders.startEdit(m, p.id, b.styleId);
+    return this.folders.startEdit(m, p.id, b.styleId, b.sourceIds);
   }
   @Post(':id/style')
   @HttpCode(200)
