@@ -25,6 +25,19 @@ const fileExists = (path: string) =>
 export const tileHeightFor = (width: number, height: number) =>
   Math.max(2, Math.round((SPRITE_TILE_WIDTH * height) / width / 2) * 2);
 
+/** Frame timestamps are half-open: an exact last second has no frame at the next integer second.
+ * Container duration can include a slightly longer audio tail. Keep that duration in the UI index, but do
+ * not schedule a thumbnail seek using it. Integer rational arithmetic also avoids a floating-point extra tile.
+ */
+export function spriteCount(
+  probe: Pick<ProbeInfo, 'durationMs' | 'still'> & {
+    video: Pick<ProbeInfo['video'], 'durationFrames' | 'fps'>;
+  },
+): number {
+  if (probe.still) return Math.max(1, Math.ceil(probe.durationMs / 1000));
+  return Math.max(1, Math.ceil((probe.video.durationFrames * probe.video.fps.den) / probe.video.fps.num));
+}
+
 /**
  * ffmpeg arguments for sheet `n`: tile i = the frame AT second (n·100 + i) (`round=up`, verified by SSIM). A photo
  * (`stillSeconds`) is looped for its still length — read once it is a single 0.04 s frame and yields no tile.
@@ -74,7 +87,7 @@ export function spritesHandler({ ds, storage }: { ds: DataSource; storage: Stora
         .getRepository(MediaAssetEntity)
         .findOneBy({ sourceId: source.id, kind: 'sprites', recipeVersion: SPRITES_RECIPE });
       if (!existing) {
-        const count = Math.max(1, Math.ceil(probe.durationMs / 1000));
+        const count = spriteCount(probe);
         const perSheet = SPRITE_COLS * SPRITE_ROWS;
         const sheets = Math.ceil(count / perSheet);
         const index: SpriteIndex = {
