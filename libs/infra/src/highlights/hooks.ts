@@ -8,7 +8,7 @@ import { zodStructuredSchema } from '../llm/schema.js';
  * cite transcript quotes, and a validator rejects any number or risky claim (discount, medical, guarantee,
  * superlative) that is not in the cited quotes or the product info. AI-written text is marked `origin: 'ai'`.
  */
-export const HOOKS_PROMPT_VERSION = 'hooks-v3';
+export const HOOKS_PROMPT_VERSION = 'hooks-v4';
 
 export type ProductInfo = { name?: string; price?: string; facts?: string[] };
 export type HookKind = 'hook' | 'title';
@@ -51,6 +51,15 @@ export const RISKY_TERMS = [
 ];
 
 const numbersIn = (s: string) => (s.replace(/,/g, '').match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+const quantityFacts = (s: string) =>
+  [
+    ...s.matchAll(
+      /(\d[\d,]*(?:\.\d+)?)\s*(บาท|เปอร์เซ็นต์|%|นิ้ว|เซนติเมตร|ซม\.?|กิโลกรัม|กก\.?|กรัม|kg|g|ml|มล\.?|ชิ้น|คู่|ตัว|คน|ครั้ง|วัน|เดือน|ปี)/giu,
+    ),
+  ].map(
+    (m) =>
+      `${Number((m[1] ?? '').replaceAll(',', ''))}:${(m[2] ?? '').toLowerCase().replaceAll('.', '').replace('เปอร์เซ็นต์', '%')}`,
+  );
 
 /** Every number and risky term in `text` must appear in the cited quotes or the product info. */
 export function untracedClaims(text: string, quotes: readonly string[], product: ProductInfo): string[] {
@@ -58,6 +67,10 @@ export function untracedClaims(text: string, quotes: readonly string[], product:
   const supportNums = new Set(numbersIn(support));
   const problems: string[] = [];
   for (const n of numbersIn(text)) if (!supportNums.has(n)) problems.push(`number ${n}`);
+  const supportedFacts = new Set(quantityFacts(support));
+  for (const fact of quantityFacts(text))
+    if (supportNums.has(Number(fact.split(':')[0])) && !supportedFacts.has(fact))
+      problems.push(`quantity/unit ${fact}`);
   const t = squash(text);
   const s = squash(support);
   for (const term of RISKY_TERMS) if (t.includes(term) && !s.includes(term)) problems.push(`claim "${term}"`);

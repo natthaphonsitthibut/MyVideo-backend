@@ -38,6 +38,11 @@ const replay = (responses: unknown[]) => {
 };
 
 describe('suggestHooks (LLM) on a real recorded answer', () => {
+  it('does not turn a real price into a discount, count or another unit', () => {
+    expect(untracedClaims('ลด 199%', ['ราคา 199 บาท'], {})).toContain('quantity/unit 199:%');
+    expect(untracedClaims('199 ชิ้น', ['ราคา 199 บาท'], {})).toContain('quantity/unit 199:ชิ้น');
+    expect(untracedClaims('ราคา 1,500 บาท', ['ราคา 1500 บาท'], {})).toEqual([]);
+  });
   it('returns 2 hooks + 1 title marked ai, every fact traceable to quotes found in the clip', async () => {
     const r = replay(structuredClone(recording.responses));
     const llm = new StructuredLlm(new ClaudeCliAdapter({ exec: r.exec }), new MemoryLlmCallStore(), {

@@ -24,7 +24,7 @@ describe('merchant-facing prompt language', () => {
     expect(HOOKS_SYSTEM).toContain('You write short Thai on-screen text');
     expect(HOOKS_SYSTEM).toContain('2 hooks (natural spoken Thai');
     expect(HOOKS_SYSTEM).toContain('1 title');
-    expect(HOOKS_PROMPT_VERSION).toBe('hooks-v3');
+    expect(HOOKS_PROMPT_VERSION).toBe('hooks-v4');
     expect(HOOKS_SYSTEM).toContain('ONE idea');
     expect(HOOKS_SYSTEM).toContain('DIFFERENT shapes');
     expect(HOOKS_SYSTEM).toContain('Never add a price');
