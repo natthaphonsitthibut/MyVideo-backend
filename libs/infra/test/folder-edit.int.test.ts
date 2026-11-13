@@ -9,6 +9,7 @@ import {
   folderPlanOf,
   requestFolderEdit,
 } from '../src/folders/folder-edit.js';
+import { visualMontageHandler } from '../src/folders/visual-montage.js';
 import { HandlerRegistry } from '../src/jobs/handlers.js';
 import { JobRunner, refreshRunStatus } from '../src/jobs/runner.js';
 
@@ -22,7 +23,11 @@ describe('folder edit orchestration (real Postgres)', () => {
   let m: string;
   let folder: string;
   const runner = () =>
-    new JobRunner(ds, new HandlerRegistry().register(folderAdvanceHandler({ ds })), { workerId: 'fe' });
+    new JobRunner(
+      ds,
+      new HandlerRegistry().register(folderAdvanceHandler({ ds })).register(visualMontageHandler({ ds })),
+      { workerId: 'fe' },
+    );
   const pendingAdvance = async (runId: string): Promise<string[]> =>
     (
       (await ds.query(
@@ -58,7 +63,12 @@ describe('folder edit orchestration (real Postgres)', () => {
   };
   async function source(opts: { audio: boolean; still?: boolean; transcript?: boolean }): Promise<string> {
     const id = uuidv7();
-    const probe = { still: !!opts.still, durationMs: 60_000, audio: opts.audio ? { codec: 'aac' } : null };
+    const probe = {
+      still: !!opts.still,
+      durationMs: 60_000,
+      video: { width: 1080, height: 1920, fps: { num: 30, den: 1 }, durationFrames: 1800 },
+      audio: opts.audio ? { codec: 'aac' } : null,
+    };
     await ds.query(
       `INSERT INTO video_sources (id, merchant_id, upload_id, title, original_filename, size_bytes, sha256, status, probe)
        VALUES ($1, $2, $3, 't', 'f', 10, 'x', 'ready', $4)`,
@@ -179,6 +189,18 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect((await folderPlanOf(ds, m, folder)).plan.steps[4]?.state).toBe('running');
 
     await finishRun(build, 'succeeded');
+    const montageJobs = (await ds.query(
+      `SELECT id FROM jobs WHERE workflow_run_id=$1 AND type='folder.montage'`,
+      [runId],
+    )) as { id: string }[];
+    expect(montageJobs).toHaveLength(1);
+    for (const j of montageJobs) {
+      await ds.query(`UPDATE jobs SET status='queued' WHERE id=$1`, [j.id]);
+      expect(await runner().run(j.id)).toBe('succeeded');
+      // Retry reuses the same editable project without opening any media.
+      const output = await ds.query(`SELECT result FROM jobs WHERE id=$1`, [j.id]);
+      expect(output[0].result.projectId).toBeTruthy();
+    }
     await runAdvance(runId);
     plan = (await folderPlanOf(ds, m, folder)).plan;
     expect(plan).toMatchObject({ finished: true, done: 5, total: 5 });
@@ -239,5 +261,35 @@ describe('folder edit orchestration (real Postgres)', () => {
     expect(
       await ds.query(`SELECT id FROM workflow_runs WHERE kind = 'folder_edit' AND subject_id = $1`, [f]),
     ).toEqual([]);
+  });
+
+  it('finishes a folder containing four photos and one silent video with one editable montage', async () => {
+    const prev = folder;
+    folder = uuidv7();
+    await ds.query(`INSERT INTO project_folders(id,merchant_id,title) VALUES($1,$2,'รูปสินค้า')`, [folder, m]);
+    for (let i = 0; i < 4; i++) await source({ audio: false, still: true });
+    await source({ audio: false });
+    const { runId } = await requestFolderEdit(ds, {
+      merchantId: m,
+      folderId: folder,
+      styleId: 'honest-review',
+    });
+    await runAdvance(runId);
+    const [j] = (await ds.query(`SELECT id FROM jobs WHERE workflow_run_id=$1 AND type='folder.montage'`, [
+      runId,
+    ])) as { id: string }[];
+    expect(j).toBeDefined();
+    await ds.query(`UPDATE jobs SET status='queued' WHERE id=$1`, [j!.id]);
+    expect(await runner().run(j!.id)).toBe('succeeded');
+    await runAdvance(runId);
+    expect((await folderPlanOf(ds, m, folder)).plan.finished).toBe(true);
+    const [version] = await ds.query(
+      `SELECT v.doc FROM project_versions v WHERE v.merchant_id=$1 AND v.doc->'meta'->>'workflowRunId'=$2`,
+      [m, runId],
+    );
+    const elements = Object.values(version.doc.elements) as { type: string }[];
+    expect(elements.filter((e) => e.type === 'image')).toHaveLength(4);
+    expect(elements.filter((e) => e.type === 'video')).toHaveLength(1);
+    folder = prev;
   });
 });

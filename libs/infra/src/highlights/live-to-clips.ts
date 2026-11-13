@@ -18,6 +18,7 @@ import { ClipSuggestionEntity } from '../db/entities/clip-suggestion.entity.js';
 import { MediaAssetEntity } from '../db/entities/media-asset.entity.js';
 import { ProjectEntity, ProjectVersionEntity } from '../db/entities/project.entity.js';
 import { TranscriptEntity } from '../db/entities/transcript.entity.js';
+import { addPhotoCutaways } from '../folders/photo-project.js';
 import { FatalJobError, type JobHandler, type NextStep } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
 import { loudnessFromPeaks, PEAKS_RECIPE, type PeaksJson } from '../media/peaks.js';
@@ -147,6 +148,7 @@ export async function requestBuildClips(
     styleId: string;
     /** Output frame of the edited clips (default 9:16). */
     ratio?: OutputRatio;
+    photos?: ClipBuildInput['photos'];
     maxUnfinishedRuns?: number;
   },
 ): Promise<{ runId: string; created: boolean }> {
@@ -203,6 +205,7 @@ export async function requestBuildClips(
           product: plan.input?.product ?? {},
           speech: speech[String(s.rank)] ?? [],
           styleId: input.styleId,
+          ...(input.photos?.length ? { photos: input.photos } : {}),
           ...(input.ratio ? { ratio: input.ratio } : {}),
         },
         maxAttempts: 3,
@@ -544,7 +547,7 @@ export async function layoutClip(
 ) {
   const layout = await openLayout();
   try {
-    return await layoutClipProject(layout, {
+    const project = await layoutClipProject(layout, {
       projectId: a.projectId,
       merchantId: a.merchantId,
       workflowRunId: a.workflowRunId,
@@ -556,6 +559,7 @@ export async function layoutClip(
       ...(a.input.ratio ? { ratio: a.input.ratio } : {}),
       ...(a.input.faceX !== undefined ? { faceX: a.input.faceX } : {}),
     });
+    return addPhotoCutaways(project, a.input.photos ?? [], `${a.workflowRunId}:${a.rank}`);
   } finally {
     await layout.close();
   }
@@ -684,6 +688,9 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         ...(product.name ? { productName: product.name } : {}),
         ...(ratio !== '9:16' ? { ratio } : {}),
         ...(faceX !== undefined ? { faceX } : {}),
+        ...(Array.isArray(job.payload.photos)
+          ? { photos: job.payload.photos as ClipBuildInput['photos'] }
+          : {}),
       });
       const project = await layoutClip(openLayout, {
         projectId,

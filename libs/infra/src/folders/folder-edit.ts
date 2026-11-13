@@ -16,6 +16,7 @@ import {
 } from '../highlights/live-to-clips.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
+import { visualFootage } from './visual-montage.js';
 
 /**
  * Project folder edit (E12-F05): ONE run per "start" press. It owns no media work itself — its `folder.advance`
@@ -131,6 +132,22 @@ export async function folderPlanOf(
     styleId: edit?.input.styleId ?? null,
     sources: await folderSourceFacts(db, merchantId, folderId, edit?.input.sourceIds),
   };
+  const visuals = facts.sources.filter((s) => s.kind === 'photo' || !s.hasAudio);
+  if (edit && visuals.length) {
+    const jobs = (await db.query(
+      `SELECT status FROM jobs WHERE workflow_run_id=$1 AND merchant_id=$2 AND type='folder.montage' LIMIT 1`,
+      [edit.id, merchantId],
+    )) as { status: string }[];
+    const status = jobs[0]?.status;
+    facts.visualBuild =
+      status === 'succeeded'
+        ? 'succeeded'
+        : status === 'dead' || status === 'cancelled'
+          ? 'failed'
+          : status
+            ? 'running'
+            : 'none';
+  }
   return { runId: edit?.id ?? null, styleId: facts.styleId, plan: folderPlan(facts), facts };
 }
 
@@ -247,17 +264,44 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       const started: string[] = [];
       const sources = await folderSourceFacts(ds, merchantId, input.folderId, input.sourceIds);
       // the frame the clips are edited for: the folder's setting now ("auto" = most of the footage's shape)
-      const frame: { settings: { ratio?: string } | null; sizes: { width: number; height: number }[] }[] =
-        await ds.query(
-          `SELECT f.settings,
+      const frame: {
+        settings: { ratio?: string; length?: string } | null;
+        sizes: { width: number; height: number }[];
+      }[] = await ds.query(
+        `SELECT f.settings,
              ARRAY(SELECT json_build_object('width', (s.probe->'video'->>'width')::int, 'height', (s.probe->'video'->>'height')::int)
                FROM project_folder_sources fs JOIN video_sources s ON s.id = fs.source_id AND s.merchant_id = fs.merchant_id
               WHERE fs.folder_id = f.id AND fs.merchant_id = $1 AND s.probe IS NOT NULL
                 AND ($3::uuid[] IS NULL OR s.id = ANY($3::uuid[]))) AS sizes
            FROM project_folders f WHERE f.id = $2 AND f.merchant_id = $1`,
-          [merchantId, input.folderId, input.sourceIds ?? null],
-        );
+        [merchantId, input.folderId, input.sourceIds ?? null],
+      );
       const ratio = resolveOutputRatio(frame[0]?.settings?.ratio, frame[0]?.sizes ?? []);
+      const visualIds = sources.filter((s) => s.kind === 'photo' || !s.hasAudio).map((s) => s.id);
+      const photos = (
+        await visualFootage(
+          ds,
+          merchantId,
+          sources.filter((s) => s.kind === 'photo').map((s) => s.id),
+        )
+      ).map((s) => ({ ...s, kind: 'image' as const }));
+      if (input.styleId && visualIds.length && sources.every((s) => s.ingest === 'ready'))
+        await ds.transaction(async (em) => {
+          const length = frame[0]?.settings?.length;
+          await enqueueInTransaction(em, {
+            merchantId,
+            workflowRunId: job.workflowRunId,
+            type: 'folder.montage',
+            queue: 'ai',
+            idempotencyKey: `${job.workflowRunId}:montage`,
+            payload: {
+              sourceIds: visualIds,
+              ratio,
+              ...(length && length !== 'auto' ? { seconds: Number(length) } : {}),
+            },
+            timeoutMs: 60000,
+          });
+        });
       for (const s of sources) {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;
         try {
@@ -272,7 +316,13 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
             });
             started.push(`analyse:${s.id}`);
           } else if (input.styleId && s.analysis === 'succeeded' && s.build === 'none') {
-            await requestBuildClips(ds, { merchantId, sourceId: s.id, styleId: input.styleId, ratio });
+            await requestBuildClips(ds, {
+              merchantId,
+              sourceId: s.id,
+              styleId: input.styleId,
+              ratio,
+              photos,
+            });
             started.push(`build:${s.id}`);
           }
         } catch (err) {

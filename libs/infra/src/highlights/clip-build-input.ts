@@ -31,6 +31,17 @@ const ClipBuildInputSchema = z.object({
   ratio: z.enum(['9:16', '4:5', '1:1', '16:9']).optional(),
   /** Measured face centre across the clip (0..1 of the source width), for side crops. */
   faceX: z.number().min(0).max(1).optional(),
+  photos: z
+    .array(
+      z.object({
+        sourceId: z.uuid(),
+        kind: z.literal('image'),
+        width: z.number().positive(),
+        height: z.number().positive(),
+        durationFrames: z.number().int().positive(),
+      }),
+    )
+    .optional(),
 });
 export type ClipBuildInput = z.infer<typeof ClipBuildInputSchema>;
 
@@ -40,6 +51,7 @@ export function clipBuildInput(input: {
   productName?: string;
   ratio?: OutputRatio;
   faceX?: number;
+  photos?: ClipBuildInput['photos'];
 }): ClipBuildInput {
   const { plan } = input;
   return {
@@ -53,6 +65,7 @@ export function clipBuildInput(input: {
     ...(input.productName?.trim() ? { productName: input.productName.trim() } : {}),
     ...(input.ratio && input.ratio !== '9:16' ? { ratio: input.ratio } : {}),
     ...(input.faceX !== undefined ? { faceX: input.faceX } : {}),
+    ...(input.photos?.length ? { photos: input.photos.map((p) => ({ ...p })) } : {}),
   };
 }
 

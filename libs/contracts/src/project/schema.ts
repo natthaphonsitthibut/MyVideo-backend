@@ -121,6 +121,8 @@ export const VideoElement = z.object({
 export const AudioElement = z.object({ type: z.literal('audio'), ...common, ...media });
 export const ImageElement = z.object({
   type: z.literal('image'),
+  /** A contained product card over a blurred copy of the same still (no extra video decoder). */
+  presentation: z.enum(['plain', 'showcase']).optional(),
   ...common,
   assetId: id,
   ...visual,

@@ -24,6 +24,7 @@ import {
   shotsHandler,
   systemHandlers,
   transcribeHandlers,
+  visualMontageHandler,
 } from '@myvideo/infra';
 import {
   type DynamicModule,
@@ -164,6 +165,7 @@ export async function defaultHandlers(env: Env, ds: DataSource): Promise<Handler
   for (const h of clips) registry.register(h);
   registry.register(clipsRestyleHandler({ ds, openLayout: () => StageTextLayout.open(bundle) }));
   registry.register(folderAdvanceHandler({ ds }));
+  registry.register(visualMontageHandler({ ds }));
   registry.register(
     reviewBuildHandler({
       ds,

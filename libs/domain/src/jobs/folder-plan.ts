@@ -25,6 +25,8 @@ export type FolderFacts = {
   /** The chosen (or locked) style; null while the merchant has not picked one. */
   styleId: string | null;
   sources: FolderSourceFacts[];
+  /** A visual montage for selected pictures/silent footage, when needed. */
+  visualBuild?: RunState;
 };
 
 export const PLAN_STEP_IDS = ['prepare', 'transcribe', 'analyse', 'style', 'edit'] as const;
@@ -74,7 +76,7 @@ function aggregate(
   return { state: 'pending', detail, error: null };
 }
 
-const run = (r: RunState) =>
+const run = (r: RunState): 'done' | 'failed' | 'running' | 'none' =>
   r === 'succeeded' ? 'done' : r === 'failed' ? 'failed' : r === 'running' ? 'running' : 'none';
 
 export function folderPlan(f: FolderFacts): FolderPlan {
@@ -133,9 +135,12 @@ export function folderPlan(f: FolderFacts): FolderPlan {
     else if (analysed && out.prepare.state === 'done')
       out.style = { state: 'waiting', detail: 'รอคุณเลือก', error: null };
     // 5. edit
-    if (f.styleId && speech.length)
+    if (f.styleId && (speech.length || f.visualBuild !== undefined))
       out.edit = aggregate(
-        speech.map((s) => ({ s: run(s.build) })),
+        [
+          ...speech.map((s) => ({ s: run(s.build) })),
+          ...(f.visualBuild !== undefined ? [{ s: run(f.visualBuild) }] : []),
+        ],
         'วิดีโอ',
         'ตัดต่อไม่สำเร็จ',
       );
