@@ -40,6 +40,12 @@ import { adviseStyles, type StyleAdvice } from './style-advice.js';
  * rules mode), boundary snapping to VAD silences / sentence ends / shot cuts. Build = hook + title, stage layout,
  * a new editable project (v1). Each finished build turns its card `ready`, so the review page fills up live.
  */
+/**
+ * Pauses the jump cuts can use (E13-F02). Measured 2026-11-13 on the real live clip C02 (55 s): the default
+ * 300 ms / 100 ms pad saw 9 pauses and one 21.2 s block of speech; 150 ms / 40 ms pad saw 14 pauses, longest block
+ * 6.9 s (120/30 found no more). A live seller's phrase breaks are ~0.25–0.5 s, the old setting merged them.
+ */
+export const CLIP_VAD = { minSilenceMs: 150, speechPadMs: 40 } as const;
 export const LIVE_TO_CLIPS_POOL = 12;
 export const LIVE_TO_CLIPS_MAX_CLIPS = 8;
 
@@ -317,7 +323,7 @@ export function clipsPlanHandler({ ds, storage, ai, llm, maxClips }: LiveToClips
       if (audio) {
         const f = await storage.localPath(audio.storageKey);
         try {
-          const vad = await ai.vad(f.path, { signal });
+          const vad = await ai.vad(f.path, { ...CLIP_VAD, signal });
           speech = vad.segments.map((s) => ({ startMs: s.start_ms, endMs: s.end_ms }));
         } finally {
           await f.release();

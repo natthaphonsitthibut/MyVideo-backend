@@ -185,10 +185,17 @@ export class AiServiceClient {
   }
 
   /** Speech segments (ms) of a local audio file (Silero VAD). */
-  vad(path: string, opts: { minSilenceMs?: number; signal?: AbortSignal } = {}): Promise<VadResult> {
+  vad(
+    path: string,
+    opts: { minSilenceMs?: number; speechPadMs?: number; signal?: AbortSignal } = {},
+  ): Promise<VadResult> {
     return this.request('/vad', VadResult, {
       method: 'POST',
-      body: { path, min_silence_ms: opts.minSilenceMs ?? 300 },
+      body: {
+        path,
+        min_silence_ms: opts.minSilenceMs ?? 300,
+        ...(opts.speechPadMs !== undefined ? { speech_pad_ms: opts.speechPadMs } : {}),
+      },
       timeoutMs: 10 * 60_000,
       signal: opts.signal,
     });
