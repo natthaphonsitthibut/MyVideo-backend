@@ -199,6 +199,26 @@ export const CAMERA_RULES = {
   maxZoomShare: 0.2,
 } as const;
 
+/**
+ * The call-to-action pill says how THIS seller takes orders, from their own words in the clip: pre-order → จอง,
+ * chat/inbox → ทักแชท/อินบ็อกซ์, the shop cart → the style's cart line, CF → CF. Nothing said → no pill: never
+ * invent an order channel (merchant 2026-11-13: "กดตะกร้า" on a pre-order-by-inbox live).
+ */
+export function spokenCta(words: readonly { text: string }[], cartLabel: string): string | null {
+  const said = words
+    .map((w) => w.text)
+    .join('')
+    .toLowerCase();
+  const book = said.includes('จอง');
+  const inbox = /อินบ็อก|อินบอก|inbox|ทักแชท|แชท/.test(said);
+  if (book && inbox) return 'จองเลย ทักอินบ็อกซ์';
+  if (book) return 'จองได้เลย';
+  if (inbox) return 'ทักแชทได้เลย';
+  if (said.includes('ตะกร้า')) return cartLabel;
+  if (/cf|ซีเอฟ/.test(said)) return 'CF ได้เลย';
+  return null;
+}
+
 /** Share of the clip that may be zoomed in when a style re-frames long takes, by energy (Assumption). */
 const REFRAME_ZOOM_SHARE: Record<NonNullable<StylePack['energy']>, number> = {
   calm: 0.2,
@@ -990,7 +1010,8 @@ export async function layoutClipProject(
     gfx?.productName && productName?.trim()
       ? await layout.layoutText(productName.trim(), PRODUCT_NAME_STYLE)
       : undefined;
-  const cta = gfx?.cta ? await layout.layoutText(gfx.cta.label, CTA_STYLE) : undefined;
+  const ctaLabel = gfx?.cta ? spokenCta(input.plan.words, gfx.cta.label) : null;
+  const cta = ctaLabel ? await layout.layoutText(ctaLabel, CTA_STYLE) : undefined;
   const graphics = gfx
     ? { prices, ...(name ? { productName: name } : {}), ...(cta ? { cta } : {}) }
     : undefined;

@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { spokenCta } from './clip-project.js';
 import { planJumpCuts, wordCutViolations } from './jump-cuts.js';
 import { sentenceEndWord } from './live-to-clips.js';
 
@@ -23,6 +24,17 @@ it('a clip edge or pause cut inside a kept word grows to the word edge instead o
   );
   expect(wordCutViolations(plan.segments, plan.words)).toEqual([]);
   expect(plan.segments[0]?.startMs).toBe(1016265);
+});
+
+it('the call-to-action follows how the seller takes orders, and is left out when they never say', () => {
+  const cart = 'กดตะกร้าเลย!';
+  const said = (t: string) => t.split(' ').map((text) => ({ text }));
+  // real L02 wording: pre-order through the back-office inbox
+  expect(spokenCta(said('ผม จะ ให้ ทุกคน ที่ จอง อินบ็อกซ์หลังบ้าน'), cart)).toBe('จองเลย ทักอินบ็อกซ์');
+  expect(spokenCta(said('เปิด จอง เท่านั้น'), cart)).toBe('จองได้เลย');
+  expect(spokenCta(said('สนใจ ทักแชท มา'), cart)).toBe('ทักแชทได้เลย');
+  expect(spokenCta(said('กด ตะกร้า เลย'), cart)).toBe(cart);
+  expect(spokenCta(said('ผ้า นุ่ม มาก'), cart)).toBeNull();
 });
 
 it('a clip finishes the spoken line it stops in, when the line ends soon after', () => {
