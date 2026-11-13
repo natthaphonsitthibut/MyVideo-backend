@@ -81,6 +81,37 @@ describe('suggestHooks (LLM) on a real recorded answer', () => {
     expect(untracedClaims('เสื้อมัดย้อม 199 บาท', [], { name: 'เสื้อมัดย้อม', price: '199 บาท' })).toEqual([]);
     expect(untracedClaims('เสื้อมัดย้อม 199 บาท', [], { name: 'เสื้อมัดย้อม' })).toEqual(['number 199']);
   });
+
+  it('rejects unreadably long hooks and titles instead of silently truncating seller claims', () => {
+    const schema = hooksSchema(clipText, recording.product);
+    for (const [index, length] of [
+      [0, 51],
+      [2, 61],
+    ] as const) {
+      const answer = structuredClone(recording.responses[0]?.structured_output);
+      if (!answer?.suggestions[index]) throw new Error('missing recorded suggestion');
+      answer.suggestions[index].text = 'ก'.repeat(length);
+      expect(schema.parse(answer).ok).toBe(false);
+    }
+  });
+
+  it('rejects duplicate hook choices even when punctuation and spaces differ', () => {
+    const answer = structuredClone(recording.responses[0]?.structured_output);
+    if (!answer?.suggestions[0] || !answer.suggestions[1]) throw new Error('missing recorded hooks');
+    answer.suggestions[1].text = `${answer.suggestions[0].text.replace(/ /g, '')}!`;
+    answer.suggestions[1].sourceQuotes = answer.suggestions[0].sourceQuotes;
+    expect(hooksSchema(clipText, recording.product).parse(answer).ok).toBe(false);
+  });
+
+  it('does not discard Thai vowel and tone marks when comparing hook choices', () => {
+    // Validator plumbing: these are deliberately authored lexical cases, not recorded model answers.
+    const suggestions = [
+      { kind: 'hook', text: 'เสื้อ', sourceQuotes: ['เสื้อ'] },
+      { kind: 'hook', text: 'เสือ', sourceQuotes: ['เสือ'] },
+      { kind: 'title', text: 'ทดสอบ', sourceQuotes: ['ทดสอบ'] },
+    ];
+    expect(hooksSchema('เสื้อ เสือ ทดสอบ', {}).parse({ suggestions }).ok).toBe(true);
+  });
 });
 
 describe('suggestHooksRules', () => {
