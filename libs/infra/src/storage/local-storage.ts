@@ -14,6 +14,7 @@ import {
   type StoragePort,
   type StoredObject,
 } from '@myvideo/domain';
+import { watchEarlyErrors } from './early-errors.js';
 
 /** Local-disk adapter for development and tests (ARCHITECTURE §8). Atomic writes via temp file + rename. */
 export class LocalStorage implements StoragePort {
@@ -32,7 +33,13 @@ export class LocalStorage implements StoragePort {
 
   async put(key: string, body: AsyncIterable<Uint8Array> | Uint8Array): Promise<StoredObject> {
     const target = this.pathOf(key);
-    await mkdir(dirname(target), { recursive: true });
+    const early = watchEarlyErrors(body);
+    try {
+      await mkdir(dirname(target), { recursive: true });
+      early.check();
+    } finally {
+      early.stop();
+    }
     const tmp = `${target}.tmp-${randomUUID()}`;
     const hash = createHash('sha256');
     let size = 0;

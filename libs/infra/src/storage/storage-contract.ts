@@ -1,4 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { InvalidRangeError, StorageNotFoundError, type StoragePort } from '@myvideo/domain';
 import { describe, expect, it } from 'vitest';
 
@@ -48,6 +51,14 @@ export function storageContract(
       expect((await collect(tail.body)).equals(data.subarray(9_990))).toBe(true);
       await expect(s.read(k, { start: 10_000, end: 10_010 })).rejects.toBeInstanceOf(InvalidRangeError);
       await s.delete(k);
+    });
+
+    it('rejects (never crashes the process) when the body is a file stream that fails to open', async () => {
+      const s = make();
+      const k = key('missing.jpg');
+      const body = createReadStream(join(tmpdir(), `never-written-${randomUUID()}.jpg`));
+      await expect(s.put(k, body)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await s.stat(k)).toBeNull();
     });
 
     it('reports missing objects and deletes idempotently', async () => {

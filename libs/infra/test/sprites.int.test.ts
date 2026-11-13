@@ -135,4 +135,35 @@ describe.skipIf(!has)('media.sprites on real footage', { timeout: 180_000 }, () 
     }
     console.log(results.join('\n'));
   });
+
+  it('a real photo gets a sprite sheet of its 5 still seconds and becomes ready', async () => {
+    const photo = `${FOOTAGE_DIR}/photos/P01-yarn-product.jpg`;
+    const runner = new JobRunner(
+      ds,
+      new HandlerRegistry().register(probeHandler({ ds, storage })).register(spritesHandler({ ds, storage })),
+      { workerId: 'w-photo' },
+    );
+    const s = await seedSourceFromFile(ds, storage, merchantId, photo);
+    await ds.query(`UPDATE jobs SET status = 'queued' WHERE id = $1`, [s.jobId]);
+    expect(await runner.run(s.jobId)).toBe('succeeded');
+    const jobRow = await ds.query(
+      `INSERT INTO jobs (merchant_id, workflow_run_id, type, queue, idempotency_key, payload, status, step_index)
+       VALUES ($1, $2, 'media.sprites', 'media', $3, $4, 'queued', 3) RETURNING id`,
+      [merchantId, s.runId, `t-sprites-${s.sourceId}`, JSON.stringify({ sourceId: s.sourceId })],
+    );
+    expect(await runner.run(jobRow[0].id)).toBe('succeeded');
+    const asset = await ds
+      .getRepository(MediaAssetEntity)
+      .findOneByOrFail({ sourceId: s.sourceId, kind: 'sprites' });
+    expect(asset.meta).toMatchObject({ count: 5, sheets: 1, tileWidth: 160, tileHeight: 90 });
+    const sheet = await storage.localPath(storageKeys.spriteSheet(merchantId, s.sourceId, asset.id, 1, 0));
+    const cell = join(root, 'photo-cell.png');
+    await runProcess('ffmpeg', ['-v', 'error', '-y', '-i', sheet.path, '-vf', 'crop=160:90:0:0', cell]);
+    const grab = join(root, 'photo-grab.png');
+    await runProcess('ffmpeg', ['-v', 'error', '-y', '-i', photo, '-vf', 'scale=160:90', grab]);
+    expect(await ssim(cell, grab)).toBeGreaterThan(0.9);
+    expect((await ds.getRepository(VideoSourceEntity).findOneByOrFail({ id: s.sourceId })).status).toBe(
+      'ready',
+    );
+  });
 });

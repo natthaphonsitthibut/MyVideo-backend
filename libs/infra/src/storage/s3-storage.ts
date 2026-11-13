@@ -24,6 +24,7 @@ import {
   type StoragePort,
   type StoredObject,
 } from '@myvideo/domain';
+import { watchEarlyErrors } from './early-errors.js';
 
 export type S3StorageConfig = {
   bucket: string;
@@ -56,6 +57,19 @@ export class S3Storage implements StoragePort {
     opts: { contentType?: string } = {},
   ): Promise<StoredObject> {
     assertValidKey(key);
+    const early = watchEarlyErrors(body);
+    try {
+      return await this.upload(key, body, opts);
+    } finally {
+      early.stop();
+    }
+  }
+
+  private async upload(
+    key: string,
+    body: AsyncIterable<Uint8Array> | Uint8Array,
+    opts: { contentType?: string },
+  ): Promise<StoredObject> {
     const hash = createHash('sha256');
     let size = 0;
     const pass = new PassThrough();

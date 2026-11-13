@@ -1,4 +1,5 @@
 import { createReadStream } from 'node:fs';
+import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type SpriteIndex, type StoragePort, storageKeys } from '@myvideo/domain';
 import type { DataSource } from 'typeorm';
@@ -13,24 +14,37 @@ export const SPRITE_COLS = 10;
 export const SPRITE_ROWS = 10;
 export const SPRITE_TILE_WIDTH = 160;
 
+const fileExists = (path: string) =>
+  access(path).then(
+    () => true,
+    () => false,
+  );
+
 /** Tile height for a display size, even, keeping aspect. */
 export const tileHeightFor = (width: number, height: number) =>
   Math.max(2, Math.round((SPRITE_TILE_WIDTH * height) / width / 2) * 2);
 
-/** ffmpeg arguments for sheet `n`: tile i = the frame AT second (n·100 + i) (`round=up`, verified by SSIM). */
-export function sheetArgs(input: string, sheet: number, tileHeight: number, out: string): string[] {
+/**
+ * ffmpeg arguments for sheet `n`: tile i = the frame AT second (n·100 + i) (`round=up`, verified by SSIM). A photo
+ * (`stillSeconds`) is looped for its still length — read once it is a single 0.04 s frame and yields no tile.
+ */
+export function sheetArgs(
+  input: string,
+  sheet: number,
+  tileHeight: number,
+  out: string,
+  stillSeconds?: number,
+): string[] {
   const perSheet = SPRITE_COLS * SPRITE_ROWS;
+  const source = stillSeconds
+    ? ['-loop', '1', '-framerate', '1', '-t', String(stillSeconds), '-i', input]
+    : ['-ss', String(sheet * perSheet), '-t', String(perSheet), '-i', input];
   return [
     '-v',
     'error',
     '-y',
     '-nostdin',
-    '-ss',
-    String(sheet * perSheet),
-    '-t',
-    String(perSheet),
-    '-i',
-    input,
+    ...source,
     '-an',
     '-vf',
     `fps=1:start_time=0:round=up,scale=${SPRITE_TILE_WIDTH}:${tileHeight},tile=${SPRITE_COLS}x${SPRITE_ROWS}`,
@@ -80,10 +94,13 @@ export function spritesHandler({ ds, storage }: { ds: DataSource; storage: Stora
               const key = storageKeys.spriteSheet(job.merchantId, source.id, assetId, SPRITES_RECIPE, n);
               if (!(await storage.stat(key))) {
                 const out = join(dir, `sheet-${n}.jpg`);
-                await runProcess('ffmpeg', sheetArgs(input.path, n, index.tileHeight, out), {
+                const still = probe.still ? probe.durationMs / 1000 : undefined;
+                await runProcess('ffmpeg', sheetArgs(input.path, n, index.tileHeight, out, still), {
                   signal,
                   timeoutMs: 10 * 60_000,
                 });
+                // ffmpeg can exit 0 without writing a frame: fail this attempt (retryable) instead of storing nothing
+                if (!(await fileExists(out))) throw new Error(`ffmpeg wrote no sprite sheet ${n}`);
                 await storage.put(key, createReadStream(out), { contentType: 'image/jpeg' });
               }
               await progress((n + 1) / sheets);
