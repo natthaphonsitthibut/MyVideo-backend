@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CAPTION_STYLE_IDS } from '../project/schema.js';
 import { named } from '../registry.js';
 import { defineRoute } from '../route.js';
 import { ApiErrorBody } from './errors.js';
@@ -87,6 +88,22 @@ export const FolderPlanResponse = named(
         description: z.string(),
         reason: z.string().nullable(),
         origin: z.enum(['ai', 'rules', 'catalogue']),
+        preview: z
+          .object({
+            sourceId: z.uuid(),
+            timeMs: z.number().int(),
+            words: z.array(z.object({ text: z.string(), startMs: z.number(), endMs: z.number() })),
+            productName: z.string().nullable(),
+            captionStyle: z.enum(CAPTION_STYLE_IDS),
+            captionY: z.number(),
+            maxWords: z.number().nullable(),
+            maxLines: z.number(),
+            hookY: z.number(),
+            hookWeight: z.number(),
+            hookColor: z.string(),
+            hookBackground: z.string().nullable(),
+          })
+          .optional(),
       }),
     ),
   }),

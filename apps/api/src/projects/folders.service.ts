@@ -8,6 +8,7 @@ import {
   getStyleLock,
   lockStyle,
   requestFolderEdit,
+  stylePreview,
   unlockStyle,
 } from '@myvideo/infra';
 import {
@@ -146,7 +147,7 @@ export class FoldersService {
 
   /** Plan panel + style proposals, both read from real state (no estimate, no invented reason). */
   async plan(merchantId: string, id: string): Promise<FolderPlanResponse> {
-    await this.get(merchantId, id); // 404 for another merchant's folder
+    const folder = await this.get(merchantId, id); // 404 for another merchant's folder
     const { runId, styleId, plan, facts } = await folderPlanOf(this.ds, merchantId, id);
     const locked = await getStyleLock(this.ds, merchantId);
     // the analysis advice of the longest speech video ranks the styles for this footage
@@ -200,6 +201,19 @@ export class FoldersService {
         reason: 'สไตล์ที่คุณล็อกไว้',
         origin: 'catalogue',
       });
+    }
+    const previewSource = speech[0] ?? facts.sources[0]?.id;
+    if (previewSource) {
+      const [segment] = (await this.ds.query(
+        `SELECT s.words FROM transcript_segments s JOIN transcripts t ON t.id=s.transcript_id AND t.merchant_id=s.merchant_id WHERE t.source_id=$1 AND t.merchant_id=$2 AND t.status='ready' ORDER BY t.created_at DESC,s.seq ASC LIMIT 1`,
+        [previewSource, merchantId],
+      )) as { words: { text: string; startMs: number; endMs: number }[] }[];
+      for (const p of proposals) {
+        const pack =
+          locked?.pack.id === p.styleId ? locked.pack : STYLE_PACKS.find((s) => s.id === p.styleId);
+        if (pack)
+          p.preview = stylePreview(pack, previewSource, segment?.words ?? [], folder.settings.productName);
+      }
     }
     return {
       runId,
