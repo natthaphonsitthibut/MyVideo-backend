@@ -11,6 +11,7 @@ import type { LaidOutText, LayoutWord, StageTextLayout } from '../render/text-la
 import { type EmphasisPage, markEmphasis, priceMentions } from './clip-graphics.js';
 import { type JumpCutPlan, keyMomentKind, planJumpCuts, type SpanMs, splitLongShots } from './jump-cuts.js';
 import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.js';
+import { planTransitions } from './transitions.js';
 
 /**
  * Clip plan → Project JSON (E07-F07): deterministic. One 9:16 `cover` video element (centre crop; the reframe
@@ -568,6 +569,76 @@ export function buildClipProject(input: {
     }
   }
 
+  // transitions (E13-F05): created after everything above so ids of clips without transitions never change
+  const transitionIds: string[] = [];
+  const transitionTrack = edit?.style.transitions ? newId() : undefined;
+  if (edit && transitionTrack) {
+    const planned = planTransitions(
+      edit.style.transitions,
+      segments.map((s, i) => ({ startFrame: s.startFrame, moment: shots[i]?.moment ?? null })),
+      fps,
+    );
+    let side = 1;
+    for (const t of planned) {
+      const seg = segments[t.index];
+      const vid = videoIds[t.index];
+      const v = vid ? elements[vid] : undefined;
+      if (!seg || !v || v.type !== 'video') continue;
+      if (t.kind === 'flash' || t.kind === 'dip') {
+        // a white frame that fades out / a short dip to black across the cut: plain shapes, editable like any layer
+        const id = newId();
+        const dip = t.kind === 'dip';
+        const startFrame = dip ? Math.max(0, seg.startFrame - 3) : seg.startFrame;
+        const frames = Math.min(dip ? 6 : 5, durationFrames - startFrame);
+        if (frames < 2) continue;
+        elements[id] = {
+          type: 'shape',
+          id,
+          trackId: transitionTrack,
+          startFrame,
+          durationFrames: frames,
+          origin: 'ai',
+          shape: 'rect',
+          width: W,
+          height: H,
+          fill: dip ? '#000000' : '#ffffff',
+          opacity: dip ? 1 : 0.85,
+          transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          ...(dip ? { animationIn: { presetId: 'fade', durationFrames: Math.floor(frames / 2) } } : {}),
+          animationOut: { presetId: 'fade', durationFrames: dip ? Math.ceil(frames / 2) : frames },
+        };
+        transitionIds.push(id);
+        continue;
+      }
+      // zoom punch / slide push: the next shot itself moves in and settles (ease-out), on top of its drift
+      const settle = Math.min(t.kind === 'zoom-punch' ? 6 : 5, v.durationFrames - 1);
+      if (settle < 2) continue;
+      const kf = { ...(v.keyframes ?? {}) };
+      const base = v.transform;
+      if (t.kind === 'zoom-punch') {
+        const drift = kf['transform.scale'];
+        const end = drift?.at(-1) ?? {
+          frame: v.durationFrames - 1,
+          value: base.scale,
+          easing: 'linear' as const,
+        };
+        const at = drift ? pushAt(base.scale, seg.startFrame + settle) : base.scale;
+        kf['transform.scale'] = [
+          { frame: 0, value: Math.round(base.scale * 1.18 * 10_000) / 10_000, easing: 'ease-out' },
+          { frame: settle, value: at, easing: 'linear' },
+          ...(end.frame > settle ? [end] : []),
+        ];
+      } else {
+        kf['transform.x'] = [
+          { frame: 0, value: base.x + side * Math.round(W * 0.18), easing: 'ease-out' },
+          { frame: settle, value: base.x, easing: 'linear' },
+        ];
+        side = -side;
+      }
+      elements[vid as string] = { ...v, keyframes: kf };
+    }
+  }
+
   if (backdropTrack && backdropId)
     elements[backdropId] = {
       type: 'shape',
@@ -665,6 +736,9 @@ export function buildClipProject(input: {
         ? [{ id: backdropTrack, kind: 'overlay' as const, elementIds: [backdropId] }]
         : []),
       { id: videoTrack, kind: 'video', elementIds: videoIds },
+      ...(transitionTrack && transitionIds.length
+        ? [{ id: transitionTrack, kind: 'overlay' as const, elementIds: transitionIds }]
+        : []),
       { id: captionTrack, kind: 'caption', elementIds: captionIds.filter((id) => elements[id]) },
       ...(overlayIds.length > 0
         ? [{ id: overlayTrack, kind: 'overlay' as const, elementIds: overlayIds }]

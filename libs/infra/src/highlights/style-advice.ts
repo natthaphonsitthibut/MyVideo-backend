@@ -51,6 +51,13 @@ export function adviseStylesRules(f: VideoFeatures): StyleAdviceItem[] {
     friendly: (calm ? 3 : 1) + (selling ? 0 : 1),
     premium: (calm ? 2 : 0) + (selling ? 0 : 1),
     simple: 0.5,
+    'live-hype': (fast ? 2 : 0) + (selling ? 1 : 0),
+    'flash-sale': (selling ? 3 : 0) + (fast ? 0.5 : 0),
+    'honest-review': (calm ? 2 : 0.5) + (selling ? 0 : 1),
+    'gadget-spec': selling ? 1 : 0.8,
+    'skincare-premium': (calm ? 1.5 : 0) + (selling ? 0 : 0.5),
+    'cute-sticker': fast ? 2 : 0.5,
+    'minimal-brand': (calm ? 1 : 0.4) + (selling ? 0 : 0.5),
   };
   const reason: Record<string, string> = {
     'sale-fast': selling
@@ -60,6 +67,17 @@ export function adviseStylesRules(f: VideoFeatures): StyleAdviceItem[] {
     friendly: calm ? 'พูดสบาย ๆ มีช่วงหยุดเยอะ เหมาะเล่าแบบเป็นกันเอง' : 'เล่าสินค้าแบบเป็นกันเอง อ่านง่าย',
     premium: calm ? 'จังหวะช้า เหมาะภาพนิ่งนาน ดูแพง' : 'ภาพเรียบ ดูแพง ไม่หวือหวา',
     simple: 'อยากได้คลิปดิบ ๆ ไปแต่งต่อเอง',
+    'live-hype': fast
+      ? `พูดเร็วมาก (ราว ${fmt(f.wordsPerSec)} คำต่อวินาที) เข้ากับการตัดถี่ ซูม แฟลชตอนราคา`
+      : 'ตัดถี่ เร้าใจแบบไลฟ์ขายของ',
+    'flash-sale': selling
+      ? `บอกราคา ${fmt(f.pricesPerMin)} ครั้งต่อนาที ป้ายราคาใหญ่ช่วยปิดการขาย`
+      : 'เน้นป้ายราคาและปุ่มสั่งซื้อ (ใช้ราคาที่พูดจริงเท่านั้น)',
+    'honest-review': calm ? 'พูดช้า มีช่วงคิด เหมาะเล่าแบบรีวิวจริงใจ' : 'เล่าแบบรีวิวใช้จริง ไม่ตกแต่งเยอะ',
+    'gadget-spec': 'เน้นซูมตอนบอกสเปก/ราคา โทนเทคโนโลยี',
+    'skincare-premium': calm ? 'จังหวะช้า นุ่ม เหมาะสินค้าความงาม' : 'นุ่ม ดูหรู สำหรับสินค้าความงาม',
+    'cute-sticker': fast ? `พูดเร็ว (ราว ${fmt(f.wordsPerSec)} คำต่อวินาที) ซับเด้งทีละคำได้` : 'สดใส น่ารัก',
+    'minimal-brand': 'ภาพสะอาด เว้นจังหวะ ให้ตัวสินค้าเด่น',
   };
   return STYLE_PACKS.map((p) => p.id)
     .sort((a, b) => (score[b] ?? 0) - (score[a] ?? 0))

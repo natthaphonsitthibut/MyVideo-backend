@@ -74,7 +74,11 @@ describe('adviseStyles (model)', () => {
     });
     expect(r.origin).toBe('ai');
     expect(r.items[0]?.styleId).toBe('sale-fast');
-    expect(r.items.map((x) => x.styleId).at(-1)).toBe('premium');
+    // the model ranked the 5 styles that existed when this answer was recorded: its order leads, the 7 newer
+    // styles (E13-F08) follow in the rules order
+    expect(r.items.map((x) => x.styleId)[4]).toBe('premium');
+    expect(r.items).toHaveLength(STYLE_PACKS.length);
+    expect(r.items.slice(5).every((x) => x.reason.length > 0)).toBe(true);
   });
 
   it('an unknown style or a reason with a number the video never had falls back to rules', async () => {

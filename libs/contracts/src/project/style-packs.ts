@@ -9,6 +9,14 @@ import type { CaptionStyleId } from './schema.js';
  *
  * Animation preset ids are the stage's (`animationKeyframes`); unknown ids fall back to `fade`.
  */
+/**
+ * Transitions at jump cuts (E13-F05), drawn with plain editable layers: `flash` = a white frame fading out,
+ * `dip` = a short dip to black across the cut, `zoom-punch` = the next shot starts 18 % closer and settles,
+ * `slide-push` = the next shot slides in from the side. `flash` and `slide-push` are "loud".
+ */
+export const TRANSITION_KINDS = ['flash', 'dip', 'zoom-punch', 'slide-push'] as const;
+export type TransitionKind = (typeof TRANSITION_KINDS)[number];
+
 export type StylePack = {
   id: string;
   /** Shown to the merchant (Thai). */
@@ -83,6 +91,17 @@ export type StylePack = {
     endCard: string | null;
     gainDb: number;
   } | null;
+  /**
+   * Transitions on jump cuts, always motivated: `onMoment` on the cut where a price / call to action is said, the
+   * other kinds in turn on plain cuts at least `minGapMs` apart. Budget: at most `maxShare` of the cuts (≤ ¼) and
+   * at most 2 loud ones per clip. Null = hard cuts only.
+   */
+  transitions: {
+    kinds: readonly TransitionKind[];
+    onMoment: TransitionKind | null;
+    maxShare: number;
+    minGapMs: number;
+  } | null;
 };
 
 export const STYLE_PACKS: readonly StylePack[] = [
@@ -118,6 +137,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-bold-short',
       gainDb: -4,
     },
+    transitions: { kinds: ['zoom-punch'], onMoment: 'flash', maxShare: 0.25, minGapMs: 3000 },
   },
   {
     id: 'friendly',
@@ -151,6 +171,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-warm-short',
       gainDb: -6,
     },
+    transitions: null,
   },
   {
     id: 'premium',
@@ -178,6 +199,7 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-minimal-short',
       gainDb: -8,
     },
+    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
   },
   {
     id: 'fun',
@@ -211,6 +233,12 @@ export const STYLE_PACKS: readonly StylePack[] = [
       endCard: 'sting-playful-short',
       gainDb: -4,
     },
+    transitions: {
+      kinds: ['slide-push', 'zoom-punch'],
+      onMoment: 'zoom-punch',
+      maxShare: 0.25,
+      minGapMs: 2000,
+    },
   },
   {
     id: 'simple',
@@ -231,6 +259,223 @@ export const STYLE_PACKS: readonly StylePack[] = [
     zoom: { punchIn: null, punchGap: 0, drift: 0 },
     graphics: { priceTag: null, productName: null, cta: null },
     sfx: null,
+    transitions: null,
+  },
+  // ---- E13-F08: seven more packs (our own design for Thai online selling) ----
+  {
+    id: 'live-hype',
+    name: 'แม่ค้าไลฟ์ไฟลุก',
+    description: 'ตัดถี่มาก ซับทีละ 2 คำ ซูมเน้นทุกจังหวะราคา แฟลชตอนบอกราคา สไลด์ภาพเปลี่ยนช็อต',
+    suits: 'ไลฟ์ขายของพลังสูง พูดเร็ว บอกราคาบ่อย อยากได้คลิปเร้าใจ',
+    captions: { styleRef: 'pop-word', y: 360, maxWords: 2, maxLines: 1 },
+    hook: {
+      seconds: 2,
+      y: -580,
+      fontWeight: 900,
+      color: '#ffffff',
+      background: '#dc2626',
+      animationIn: 'pop',
+    },
+    endCard: { seconds: 2, color: '#ffffff', background: '#dc2626e6', animationIn: 'pop' },
+    cuts: { maxPauseMs: 180, keepPauseMs: 50, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.25, punchGap: 2, drift: 0.015 },
+    graphics: {
+      priceTag: { color: '#ffffff', background: '#dc2626', animationIn: 'pop', y: 60, maxPerClip: 3 },
+      productName: null,
+      cta: { label: 'กดตะกร้าด่วน!', animationIn: 'pop', y: 170 },
+    },
+    sfx: {
+      cut: ['whoosh-fast-soft'],
+      minGapMs: 5000,
+      price: 'money-coin-drop',
+      maxPrice: 3,
+      cta: 'pop-large-bubble',
+      hook: 'sting-bold-short',
+      endCard: 'sting-bright-short',
+      gainDb: -3,
+    },
+    transitions: { kinds: ['slide-push', 'zoom-punch'], onMoment: 'flash', maxShare: 0.25, minGapMs: 2000 },
+  },
+  {
+    id: 'honest-review',
+    name: 'รีวิวจริงใจ',
+    description: 'จังหวะคนเล่าจริง เก็บช่วงหายใจไว้นิดหน่อย ซับกล่องล่างทีละประโยค ราคาขึ้นเรียบ ๆ ไม่มีเอฟเฟกต์ตัด',
+    suits: 'รีวิวใช้จริง เล่าข้อดีข้อเสีย อยากให้คนดูเชื่อใจ',
+    captions: { styleRef: 'boxed', y: 600, maxWords: 6, maxLines: 1 },
+    hook: {
+      seconds: 3,
+      y: -500,
+      fontWeight: 700,
+      color: '#111111',
+      background: '#ffffffee',
+      animationIn: 'fade',
+    },
+    endCard: { seconds: 2.5, color: '#111111', background: '#ffffffee', animationIn: 'fade' },
+    cuts: { maxPauseMs: 550, keepPauseMs: 200, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: null, punchGap: 0, drift: 0.01 },
+    graphics: {
+      priceTag: { color: '#111111', background: '#ffffffee', animationIn: 'fade', y: 140, maxPerClip: 1 },
+      productName: { color: '#111111', background: '#ffffffd9', animationIn: 'fade', y: -330 },
+      cta: null,
+    },
+    sfx: null,
+    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.1, minGapMs: 8000 },
+  },
+  {
+    id: 'gadget-spec',
+    name: 'สเปกแกดเจ็ต',
+    description: 'ภาพคม ตัดเงียบสั้น ซูมเข้าตอนบอกสเปก/ราคา ภาพสไลด์เปลี่ยนช็อต เสียงฟึ่บเบา ๆ ป้ายราคาโทนเทคโนโลยี',
+    suits: 'มือถือ หูฟัง อุปกรณ์ไอที โชว์ฟีเจอร์ทีละข้อ',
+    captions: { styleRef: 'minimal', y: 520, maxWords: 4, maxLines: 1 },
+    hook: {
+      seconds: 2.5,
+      y: -540,
+      fontWeight: 800,
+      color: '#22d3ee',
+      background: '#0f172ae6',
+      animationIn: 'zoom-in',
+    },
+    endCard: { seconds: 2.5, color: '#e0f2fe', background: '#0f172ae6', animationIn: 'zoom-in' },
+    cuts: { maxPauseMs: 280, keepPauseMs: 90, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.18, punchGap: 3, drift: 0.01 },
+    graphics: {
+      priceTag: { color: '#0f172a', background: '#22d3ee', animationIn: 'zoom-in', y: 100, maxPerClip: 2 },
+      productName: { color: '#e0f2fe', background: '#0f172acc', animationIn: 'slide-up', y: -330 },
+      cta: { label: 'ดูสเปกเต็มที่ตะกร้า', animationIn: 'zoom-in', y: 170 },
+    },
+    sfx: {
+      cut: ['swish-soft'],
+      minGapMs: 6000,
+      price: 'notification-success-sparkle',
+      maxPrice: 2,
+      cta: 'notification-success-ding-ding',
+      hook: 'whoosh-fast-soft',
+      endCard: 'sting-minimal-short',
+      gainDb: -6,
+    },
+    transitions: { kinds: ['slide-push'], onMoment: 'zoom-punch', maxShare: 0.2, minGapMs: 3000 },
+  },
+  {
+    id: 'skincare-premium',
+    name: 'พรีเมียมสกินแคร์',
+    description: 'ช้า นุ่ม ภาพค่อย ๆ ดันเข้า ซับบางสีอ่อน จางเข้า–ออกระหว่างช็อต ไม่มีป้ายเด้ง',
+    suits: 'เครื่องสำอาง สกินแคร์ น้ำหอม อยากให้ดูหรูแต่อบอุ่น',
+    captions: { styleRef: 'minimal', y: 620, maxWords: 5, maxLines: 1 },
+    hook: { seconds: 3, y: -480, fontWeight: 500, color: '#fff1f2', animationIn: 'fade' },
+    endCard: { seconds: 3, color: '#fff1f2', background: '#4c0519d9', animationIn: 'fade' },
+    cuts: { maxPauseMs: 700, keepPauseMs: 260, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: null, punchGap: 0, drift: 0.045 },
+    graphics: {
+      priceTag: null,
+      productName: { color: '#fff1f2', background: '#4c0519b3', animationIn: 'fade', y: -330 },
+      cta: null,
+    },
+    sfx: {
+      cut: [],
+      minGapMs: 0,
+      price: null,
+      maxPrice: 0,
+      cta: null,
+      hook: 'shimmer-short-soft',
+      endCard: 'shimmer-short-bright',
+      gainDb: -9,
+    },
+    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.2, minGapMs: 5000 },
+  },
+  {
+    id: 'cute-sticker',
+    name: 'น่ารักสติกเกอร์',
+    description: 'ซับตัวหนาขอบชมพูทีละ 1–2 คำ ทุกอย่างเด้งดึ๋ง ซูมเน้นตอนพูดราคา เสียงป๊อปฟองสบู่',
+    suits: 'ของน่ารัก ของเล่น เครื่องเขียน กิ๊ฟช็อป กลุ่มลูกค้าวัยรุ่น',
+    captions: { styleRef: 'outline-bold', y: 420, maxWords: 2, maxLines: 1 },
+    hook: {
+      seconds: 2.5,
+      y: -560,
+      fontWeight: 900,
+      color: '#ffffff',
+      background: '#f472b6',
+      animationIn: 'bounce',
+    },
+    endCard: { seconds: 2.5, color: '#ffffff', background: '#f472b6e6', animationIn: 'bounce' },
+    cuts: { maxPauseMs: 250, keepPauseMs: 80, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.15, punchGap: 2, drift: 0.01 },
+    graphics: {
+      priceTag: { color: '#ffffff', background: '#a855f7', animationIn: 'bounce', y: 90, maxPerClip: 2 },
+      productName: { color: '#ffffff', background: '#f472b6cc', animationIn: 'bounce', y: -330 },
+      cta: { label: 'กดตะกร้าเลยน้า', animationIn: 'bounce', y: 170 },
+    },
+    sfx: {
+      cut: ['pop-medium-bubble'],
+      minGapMs: 5000,
+      price: 'pop-large-bubble',
+      maxPrice: 2,
+      cta: 'pop-medium-bubble',
+      hook: 'pop-large-bubble',
+      endCard: 'sting-playful-short',
+      gainDb: -5,
+    },
+    transitions: { kinds: ['zoom-punch'], onMoment: 'zoom-punch', maxShare: 0.25, minGapMs: 2500 },
+  },
+  {
+    id: 'flash-sale',
+    name: 'แฟลชเซล',
+    description: 'จังหวะเร็ว ป้ายราคาแดงเด้งใหญ่ แฟลชตอนบอกราคา ซับไฮไลต์คำสำคัญ ปิดด้วยปุ่มสั่งซื้อ',
+    suits: 'โปรลดราคา ของแถม วันเซล อยากให้รีบตัดสินใจ (ใช้ราคาที่พูดจริงเท่านั้น)',
+    captions: { styleRef: 'bold-highlight', y: 400, maxWords: 3, maxLines: 1 },
+    hook: {
+      seconds: 2,
+      y: -560,
+      fontWeight: 900,
+      color: '#facc15',
+      background: '#991b1bf2',
+      animationIn: 'zoom-in',
+    },
+    endCard: { seconds: 2.5, color: '#facc15', background: '#991b1bf2', animationIn: 'zoom-in' },
+    cuts: { maxPauseMs: 220, keepPauseMs: 70, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: 1.22, punchGap: 2, drift: 0.012 },
+    graphics: {
+      priceTag: { color: '#facc15', background: '#991b1b', animationIn: 'zoom-in', y: 40, maxPerClip: 3 },
+      productName: null,
+      cta: { label: 'กดสั่งเลยก่อนหมดโปร', animationIn: 'zoom-in', y: 170 },
+    },
+    sfx: {
+      cut: [],
+      minGapMs: 0,
+      price: 'money-register',
+      maxPrice: 3,
+      cta: 'notification-attention-soft',
+      hook: 'sting-bold-short',
+      endCard: 'sting-bold-short',
+      gainDb: -3,
+    },
+    transitions: { kinds: ['zoom-punch'], onMoment: 'flash', maxShare: 0.25, minGapMs: 2500 },
+  },
+  {
+    id: 'minimal-brand',
+    name: 'มินิมอลแบรนด์',
+    description: 'สะอาด เว้นจังหวะ ไม่ซูมแรง ซับบรรทัดเดียวล่างจอ จางดำระหว่างช่วง ปิดด้วยชื่อสินค้า',
+    suits: 'แบรนด์เสื้อผ้า ของแต่งบ้าน สินค้าที่ภาพสวยอยู่แล้ว',
+    captions: { styleRef: 'clean', y: 680, maxWords: 6, maxLines: 1 },
+    hook: { seconds: 3, y: -500, fontWeight: 600, color: '#ffffff', animationIn: 'fade' },
+    endCard: { seconds: 2.5, color: '#ffffff', background: '#000000cc', animationIn: 'fade' },
+    cuts: { maxPauseMs: 600, keepPauseMs: 220, removeFillers: true, removeRestarts: true, maxShotMs: null },
+    zoom: { punchIn: null, punchGap: 0, drift: 0.02 },
+    graphics: {
+      priceTag: null,
+      productName: { color: '#ffffff', background: '#00000099', animationIn: 'fade', y: -330 },
+      cta: null,
+    },
+    sfx: {
+      cut: [],
+      minGapMs: 0,
+      price: null,
+      maxPrice: 0,
+      cta: null,
+      hook: null,
+      endCard: 'sting-minimal-short',
+      gainDb: -8,
+    },
+    transitions: { kinds: ['dip'], onMoment: null, maxShare: 0.15, minGapMs: 6000 },
   },
 ];
 
