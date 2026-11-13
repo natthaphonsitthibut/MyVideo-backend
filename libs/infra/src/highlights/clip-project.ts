@@ -21,6 +21,26 @@ import { placeSoundEffects, type SfxMoment, soundFrames } from './sound-effects.
  */
 export const CLIP_WIDTH = 1080;
 export const CLIP_HEIGHT = 1920;
+
+/**
+ * Output frames (E12-F09). Positions in the style packs are designed on the 1080×1920 frame: on another frame a
+ * vertical position keeps its share of the frame height (`y · height / 1920`) and text is drawn at `textScale`
+ * (laid out on a design column `width / textScale` wide, so wide frames get longer lines, not bigger letters).
+ * **Assumption** (no platform measurement yet): text scales chosen so the largest caption line stays ≤ 7 % of the
+ * frame height on 16:9 and the safe-zone lint below passes for every style.
+ */
+export const OUTPUT_FRAMES = {
+  '9:16': { width: 1080, height: 1920, textScale: 1 },
+  '4:5': { width: 1080, height: 1350, textScale: 0.85 },
+  '1:1': { width: 1080, height: 1080, textScale: 0.75 },
+  '16:9': { width: 1920, height: 1080, textScale: 0.7 },
+} as const;
+export type OutputRatio = keyof typeof OUTPUT_FRAMES;
+/** Design column for laying out text on a frame (≤ 1600 so a 16:9 caption line stays readable at a glance). */
+export const layoutWidth = (ratio: OutputRatio) =>
+  Math.min(1600, Math.round(OUTPUT_FRAMES[ratio].width / OUTPUT_FRAMES[ratio].textScale));
+/** Behind a picture that does not fill the frame (never stretched): a plain dark backdrop. */
+const BACKDROP = '#111111';
 export const CLIP_CAPTION_STYLE = 'bold-highlight' as const;
 /** Lower safe area, same as clips the user creates by hand (E05-F07). */
 const CAPTION_Y = 520;
@@ -47,6 +67,9 @@ export type ClipSourceInfo = {
   fps: { num: number; den: number };
   durationFrames: number;
   hasAudio: boolean;
+  /** Display size of the source (after rotation); unknown = treated as filling the frame. */
+  width?: number;
+  height?: number;
 };
 export type ClipWordMs = { text: string; startMs: number; endMs: number; origin?: 'ai'; asrText?: string };
 export type ClipPlan = {
@@ -270,9 +293,34 @@ export function buildClipProject(input: {
   /** Style pack + jump-cut plan. Absent = the plain cut: one video element, default captions. */
   edit?: { style: StylePack; cut: JumpCutPlan };
   seed: string;
+  /** Output frame; default 9:16. */
+  ratio?: OutputRatio;
+  /** Where the face is across the clip (0..1 of the source width); keeps it in view when the frame crops the sides. */
+  faceX?: number;
 }): Project {
   const { source, plan, pages, hook, edit } = input;
   const newId = seededIds(input.seed);
+  const out = OUTPUT_FRAMES[input.ratio ?? '9:16'];
+  const W = out.width;
+  const H = out.height;
+  /** A text/graphic position designed on 1080×1920 → this frame (same share of the height, scaled text). */
+  const place = (y: number) => ({
+    x: 0,
+    y: Math.round((y * H) / CLIP_HEIGHT),
+    scale: out.textScale,
+    rotation: 0,
+  });
+  // how the picture sits in the frame: a source much narrower than the frame is shown whole over a backdrop
+  const srcAspect = source.width && source.height ? source.width / source.height : W / H;
+  const inside = srcAspect < (W / H) * 0.85;
+  /** Displayed width of a `cover` picture at scale 1 and the shift that centres the face, clamped to the picture. */
+  const coverWidth = srcAspect > W / H ? H * srcAspect : W;
+  const faceShift = (scale: number) => {
+    if (inside || input.faceX === undefined || coverWidth <= W) return 0;
+    const wanted = (0.5 - input.faceX) * coverWidth * scale;
+    const limit = (coverWidth * scale - W) / 2;
+    return Math.round(Math.max(-limit, Math.min(limit, wanted)));
+  };
   const frames = edit ? editFrames(source, plan, edit.cut) : undefined;
   const plain = clipFrames(source, plan);
   const durationFrames = frames?.durationFrames ?? plain.durationFrames;
@@ -287,7 +335,8 @@ export function buildClipProject(input: {
   const videoTrack = newId();
   const captionTrack = newId();
   const overlayTrack = newId();
-  const transform = (y: number, scale = 1) => ({ x: 0, y, scale, rotation: 0 });
+  // every text and graphic is placed on the output frame through `place` (E12-F09)
+  const transform = place;
   const elements: Project['elements'] = {};
   const drift = edit?.style.zoom.drift ?? 0;
   // one slow push-in per RUN of shots with the same framing (not per shot: restarting the push at every cut made
@@ -330,11 +379,18 @@ export function buildClipProject(input: {
       playbackRate: 1,
       volume: 1,
       // zoomed shots keep the top (the seller's face): most of the extra crop comes off the bottom
-      transform: transform(Math.round((scale - 1) * (CLIP_HEIGHT / 2) * ZOOM_KEEP_TOP), scale),
-      fit: 'cover',
+      transform: {
+        x: faceShift(scale),
+        y: Math.round((scale - 1) * (H / 2) * ZOOM_KEEP_TOP),
+        scale,
+        rotation: 0,
+      },
+      fit: inside ? 'contain' : 'cover',
     };
     return id;
   });
+  const backdropTrack = inside ? newId() : undefined;
+  const backdropId = inside ? newId() : undefined;
   const captionStyle = edit?.style.captions.styleRef ?? CLIP_CAPTION_STYLE;
   const captionY = edit?.style.captions.y ?? CAPTION_Y;
   const corrected = (frames?.words ?? plain.words).filter((w) => w.asrText !== undefined);
@@ -512,6 +568,21 @@ export function buildClipProject(input: {
     }
   }
 
+  if (backdropTrack && backdropId)
+    elements[backdropId] = {
+      type: 'shape',
+      id: backdropId,
+      trackId: backdropTrack,
+      startFrame: 0,
+      durationFrames,
+      origin: 'ai',
+      shape: 'rect',
+      width: W,
+      height: H,
+      fill: BACKDROP,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+    };
+
   // sound effects (D-026): created last so the ids above stay what they were before sounds existed
   const assets: Project['assets'] = {
     [assetId]: {
@@ -585,11 +656,14 @@ export function buildClipProject(input: {
     id: input.projectId,
     merchantId: input.merchantId,
     fps: { num: source.fps.num, den: source.fps.den },
-    width: CLIP_WIDTH,
-    height: CLIP_HEIGHT,
+    width: W,
+    height: H,
     durationFrames,
     assets,
     tracks: [
+      ...(backdropTrack && backdropId
+        ? [{ id: backdropTrack, kind: 'overlay' as const, elementIds: [backdropId] }]
+        : []),
       { id: videoTrack, kind: 'video', elementIds: videoIds },
       { id: captionTrack, kind: 'caption', elementIds: captionIds.filter((id) => elements[id]) },
       ...(overlayIds.length > 0
@@ -608,6 +682,36 @@ export function buildClipProject(input: {
       ...(edit ? { styleId: edit.style.id } : {}),
     },
   } as Project;
+}
+
+/** Caption line height used by the lint: the largest caption font (96 px) plus spacing — an upper bound. */
+const LINT_CAPTION_LINE_PX = 110;
+
+/**
+ * Safe-zone lint (E12-F09): every text and caption box, as placed and scaled, must sit inside the frame with a
+ * margin of 4 % of the height at the top and bottom. Horizontal fit is guaranteed by laying text out on the
+ * frame's design column. Returns the problems (empty = OK).
+ */
+export function layoutLint(project: Project): string[] {
+  const margin = project.height * 0.04;
+  const out: string[] = [];
+  for (const e of Object.values(project.elements)) {
+    let lines = 0;
+    let lineHeight = 0;
+    if (e.type === 'text') {
+      lines = Math.max(1, e.content.split('\n').length);
+      lineHeight = e.style ? e.style.fontSize * 1.3 : LINT_CAPTION_LINE_PX;
+    } else if (e.type === 'caption') {
+      lines = Math.max(1, e.lines.length);
+      lineHeight = LINT_CAPTION_LINE_PX;
+    } else continue;
+    const half = (lines * lineHeight * e.transform.scale) / 2;
+    const top = e.transform.y - half;
+    const bottom = e.transform.y + half;
+    if (top < -project.height / 2 + margin || bottom > project.height / 2 - margin)
+      out.push(`${e.type} ${e.id} at y=${e.transform.y} spans ${Math.round(top)}..${Math.round(bottom)}`);
+  }
+  return out;
 }
 
 export class InvalidClipProjectError extends Error {
@@ -655,7 +759,7 @@ export async function layoutClipProject(
           words.map(({ text, startFrame, endFrame }) => ({ text, startFrame, endFrame })),
           {
             styleRef: captionStyle,
-            canvasWidth: CLIP_WIDTH,
+            canvasWidth: layoutWidth(input.ratio ?? '9:16'),
             maxLines: capt?.maxLines ?? 2,
             ...(capt?.maxWords ? { maxWords: capt.maxWords } : {}),
           },

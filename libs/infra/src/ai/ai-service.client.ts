@@ -54,7 +54,16 @@ export type ShotsResult = z.infer<typeof ShotsResult>;
 
 export const FacesResult = z.object({
   engine: z.string(),
-  images: z.array(z.object({ path: z.string(), faces: z.number().int(), largest_ratio: z.number() })),
+  images: z.array(
+    z.object({
+      path: z.string(),
+      faces: z.number().int(),
+      largest_ratio: z.number(),
+      // centre of the largest face (0..1 of the frame); null without a face, absent from older services
+      center_x: z.number().nullable().optional(),
+      center_y: z.number().nullable().optional(),
+    }),
+  ),
 });
 export type FacesResult = z.infer<typeof FacesResult>;
 

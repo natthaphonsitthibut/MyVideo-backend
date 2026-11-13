@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { STYLE_PACKS } from '@myvideo/contracts';
 import {
   finalizeClips,
@@ -22,11 +23,12 @@ import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from 
 import { loudnessFromPeaks, PEAKS_RECIPE, type PeaksJson } from '../media/peaks.js';
 import type { ProbeInfo } from '../media/probe.js';
 import { loadSource } from '../media/source-helpers.js';
+import { runProcess, withTempDir } from '../process/run-process.js';
 import type { StageTextLayout } from '../render/text-layout.js';
 import { clipCaptionWords, selectCaptionSegments } from './caption-fix.js';
 import { type ClipBuildInput, clipBuildInput, planOf } from './clip-build-input.js';
 import { clipEndWithTail, normalizeThaiSpelling } from './clip-ending.js';
-import { layoutClipProject, seededIds } from './clip-project.js';
+import { layoutClipProject, OUTPUT_FRAMES, type OutputRatio, seededIds } from './clip-project.js';
 import { type ProductInfo, suggestHooks, suggestHooksRules } from './hooks.js';
 import { keyMomentKind } from './jump-cuts.js';
 import { flattenWords, limitByInputShare, rerankCandidates } from './rerank.js';
@@ -133,7 +135,14 @@ export class BuildClipsUnavailableError extends Error {
  */
 export async function requestBuildClips(
   ds: DataSource,
-  input: { merchantId: string; sourceId: string; styleId: string; maxUnfinishedRuns?: number },
+  input: {
+    merchantId: string;
+    sourceId: string;
+    styleId: string;
+    /** Output frame of the edited clips (default 9:16). */
+    ratio?: OutputRatio;
+    maxUnfinishedRuns?: number;
+  },
 ): Promise<{ runId: string; created: boolean }> {
   if (!STYLE_PACKS.some((p) => p.id === input.styleId))
     throw new BuildClipsUnavailableError('unknown_style', 'unknown style');
@@ -172,7 +181,7 @@ export async function requestBuildClips(
       kind: 'build_clips',
       subjectType: 'source',
       subjectId: input.sourceId,
-      input: { planRunId: plan.id, styleId: input.styleId },
+      input: { planRunId: plan.id, styleId: input.styleId, ...(input.ratio ? { ratio: input.ratio } : {}) },
     });
     for (const s of planned) {
       await enqueueInTransaction(em, {
@@ -188,6 +197,7 @@ export async function requestBuildClips(
           product: plan.input?.product ?? {},
           speech: speech[String(s.rank)] ?? [],
           styleId: input.styleId,
+          ...(input.ratio ? { ratio: input.ratio } : {}),
         },
         maxAttempts: 3,
         timeoutMs: 10 * 60_000,
@@ -505,6 +515,8 @@ export function sourceInfo(sourceId: string, probe: ProbeInfo) {
     fps: probe.video.fps,
     durationFrames: probe.video.durationFrames,
     hasAudio: probe.audio !== null,
+    width: probe.video.width,
+    height: probe.video.height,
   };
 }
 
@@ -535,18 +547,72 @@ export async function layoutClip(
       seed: `${a.workflowRunId}:${a.rank}`,
       style: { ...(a.styleId ? { styleId: a.styleId } : {}), speech: a.input.speech },
       ...(a.input.productName ? { productName: a.input.productName } : {}),
+      ...(a.input.ratio ? { ratio: a.input.ratio } : {}),
+      ...(a.input.faceX !== undefined ? { faceX: a.input.faceX } : {}),
     });
   } finally {
     await layout.close();
   }
 }
 
-export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): JobHandler {
+/**
+ * Where the face is across a clip, for crops that cut the sides (16:9 footage in a 9:16 frame): the largest face on
+ * 3 frames (10 %, 50 %, 90 % of the clip), median centre as a share of the width. Undefined when no face is seen or
+ * the measurement fails — the crop then stays centred (a re-frame is a nicety, never a reason to fail the clip).
+ */
+export async function measureFaceX(
+  ai: AiServiceClient,
+  storage: StoragePort,
+  originalKey: string,
+  startMs: number,
+  endMs: number,
+): Promise<number | undefined> {
+  try {
+    const file = await storage.localPath(originalKey);
+    try {
+      return await withTempDir('faces', async (dir) => {
+        const paths: string[] = [];
+        for (const [i, share] of [0.1, 0.5, 0.9].entries()) {
+          const out = join(dir, `face-${i}.jpg`);
+          const t = (startMs + (endMs - startMs) * share) / 1000;
+          await runProcess('ffmpeg', [
+            '-v',
+            'error',
+            '-y',
+            '-nostdin',
+            '-ss',
+            t.toFixed(3),
+            '-i',
+            file.path,
+            '-frames:v',
+            '1',
+            '-vf',
+            'scale=-2:540',
+            out,
+          ]);
+          paths.push(out);
+        }
+        const res = await ai.faces(paths);
+        const xs = res.images
+          .map((img) => img.center_x)
+          .filter((x): x is number => typeof x === 'number')
+          .sort((a, b) => a - b);
+        return xs.length ? (xs[Math.floor(xs.length / 2)] as number) : undefined;
+      });
+    } finally {
+      await file.release();
+    }
+  } catch {
+    return undefined;
+  }
+}
+
+export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToClipsDeps): JobHandler {
   return {
     type: 'clips.build',
     queue: 'ai',
     async run({ job }) {
-      const { source } = await loadSource(ds, job);
+      const { source, original } = await loadSource(ds, job);
       const probe = source.probe as ProbeInfo | null;
       if (!probe) throw new FatalJobError('source has no probe result');
       const repo = ds.getRepository(ClipSuggestionEntity);
@@ -589,6 +655,16 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
       );
       const projectId = clipProjectId(planRunId, rank);
       const endMs = clipEndWithTail(s.endMs, words[s.endWord + 1]?.startMs, probe.durationMs);
+      const ratio: OutputRatio =
+        typeof job.payload.ratio === 'string' && job.payload.ratio in OUTPUT_FRAMES
+          ? (job.payload.ratio as OutputRatio)
+          : '9:16';
+      // the frame crops the sides of a wider picture: find where the face is so it stays in view
+      const frame = OUTPUT_FRAMES[ratio];
+      const faceX =
+        probe.video.width / probe.video.height > (frame.width / frame.height) * 1.15
+          ? await measureFaceX(ai, storage, original.storageKey, s.startMs, endMs)
+          : undefined;
       const buildInput = clipBuildInput({
         plan: {
           startMs: s.startMs,
@@ -600,6 +676,8 @@ export function clipsBuildHandler({ ds, llm, openLayout }: LiveToClipsDeps): Job
         // older queued jobs have no speech spans: then only filler words are cut
         speech: Array.isArray(job.payload.speech) ? (job.payload.speech as SpanMs[]) : [],
         ...(product.name ? { productName: product.name } : {}),
+        ...(ratio !== '9:16' ? { ratio } : {}),
+        ...(faceX !== undefined ? { faceX } : {}),
       });
       const project = await layoutClip(openLayout, {
         projectId,

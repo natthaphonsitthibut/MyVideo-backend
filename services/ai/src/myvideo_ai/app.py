@@ -110,6 +110,8 @@ class FaceOut(BaseModel):
     path: str
     faces: int
     largest_ratio: float
+    center_x: float | None = None
+    center_y: float | None = None
 
 
 class FacesResponse(BaseModel):
@@ -210,7 +212,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 st = face_stats(img, model)
             except OSError as err:
                 raise HTTPException(status_code=400, detail=str(err)) from err
-            out.append(FaceOut(path=str(img), faces=st.faces, largest_ratio=st.largest_ratio))
+            out.append(
+                FaceOut(
+                    path=str(img),
+                    faces=st.faces,
+                    largest_ratio=st.largest_ratio,
+                    center_x=st.center_x,
+                    center_y=st.center_y,
+                )
+            )
         return FacesResponse(engine=FACES_ENGINE, images=out)
 
     @app.post("/asr")

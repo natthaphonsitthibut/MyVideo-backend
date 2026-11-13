@@ -19,6 +19,9 @@ MIN_SCORE = 0.8
 class FaceStats:
     faces: int
     largest_ratio: float  # largest face box area / frame area, 0..1
+    # centre of the largest face as a share of the frame (0..1), for re-framing crops; None without a face
+    center_x: float | None = None
+    center_y: float | None = None
 
 
 def face_stats(image: Path, model: Path) -> FaceStats:
@@ -32,7 +35,14 @@ def face_stats(image: Path, model: Path) -> FaceStats:
         return FaceStats(faces=0, largest_ratio=0.0)
     # faces smaller than ~6 % of the short side are crowd/background, not someone talking to the camera
     min_side = min(h, w) * 0.06
-    sizes = [float(f[2]) * float(f[3]) for f in faces if min(float(f[2]), float(f[3])) >= min_side]
-    if not sizes:
+    kept = [f for f in faces if min(float(f[2]), float(f[3])) >= min_side]
+    if not kept:
         return FaceStats(faces=0, largest_ratio=0.0)
-    return FaceStats(faces=len(sizes), largest_ratio=round(max(sizes) / float(w * h), 4))
+    big = max(kept, key=lambda f: float(f[2]) * float(f[3]))
+    x, y, fw, fh = (float(v) for v in big[:4])
+    return FaceStats(
+        faces=len(kept),
+        largest_ratio=round(fw * fh / float(w * h), 4),
+        center_x=round(min(1.0, max(0.0, (x + fw / 2) / w)), 4),
+        center_y=round(min(1.0, max(0.0, (y + fh / 2) / h)), 4),
+    )

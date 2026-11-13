@@ -1,6 +1,6 @@
 import type { SpanMs } from '@myvideo/domain';
 import { z } from 'zod';
-import type { ClipPlan } from './clip-project.js';
+import type { ClipPlan, OutputRatio } from './clip-project.js';
 
 /**
  * The inputs `clips.build` gave the pure project builder, stored on the clip suggestion. Everything that needed an
@@ -27,6 +27,10 @@ const ClipBuildInputSchema = z.object({
   hook: z.object({ text: z.string(), origin: z.enum(['ai', 'rules']) }).nullable(),
   /** What the merchant typed as the product name (graphics, emphasis); absent when none. */
   productName: z.string().optional(),
+  /** Output frame (E12-F09); absent = 9:16 (clips built before ratios existed). */
+  ratio: z.enum(['9:16', '4:5', '1:1', '16:9']).optional(),
+  /** Measured face centre across the clip (0..1 of the source width), for side crops. */
+  faceX: z.number().min(0).max(1).optional(),
 });
 export type ClipBuildInput = z.infer<typeof ClipBuildInputSchema>;
 
@@ -34,6 +38,8 @@ export function clipBuildInput(input: {
   plan: ClipPlan;
   speech: readonly SpanMs[];
   productName?: string;
+  ratio?: OutputRatio;
+  faceX?: number;
 }): ClipBuildInput {
   const { plan } = input;
   return {
@@ -45,6 +51,8 @@ export function clipBuildInput(input: {
     title: plan.title,
     hook: plan.hook ? { text: plan.hook.text, origin: plan.hook.origin } : null,
     ...(input.productName?.trim() ? { productName: input.productName.trim() } : {}),
+    ...(input.ratio && input.ratio !== '9:16' ? { ratio: input.ratio } : {}),
+    ...(input.faceX !== undefined ? { faceX: input.faceX } : {}),
   };
 }
 

@@ -57,3 +57,25 @@ def test_face_on_real_talking_head_and_none_on_product_footage(tmp_path):
     # C03 is a half-body shot: the face is ~0.9 % of the frame (measured); talking-head rule uses >= 0.4 %
     assert max(i["largest_ratio"] for i in talk_hits) >= 0.004, imgs
     assert gpu_hits == [], imgs
+    # no face → no position
+    assert all(i["center_x"] is None and i["center_y"] is None for i in imgs[3:]), imgs
+
+
+@pytest.mark.skipif(not REAL, reason="real footage C03/C05 not present")
+def test_face_centre_follows_where_the_face_is(tmp_path):
+    """Real C03 frame placed at the left / right third of a wide black canvas (real pixels, placement made
+    here): the reported centre must move with it — this is what the 16:9 → 9:16 crop uses."""
+    talk = frame(TALKING, 20.0, tmp_path / "talk.jpg")  # 288x360
+    out = {}
+    for side, x in (("left", 0), ("right", 576)):
+        img = tmp_path / f"wide-{side}.jpg"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(talk), "-vf", f"pad=864:360:{x}:0:black", str(img)],
+            check=True,
+        )
+        out[side] = img
+    client = TestClient(create_app(Settings(allowed_roots=[tmp_path])))
+    imgs = client.post("/faces", json={"paths": [str(out["left"]), str(out["right"])]}).json()["images"]
+    assert imgs[0]["faces"] > 0 and imgs[1]["faces"] > 0, imgs
+    assert imgs[0]["center_x"] < 1 / 3 < 2 / 3 < imgs[1]["center_x"], imgs
+    assert 0 < imgs[0]["center_y"] < 1, imgs

@@ -97,7 +97,7 @@ describe('folder edit orchestration (real Postgres)', () => {
     folder = uuidv7();
     await ds.query(
       `INSERT INTO project_folders (id, merchant_id, title, settings) VALUES ($1, $2, 'ไลฟ์', $3)`,
-      [folder, m, JSON.stringify({ productName: 'เสื้อมัดย้อม' })],
+      [folder, m, JSON.stringify({ productName: 'เสื้อมัดย้อม', ratio: '16:9' })],
     );
   });
   afterAll(async () => {
@@ -158,6 +158,16 @@ describe('folder edit orchestration (real Postgres)', () => {
     });
     await runAdvance(runId);
     const build = await childRun('build_clips', live);
+    // the folder's frame reaches every clip build
+    const [b] = (await ds.query('SELECT input FROM workflow_runs WHERE id = $1', [build])) as {
+      input: { ratio?: string };
+    }[];
+    expect(b?.input.ratio).toBe('16:9');
+    const jobs = (await ds.query(
+      `SELECT payload FROM jobs WHERE workflow_run_id = $1 AND type = 'clips.build'`,
+      [build],
+    )) as { payload: { ratio?: string } }[];
+    expect(jobs.map((j) => j.payload.ratio)).toEqual(['16:9']);
     expect(
       (
         await ds.query('SELECT 1 FROM workflow_runs WHERE kind = $1 AND subject_id = $2', [

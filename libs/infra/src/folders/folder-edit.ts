@@ -4,6 +4,7 @@ import {
   type FolderSourceFacts,
   folderPlan,
   type RunState,
+  resolveOutputRatio,
 } from '@myvideo/domain';
 import type { DataSource, EntityManager } from 'typeorm';
 import { requestTranscription, TranscriptionUnavailableError } from '../ai/transcribe-handlers.js';
@@ -230,6 +231,17 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
       const merchantId = job.merchantId;
       const started: string[] = [];
       const sources = await folderSourceFacts(ds, merchantId, input.folderId);
+      // the frame the clips are edited for: the folder's setting now ("auto" = most of the footage's shape)
+      const frame: { settings: { ratio?: string } | null; sizes: { width: number; height: number }[] }[] =
+        await ds.query(
+          `SELECT f.settings,
+             ARRAY(SELECT json_build_object('width', (s.probe->'video'->>'width')::int, 'height', (s.probe->'video'->>'height')::int)
+               FROM project_folder_sources fs JOIN video_sources s ON s.id = fs.source_id AND s.merchant_id = fs.merchant_id
+              WHERE fs.folder_id = f.id AND fs.merchant_id = $1 AND s.probe IS NOT NULL) AS sizes
+           FROM project_folders f WHERE f.id = $2 AND f.merchant_id = $1`,
+          [merchantId, input.folderId],
+        );
+      const ratio = resolveOutputRatio(frame[0]?.settings?.ratio, frame[0]?.sizes ?? []);
       for (const s of sources) {
         if (s.ingest !== 'ready' || s.kind !== 'video' || !s.hasAudio) continue;
         try {
@@ -244,7 +256,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
             });
             started.push(`analyse:${s.id}`);
           } else if (input.styleId && s.analysis === 'succeeded' && s.build === 'none') {
-            await requestBuildClips(ds, { merchantId, sourceId: s.id, styleId: input.styleId });
+            await requestBuildClips(ds, { merchantId, sourceId: s.id, styleId: input.styleId, ratio });
             started.push(`build:${s.id}`);
           }
         } catch (err) {
@@ -265,7 +277,14 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
             WHERE id = $1 AND merchant_id = $2`,
           [job.workflowRunId, merchantId],
         );
-      return { started, done: plan.done, total: plan.total, finished: plan.finished, failed: plan.failed };
+      return {
+        started,
+        ratio,
+        done: plan.done,
+        total: plan.total,
+        finished: plan.finished,
+        failed: plan.failed,
+      };
     },
   };
 }

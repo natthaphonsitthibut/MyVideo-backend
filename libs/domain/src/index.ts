@@ -8,6 +8,7 @@ export * from './jobs/retry.js';
 export * from './jobs/workflow-state.js';
 export * from './llm/llm-port.js';
 export * from './media/chunk-plan.js';
+export * from './media/output-ratio.js';
 export * from './media/shots.js';
 export * from './media/source.js';
 export * from './media/sprites.js';
