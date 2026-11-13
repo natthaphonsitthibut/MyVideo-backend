@@ -70,6 +70,7 @@ export {
   latestFolderEdit,
   requestFolderEdit,
 } from './folders/folder-edit.js';
+export { getStyleLock, lockStyle, unlockStyle } from './folders/style-lock.js';
 export { visualMontageHandler } from './folders/visual-montage.js';
 export { type ProbeResult, probePostgres, probeRedis } from './health/probes.js';
 export {

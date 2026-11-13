@@ -19,6 +19,11 @@ export class FoldersController {
   list(@CurrentMerchant() m: string) {
     return this.folders.list(m);
   }
+  @Delete('style-lock')
+  @HttpCode(204)
+  unlockStyle(@CurrentMerchant() m: string) {
+    return this.folders.unlockStyle(m);
+  }
   @Post()
   @HttpCode(201)
   create(
@@ -57,9 +62,9 @@ export class FoldersController {
   chooseStyle(
     @CurrentMerchant() m: string,
     @Param(new ZodPipe(FolderParams)) p: { id: string },
-    @Body(new ZodPipe(ChooseFolderStyleBody)) b: { styleId: string },
+    @Body(new ZodPipe(ChooseFolderStyleBody)) b: { styleId: string; lockStyle?: boolean },
   ) {
-    return this.folders.chooseStyle(m, p.id, b.styleId);
+    return this.folders.chooseStyle(m, p.id, b.styleId, b.lockStyle);
   }
   @Post(':id/sources')
   @HttpCode(200)

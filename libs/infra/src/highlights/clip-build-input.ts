@@ -1,3 +1,4 @@
+import { FrozenStyle } from '@myvideo/contracts';
 import type { SpanMs } from '@myvideo/domain';
 import { z } from 'zod';
 import type { ClipPlan, OutputRatio } from './clip-project.js';
@@ -17,6 +18,7 @@ const Word = z.object({
 const Span = z.object({ startMs: z.number().int(), endMs: z.number().int() });
 
 const ClipBuildInputSchema = z.object({
+  frozenStyle: FrozenStyle.optional(),
   version: z.literal(1),
   startMs: z.number().int().min(0),
   endMs: z.number().int().min(1),
@@ -52,10 +54,12 @@ export function clipBuildInput(input: {
   ratio?: OutputRatio;
   faceX?: number;
   photos?: ClipBuildInput['photos'];
+  frozenStyle?: FrozenStyle;
 }): ClipBuildInput {
   const { plan } = input;
   return {
     version: 1,
+    ...(input.frozenStyle ? { frozenStyle: FrozenStyle.parse(input.frozenStyle) } : {}),
     startMs: plan.startMs,
     endMs: plan.endMs,
     words: plan.words.map((w) => ({ ...w })),

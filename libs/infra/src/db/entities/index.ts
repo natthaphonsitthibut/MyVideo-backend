@@ -11,6 +11,7 @@ import { ProjectEntity, ProjectVersionEntity } from './project.entity.js';
 import { ProjectFolderEntity, ProjectFolderSourceEntity } from './project-folder.entity.js';
 import { RenderEntity } from './render.entity.js';
 import { SessionEntity } from './session.entity.js';
+import { StyleLockEntity } from './style-lock.entity.js';
 import {
   TranscriptChunkEntity,
   TranscriptEditEntity,
@@ -49,6 +50,7 @@ export {
 };
 /** Every entity, listed explicitly (no globs: ESM + bundling safe). */
 export const entities = [
+  StyleLockEntity,
   MerchantEntity,
   UserEntity,
   SessionEntity,

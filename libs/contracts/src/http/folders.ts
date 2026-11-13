@@ -71,6 +71,7 @@ export const FolderPlanResponse = named(
     /** The newest folder edit (null = never started). */
     runId: z.uuid().nullable(),
     styleId: z.string().nullable(),
+    lockedStyle: z.object({ styleId: z.string(), name: z.string() }).nullable(),
     steps: z.array(FolderPlanStep),
     done: z.number().int(),
     total: z.number().int(),
@@ -100,10 +101,19 @@ export const StartFolderEditBody = named(
 );
 export const ChooseFolderStyleBody = named(
   'ChooseFolderStyleBody',
-  z.object({ styleId: z.string().min(1).max(64) }),
+  z.object({ styleId: z.string().min(1).max(64), lockStyle: z.boolean().optional() }),
 );
 const missing = { description: 'No such folder or source for this merchant', schema: ApiErrorBody };
 export const folderRoutes = [
+  defineRoute({
+    operationId: 'unlockEditingStyle',
+    method: 'delete',
+    path: '/folders/style-lock',
+    summary: 'Stop automatically applying the merchant locked style to new edits',
+    tags: ['folders'],
+    auth: true,
+    responses: { 204: { description: 'Style unlocked' } },
+  }),
   defineRoute({
     operationId: 'createFolder',
     method: 'post',

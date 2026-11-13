@@ -1,3 +1,4 @@
+import type { FrozenStyle } from '@myvideo/contracts';
 import {
   type FolderFacts,
   type FolderPlan,
@@ -16,6 +17,7 @@ import {
 } from '../highlights/live-to-clips.js';
 import { FatalJobError, type JobHandler } from '../jobs/handlers.js';
 import { assertRunCapacity, createRunInTransaction, enqueueInTransaction } from '../jobs/job-store.js';
+import { getStyleLock } from './style-lock.js';
 import { visualFootage } from './visual-montage.js';
 
 /**
@@ -30,6 +32,7 @@ export type FolderEditInput = {
   sourceIds?: string[];
   /** Chosen (or locked) style; null until the merchant picks. */
   styleId: string | null;
+  frozenStyle?: FrozenStyle;
   /** Merchant-typed product name from the folder settings (never invented). */
   productName: string | null;
   /** Set when the plan is finished or failed: the run no longer reacts to child runs. */
@@ -192,10 +195,13 @@ export async function requestFolderEdit(
     const open = await latestFolderEdit(em, input.merchantId, input.folderId);
     if (open && !open.input.closedAt) return { runId: open.id, created: false };
     if (input.maxUnfinishedRuns) await assertRunCapacity(em, input.merchantId, input.maxUnfinishedRuns);
+    const locked = await getStyleLock(em, input.merchantId);
+    const frozenStyle = locked && (!input.styleId || input.styleId === locked.pack.id) ? locked : undefined;
     const runInput: FolderEditInput = {
       folderId: input.folderId,
       sourceIds,
-      styleId: input.styleId ?? null,
+      styleId: input.styleId ?? frozenStyle?.pack.id ?? null,
+      ...(frozenStyle ? { frozenStyle } : {}),
       productName: folder.settings?.productName ?? null,
     };
     const run = await createRunInTransaction(em, {
@@ -218,10 +224,12 @@ export async function chooseFolderStyle(
   return ds.transaction(async (em) => {
     const open = await latestFolderEdit(em, input.merchantId, input.folderId);
     if (!open || open.input.closedAt) return null;
+    const locked = await getStyleLock(em, input.merchantId);
+    const frozenStyle = locked?.pack.id === input.styleId ? locked : null;
     await em.query(
-      `UPDATE workflow_runs SET input = jsonb_set(input, '{styleId}', to_jsonb($3::text)), updated_at = now()
+      `UPDATE workflow_runs SET input = jsonb_set(input, '{styleId}', to_jsonb($3::text)) || jsonb_build_object('frozenStyle',$4::jsonb), updated_at = now()
         WHERE id = $1 AND merchant_id = $2`,
-      [open.id, input.merchantId, input.styleId],
+      [open.id, input.merchantId, input.styleId, JSON.stringify(frozenStyle)],
     );
     await enqueueInTransaction(em, advanceStep(input.merchantId, open.id, `style:${input.styleId}`));
     return { runId: open.id };
@@ -322,6 +330,7 @@ export function folderAdvanceHandler({ ds }: { ds: DataSource }): JobHandler {
               styleId: input.styleId,
               ratio,
               photos,
+              ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
             });
             started.push(`build:${s.id}`);
           }

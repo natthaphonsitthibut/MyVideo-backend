@@ -5,7 +5,10 @@ import {
   type Env,
   FolderEditUnavailableError,
   folderPlanOf,
+  getStyleLock,
+  lockStyle,
   requestFolderEdit,
+  unlockStyle,
 } from '@myvideo/infra';
 import {
   BadRequestException,
@@ -145,6 +148,7 @@ export class FoldersService {
   async plan(merchantId: string, id: string): Promise<FolderPlanResponse> {
     await this.get(merchantId, id); // 404 for another merchant's folder
     const { runId, styleId, plan, facts } = await folderPlanOf(this.ds, merchantId, id);
+    const locked = await getStyleLock(this.ds, merchantId);
     // the analysis advice of the longest speech video ranks the styles for this footage
     const speech = facts.sources.filter((s) => s.kind === 'video' && s.hasAudio).map((s) => s.id);
     const advice: {
@@ -186,7 +190,25 @@ export class FoldersService {
     // the style step names the style the merchant knows, not its id
     const picked = styleId ? STYLE_PACKS.find((p) => p.id === styleId) : undefined;
     const steps = plan.steps.map((s) => (s.id === 'style' && picked ? { ...s, detail: picked.name } : s));
-    return { runId, styleId, ...plan, steps, proposals: proposals.slice(0, 3) };
+    if (locked) {
+      const i = proposals.findIndex((p) => p.styleId === locked.pack.id);
+      if (i >= 0) proposals.splice(i, 1);
+      proposals.unshift({
+        styleId: locked.pack.id,
+        name: locked.pack.name,
+        description: locked.pack.description,
+        reason: 'สไตล์ที่คุณล็อกไว้',
+        origin: 'catalogue',
+      });
+    }
+    return {
+      runId,
+      styleId,
+      ...plan,
+      steps,
+      proposals: proposals.slice(0, 3),
+      lockedStyle: locked ? { styleId: locked.pack.id, name: locked.pack.name } : null,
+    };
   }
 
   async startEdit(
@@ -217,13 +239,22 @@ export class FoldersService {
     return this.plan(merchantId, id);
   }
 
-  async chooseStyle(merchantId: string, id: string, styleId: string): Promise<FolderPlanResponse> {
+  async chooseStyle(
+    merchantId: string,
+    id: string,
+    styleId: string,
+    saveLock = false,
+  ): Promise<FolderPlanResponse> {
     if (!STYLE_PACKS.some((p) => p.id === styleId))
       throw new BadRequestException({ error: 'unknown_style', message: `ไม่มีสไตล์ "${styleId}"` });
     await this.get(merchantId, id);
+    if (saveLock) await lockStyle(this.ds, merchantId, styleId);
     const done = await chooseFolderStyle(this.ds, { merchantId, folderId: id, styleId });
     if (!done) throw new ConflictException('ยังไม่ได้เริ่มตัดต่อโปรเจกต์นี้ กด "เริ่มตัดต่อ" ก่อน');
     return this.plan(merchantId, id);
+  }
+  async unlockStyle(merchantId: string): Promise<void> {
+    await unlockStyle(this.ds, merchantId);
   }
 
   async delete(merchantId: string, id: string): Promise<void> {

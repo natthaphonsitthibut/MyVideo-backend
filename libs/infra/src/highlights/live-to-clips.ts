@@ -1,6 +1,7 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STYLE_PACKS } from '@myvideo/contracts';
+import { type FrozenStyle, STYLE_PACKS } from '@myvideo/contracts';
 import {
   finalizeClips,
   flattenTranscript,
@@ -149,6 +150,7 @@ export async function requestBuildClips(
     /** Output frame of the edited clips (default 9:16). */
     ratio?: OutputRatio;
     photos?: ClipBuildInput['photos'];
+    frozenStyle?: FrozenStyle;
     maxUnfinishedRuns?: number;
   },
 ): Promise<{ runId: string; created: boolean }> {
@@ -206,6 +208,7 @@ export async function requestBuildClips(
           speech: speech[String(s.rank)] ?? [],
           styleId: input.styleId,
           ...(input.photos?.length ? { photos: input.photos } : {}),
+          ...(input.frozenStyle ? { frozenStyle: input.frozenStyle } : {}),
           ...(input.ratio ? { ratio: input.ratio } : {}),
         },
         maxAttempts: 3,
@@ -547,19 +550,29 @@ export async function layoutClip(
 ) {
   const layout = await openLayout();
   try {
+    const frozen = a.input.frozenStyle?.pack.id === a.styleId ? a.input.frozenStyle : undefined;
+    const seed = frozen
+      ? createHash('sha256')
+          .update(JSON.stringify([frozen.seed, a.source, a.input]))
+          .digest('hex')
+      : `${a.workflowRunId}:${a.rank}`;
     const project = await layoutClipProject(layout, {
-      projectId: a.projectId,
+      projectId: frozen ? seededIds(`${seed}:project`)() : a.projectId,
       merchantId: a.merchantId,
-      workflowRunId: a.workflowRunId,
+      ...(!frozen ? { workflowRunId: a.workflowRunId } : {}),
       source: a.source,
       plan: planOf(a.input),
-      seed: `${a.workflowRunId}:${a.rank}`,
-      style: { ...(a.styleId ? { styleId: a.styleId } : {}), speech: a.input.speech },
+      seed,
+      style: {
+        ...(a.styleId ? { styleId: a.styleId } : {}),
+        speech: a.input.speech,
+        ...(frozen ? { resolved: frozen.pack } : {}),
+      },
       ...(a.input.productName ? { productName: a.input.productName } : {}),
       ...(a.input.ratio ? { ratio: a.input.ratio } : {}),
       ...(a.input.faceX !== undefined ? { faceX: a.input.faceX } : {}),
     });
-    return addPhotoCutaways(project, a.input.photos ?? [], `${a.workflowRunId}:${a.rank}`);
+    return addPhotoCutaways(project, a.input.photos ?? [], seed);
   } finally {
     await layout.close();
   }
@@ -663,7 +676,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         { merchantId: job.merchantId, workflowRunId: job.workflowRunId },
         aiFixed,
       );
-      const projectId = clipProjectId(planRunId, rank);
+      let projectId = clipProjectId(planRunId, rank);
       const endMs = clipEndWithTail(s.endMs, words[s.endWord + 1]?.startMs, probe.durationMs);
       const ratio: OutputRatio =
         typeof job.payload.ratio === 'string' && job.payload.ratio in OUTPUT_FRAMES
@@ -691,6 +704,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         ...(Array.isArray(job.payload.photos)
           ? { photos: job.payload.photos as ClipBuildInput['photos'] }
           : {}),
+        ...(job.payload.frozenStyle ? { frozenStyle: job.payload.frozenStyle as FrozenStyle } : {}),
       });
       const project = await layoutClip(openLayout, {
         projectId,
@@ -701,6 +715,7 @@ export function clipsBuildHandler({ ds, storage, ai, llm, openLayout }: LiveToCl
         input: buildInput,
         styleId: typeof job.payload.styleId === 'string' ? job.payload.styleId : undefined,
       });
+      projectId = project.id;
       await ds.transaction(async (em) => {
         const exists = await em.getRepository(ProjectEntity).existsBy({ id: projectId });
         if (!exists) {

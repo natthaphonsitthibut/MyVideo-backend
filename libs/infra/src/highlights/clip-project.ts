@@ -803,7 +803,7 @@ export class InvalidClipProjectError extends Error {
 export async function layoutClipProject(
   layout: StageTextLayout,
   input: Omit<Parameters<typeof buildClipProject>[0], 'pages' | 'hook' | 'endCard' | 'edit' | 'graphics'> & {
-    style?: { styleId?: string; speech: readonly SpanMs[] };
+    style?: { styleId?: string; speech: readonly SpanMs[]; resolved?: StylePack };
     /** The merchant's product name (lower-third, emphasis) — only what the merchant typed. */
     productName?: string;
   },
@@ -811,7 +811,7 @@ export async function layoutClipProject(
   const { style: styleInput, productName, ...rest } = input;
   let edit: { style: StylePack; cut: JumpCutPlan } | undefined;
   if (styleInput) {
-    const style = stylePack(styleInput.styleId);
+    const style = styleInput.resolved ?? stylePack(styleInput.styleId);
     const jump = planJumpCuts(
       { startMs: input.plan.startMs, endMs: input.plan.endMs },
       input.plan.words,
