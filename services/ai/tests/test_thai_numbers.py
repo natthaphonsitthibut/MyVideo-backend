@@ -27,6 +27,8 @@ from myvideo_ai.thai import numbers_to_digits, segment_words
         ("เบอร์สาม", "เบอร์ 3"),
         ("ลดเหลือห้าบาท", "ลดเหลือ 5 บาท"),
         ("สิบเปอร์เซ็นต์", "10 เปอร์เซ็นต์"),
+        # L02: the same live wrote both "รอบสอง" and "รอบ 2" — one form, digits
+        ("ผมจะเปิดรอบสอง", "ผมจะเปิดรอบ 2"),
     ],
 )
 def test_unambiguous_spoken_numbers_become_digits(spoken: str, written: str) -> None:
